@@ -11,7 +11,22 @@
     --text-muted: #8898aa;
     --border-color: #e9ecef;
     --pdf-red: #f5365c;       /* Rojo Botón Exportar */
-    --nav-height: 75px;
+    --nav-height: 60px;
+    --sidebar-width: 260px;
+}
+
+@media (max-width: 1600px) {
+    :root {
+        --nav-height: 55px;
+        --sidebar-width: 240px;
+    }
+}
+
+@media (max-width: 1366px) {
+    :root {
+        --nav-height: 50px;
+        --sidebar-width: 220px;
+    }
 }
 
 * { 
@@ -38,7 +53,7 @@ body {
     display: grid;
     grid-template-columns: 1fr auto 1fr;
     align-items: center;
-    padding: 0 30px;
+    padding: 0 20px;
     height: var(--nav-height);
     background: var(--primary-dark);
     flex-shrink: 0;
@@ -46,14 +61,15 @@ body {
 }
 
 /* Logo Izquierda */
-.logo { display: flex; align-items: center; gap: 12px; }
+.logo { display: flex; align-items: center; gap: 10px; }
 .logo-icon { 
     background: var(--accent-blue); color: white; 
-    width: 32px; height: 32px; border-radius: 8px; 
-    display: flex; align-items: center; justify-content: center; 
+    width: 28px; height: 28px; border-radius: 6px; 
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.9rem;
 }
 .logo-text {
-    color: var(--accent-blue); font-weight: 800; font-size: 1.1rem;
+    color: var(--accent-blue); font-weight: 800; font-size: 0.95rem;
     letter-spacing: -0.5px; text-transform: uppercase;
 }
 .logo-text .dot { color: white; }
@@ -63,22 +79,22 @@ body {
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.15);
     color: #ffffff;
-    padding: 8px 25px;
-    border-radius: 10px;
-    font-size: 0.85rem;
+    padding: 6px 20px;
+    border-radius: 8px;
+    font-size: 0.75rem;
     font-weight: 600;
-    letter-spacing: 1px;
+    letter-spacing: 0.5px;
     text-transform: uppercase;
 }
 
 /* Derecha: Registros y Filtros */
-.nav-right { display: flex; align-items: center; gap: 20px; justify-self: end; }
+.nav-right { display: flex; align-items: center; gap: 15px; justify-self: end; }
 .badge-records {
     background: #ffffff; color: var(--primary-dark);
-    padding: 6px 16px; border-radius: 20px;
-    font-size: 0.75rem; font-weight: 800;
+    padding: 5px 14px; border-radius: 16px;
+    font-size: 0.7rem; font-weight: 800;
 }
-.nav-filters-info { color: var(--text-muted); font-size: 0.75rem; display: flex; gap: 10px; }
+.nav-filters-info { color: var(--text-muted); font-size: 0.7rem; display: flex; gap: 8px; }
 .nav-filters-info span { color: var(--accent-cyan); font-weight: 700; }
 
 /* =========================================
@@ -93,13 +109,13 @@ body {
 
 /* Menú Lateral */
 .sidebar { 
-    width: 280px; 
+    width: var(--sidebar-width);
     background: #ffffff; 
     border-right: 1px solid var(--border-color); 
-    padding: 20px; 
+    padding: 15px; 
     display: flex; 
     flex-direction: column; 
-    gap: 20px; 
+    gap: 15px; 
     flex-shrink: 0;
     overflow-y: auto; 
 }
@@ -107,10 +123,10 @@ body {
 /* Contenido Principal (Elástico) */
 .main-content { 
     flex-grow: 1; 
-    padding: 15px; 
+    padding: 12px; 
     display: flex; 
     flex-direction: column; 
-    gap: 15px; 
+    gap: 12px; 
     overflow: hidden; /* Evita que el contenido empuje hacia afuera */
 }
 
@@ -122,28 +138,29 @@ body {
 .kpi-grid { 
     display: grid; 
     grid-template-columns: repeat(3, 1fr); 
-    gap: 15px; 
+    gap: 12px; 
     flex-shrink: 0;
     height: auto;
 }
 .kpi-card { 
-    background: white; padding: 12px 20px; border-radius: 12px; 
-    display: flex; align-items: center; gap: 15px; 
+    background: white; padding: 10px 15px; border-radius: 10px; 
+    display: flex; align-items: center; gap: 12px; 
     border: 1px solid var(--border-color); 
 }
 .kpi-icon { 
-    width: 40px; height: 40px; border-radius: 8px;
+    width: 36px; height: 36px; border-radius: 6px;
     display: flex; align-items: center; justify-content: center;
     color: white; background: var(--accent-blue);
+    font-size: 1rem;
 }
-.kpi-data h3 { font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; }
-.kpi-data span { font-size: 1.2rem; font-weight: 800; }
+.kpi-data h3 { font-size: 0.6rem; color: var(--text-muted); text-transform: uppercase; }
+.kpi-data span { font-size: 1.1rem; font-weight: 800; }
 
 /* Cuadrículas de Gráficos (Ocupan todo el espacio restante) */
 .charts-grid-top { 
     display: grid; 
     grid-template-columns: 2fr 1fr; 
-    gap: 15px; 
+    gap: 12px; 
     flex: 1;
     min-height: 0;
 }
@@ -151,14 +168,14 @@ body {
 .bottom-grid { 
     display: grid; 
     grid-template-columns: 1fr 1.6fr; 
-    gap: 15px; 
+    gap: 12px; 
     flex: 1.3;
     min-height: 0;
 }
 
 /* Contenedores de Gráficos */
 .chart-container, .map-container-wrapper { 
-    background: white; border-radius: 12px; padding: 12px; 
+    background: white; border-radius: 10px; padding: 10px; 
     border: 1px solid var(--border-color); 
     display: flex; flex-direction: column;
     height: 100%; width: 100%;
@@ -167,32 +184,42 @@ body {
 
 .chart-header { 
     display: flex; justify-content: space-between; align-items: center; 
-    margin-bottom: 8px; flex-shrink: 0;
+    margin-bottom: 6px; flex-shrink: 0;
 }
-.chart-header h4 { font-size: 0.8rem; font-weight: 700; color: var(--primary-dark); }
+.chart-header h4 { font-size: 0.75rem; font-weight: 700; color: var(--primary-dark); }
 
 .canvas-wrapper { 
     flex-grow: 1; position: relative; width: 100%; height: 100%; min-height: 0; 
 }
-#main-map { position: absolute; top: 0; bottom: 0; width: 100%; height: 100%; border-radius: 8px; }
+#main-map { position: absolute; top: 0; bottom: 0; width: 100%; height: 100%; border-radius: 6px; }
 
 /* =========================================
    UI SIDEBAR Y BOTONES
    ========================================= */
 .btn-export-pdf {
     width: 100%; background: var(--pdf-red); color: white; border: none;
-    padding: 12px; border-radius: 10px; font-weight: 800; font-size: 0.75rem;
-    cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 10px; border-radius: 8px; font-weight: 800; font-size: 0.7rem;
+    cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;
 }
 .btn-export-pdf:hover { background: #ec0c38; transform: translateY(-1px); }
 
-.filter-group label { font-size: 0.8rem; font-weight: 700; display: flex; justify-content: space-between; margin-bottom: 8px; }
+.filter-header {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--primary-dark);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.filter-group label { font-size: 0.75rem; font-weight: 700; display: flex; justify-content: space-between; margin-bottom: 6px; }
 .filter-scroll-box { 
     background: #f8f9fe; border: 1px solid var(--border-color); 
-    border-radius: 8px; padding: 8px; max-height: 140px; overflow-y: auto; 
+    border-radius: 6px; padding: 6px; max-height: 120px; overflow-y: auto; 
 }
-.checkbox-item { display: flex; align-items: center; gap: 8px; font-size: 0.75rem; margin-bottom: 5px; cursor: pointer; }
-.checkbox-item input { accent-color: var(--accent-blue); width: 15px; height: 15px; }
+.checkbox-item { display: flex; align-items: center; gap: 6px; font-size: 0.7rem; margin-bottom: 4px; cursor: pointer; }
+.checkbox-item input { accent-color: var(--accent-blue); width: 14px; height: 14px; }
 
 /* =========================================
    VISTAS DE CARGA (CENTRADAS)
@@ -373,7 +400,7 @@ body {
 
 .header-actions {
     display: flex;
-    gap: 8px;
+    gap: 6px;
     align-items: center;
 }
 
@@ -381,9 +408,9 @@ body {
     background: white;
     color: var(--text-muted);
     border: 1px solid var(--border-color);
-    padding: 6px 12px;
-    border-radius: 6px;
-    font-size: 0.7rem;
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-size: 0.65rem;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
@@ -400,10 +427,138 @@ body {
     border: none;
     color: var(--text-muted);
     cursor: pointer;
-    padding: 4px 8px;
-    font-size: 0.9rem;
+    padding: 3px 6px;
+    font-size: 0.85rem;
 }
 
 .btn-maximize:hover {
     color: var(--accent-blue);
+}
+
+/* =========================================
+   MEDIA QUERIES RESPONSIVE
+   ========================================= */
+
+/* Pantallas medianas (laptops pequeños) */
+@media (max-width: 1366px) {
+    .navbar {
+        padding: 0 15px;
+    }
+    
+    .logo-text {
+        font-size: 0.85rem;
+    }
+    
+    .filename-pill {
+        font-size: 0.7rem;
+        padding: 5px 15px;
+    }
+    
+    .badge-records {
+        font-size: 0.65rem;
+        padding: 4px 12px;
+    }
+    
+    .nav-filters-info {
+        font-size: 0.65rem;
+    }
+    
+    .kpi-card {
+        padding: 8px 12px;
+    }
+    
+    .kpi-icon {
+        width: 32px;
+        height: 32px;
+        font-size: 0.9rem;
+    }
+    
+    .kpi-data h3 {
+        font-size: 0.55rem;
+    }
+    
+    .kpi-data span {
+        font-size: 1rem;
+    }
+}
+
+/* Tablets y pantallas pequeñas */
+@media (max-width: 1024px) {
+    :root {
+        --nav-height: 50px;
+        --sidebar-width: 200px;
+    }
+    
+    .sidebar {
+        padding: 12px;
+        gap: 12px;
+    }
+    
+    .main-content {
+        padding: 10px;
+        gap: 10px;
+    }
+    
+    .kpi-grid {
+        gap: 10px;
+    }
+    
+    .charts-grid-top,
+    .bottom-grid {
+        gap: 10px;
+    }
+    
+    .chart-container,
+    .map-container-wrapper {
+        padding: 8px;
+    }
+    
+    .chart-header h4 {
+        font-size: 0.7rem;
+    }
+    
+    .btn-mini {
+        font-size: 0.6rem;
+        padding: 4px 8px;
+    }
+    
+    .filter-scroll-box {
+        max-height: 100px;
+    }
+}
+
+/* Móviles horizontales y tablets pequeñas */
+@media (max-width: 768px) {
+    .navbar {
+        grid-template-columns: auto 1fr;
+        gap: 10px;
+    }
+    
+    .nav-right {
+        grid-column: 1 / -1;
+        justify-self: start;
+        gap: 10px;
+    }
+    
+    .nav-filters-info {
+        display: none;
+    }
+    
+    .sidebar {
+        display: none;
+    }
+    
+    .kpi-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .charts-grid-top {
+        grid-template-columns: 1fr;
+        flex: 1.2;
+    }
+    
+    .bottom-grid {
+        grid-template-columns: 1fr;
+        flex: 1.5;
+    }
 }
