@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eurocop Analytics | Seguridad Pública</title>
+    
+    <!-- FUENTES: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    
+    <!-- ICONOS: FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- ESTILOS MAPA: MapLibre GL JS -->
+    <link href="https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.css" rel="stylesheet" />
+    
+    <!-- ESTILOS PROPIOS -->
+    <link rel="stylesheet" href="style.css">
+
+    <!-- LIBRERÍAS PARA EXPORTACIÓN PDF (html2canvas y jsPDF) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+
+    <!-- =========================================
+       NAVBAR SUPERIOR
+    ========================================== -->
+    <nav class="navbar">
+        <!-- Izquierda: Logo -->
+        <div class="logo">
+            <span class="logo-icon"><i class="fa-solid fa-shield-halved"></i></span>
+            <span class="logo-text">EUROCOP ANALYTICS<span class="dot">.</span></span>
+        </div>
+
+        <!-- Centro: Nombre del archivo (Estilo Imagen 1) -->
+        <div class="nav-center">
+            <div id="display-filename" class="filename-pill">SIN ARCHIVO CARGADO</div>
+        </div>
+
+        <!-- Derecha: Registros y Filtros (Combinación Imagen 1 y 2) -->
+        <div class="nav-right">
+            <span id="kpi-total-filas" class="badge-records">0 REGISTROS</span>
+            <div class="nav-filters-info">
+                <strong>AÑO:</strong> <span id="header-year">----</span>
+                <strong>MES:</strong> <span id="header-month">----</span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- =========================================
+       VISTA 1: CARGA DE ARCHIVOS
+    ========================================== -->
+    <section id="upload-view" class="view-container active">
+        <div class="upload-center">
+            <div class="upload-card">
+                <div class="brand-circle">
+                    <i class="fa-solid fa-file-import"></i>
+                </div>
+                <h1>Carga de Datos</h1>
+                <p>Sube tu archivo Excel (.xlsx) o CSV para comenzar el análisis.</p>
+                
+                <div class="drop-zone" id="drop-zone">
+                    <i class="fa-solid fa-cloud-arrow-up upload-icon"></i>
+                    <span>ARRASTRAR O HACER CLIC</span>
+                    <input type="file" id="file-input" accept=".csv, .xlsx, .xls" hidden>
+                </div>
+                <div class="csv-info">
+                    <small><i class="fa-solid fa-circle-info"></i> El sistema procesará coordenadas y categorías automáticamente.</small>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- =========================================
+       VISTA 2: CONFIGURACIÓN (MAPEO)
+    ========================================== -->
+    <section id="mapping-view" class="view-container">
+        <div class="config-panel">
+            <div class="panel-header">
+                <h2><i class="fa-solid fa-sliders"></i> CONFIGURACIÓN DE CAMPOS</h2>
+                <p>Relaciona las columnas de tu archivo con los datos del sistema.</p>
+            </div>
+            
+            <div class="cards-grid">
+                <!-- Nº EXPEDIENTE -->
+                <div class="card">
+                    <label><strong>CONTADOR / ID</strong></label>
+                    <select id="map-expediente" class="styled-select"></select>
+                </div>
+
+                <!-- FECHA -->
+                <div class="card">
+                    <label><strong>FECHA (Obligatorio)</strong></label>
+                    <select id="map-fecha" class="styled-select"></select>
+                    <label style="margin-top:10px; display:block"><strong>HORA (Opcional)</strong></label>
+                    <select id="map-hora" class="styled-select"></select>
+                </div>
+
+                <!-- LATITUD -->
+                <div class="card">
+                    <label><strong>LATITUD (Y)</strong></label>
+                    <select id="map-lat" class="styled-select"></select>
+                </div>
+
+                <!-- LONGITUD -->
+                <div class="card">
+                    <label><strong>LONGITUD (X)</strong></label>
+                    <select id="map-lon" class="styled-select"></select>
+                </div>
+
+                <!-- CATEGORÍA -->
+                <div class="card">
+                    <label><strong>CATEGORÍA / TIPO</strong></label>
+                    <select id="map-categoria" class="styled-select"></select>
+                </div>
+            </div>
+            
+            <div class="action-footer">
+                <button onclick="location.reload()" class="btn-mini" style="margin-right: 10px;">Cancelar</button>
+                <button id="btn-visualizar" class="btn-primary">GENERAR DASHBOARD</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- =========================================
+       VISTA 3: DASHBOARD INTERACTIVO
+    ========================================== -->
+    <section id="dashboard-view" class="view-container">
+        
+        <!-- SIDEBAR DE FILTROS -->
+        <aside class="sidebar">
+            
+            <!-- ACCIONES SUPERIORES (PDF) -->
+            <div class="sidebar-actions">
+                <button class="btn-export-pdf" onclick="FncConvertirPdf.exportar()">
+                    <i class="fa-solid fa-file-pdf"></i> EXPORTAR A PDF (A4)
+                </button>
+            </div>
+
+            <div class="filter-header"><i class="fa-solid fa-filter"></i> FILTROS AVANZADOS</div>
+            
+            <!-- Filtro Años -->
+            <div class="filter-group">
+                <label>Años <button class="btn-mini" onclick="toggleGroup('list-year', true)">Todos</button></label>
+                <div id="list-year" class="filter-scroll-box"></div>
+            </div>
+
+            <!-- Filtro Meses -->
+            <div class="filter-group">
+                <label>Meses <button class="btn-mini" onclick="toggleGroup('list-month', true)">Todos</button></label>
+                <div id="list-month" class="filter-scroll-box"></div>
+            </div>
+
+            <!-- Filtro Categorías -->
+            <div class="filter-group">
+                <label>Categorías <button class="btn-mini" onclick="toggleGroup('list-category', true)">Todos</button></label>
+                <div id="list-category" class="filter-scroll-box"></div>
+            </div>
+        </aside>
+
+        <!-- CONTENIDO PRINCIPAL (Lo que se captura en el PDF) -->
+        <main class="main-content">
+            
+            <!-- KPIs SUPERIORES -->
+            <div class="kpi-grid">
+                <div class="kpi-card">
+                    <div class="kpi-icon"><i class="fa-solid fa-folder-open"></i></div>
+                    <div class="kpi-data"><h3>Expedientes</h3><span id="kpi-count">0</span></div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-icon" style="background: #2dce89;"><i class="fa-solid fa-location-crosshairs"></i></div>
+                    <div class="kpi-data"><h3>Zona Principal</h3><span>Durango / Local</span></div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-icon" style="background: #fb6340;"><i class="fa-solid fa-calendar-check"></i></div>
+                    <div class="kpi-data"><h3>Periodo</h3><span>Filtrado</span></div>
+                </div>
+            </div>
+
+            <!-- GRÁFICOS SUPERIORES -->
+            <div class="charts-grid-top">
+                <div class="chart-container" id="container-timeline">
+                    <div class="chart-header">
+                        <h4>Evolución Temporal</h4>
+                        <div class="header-actions">
+                            <!-- Selector de vista temporal -->
+                            <select id="select-temporal-view" class="btn-mini" onchange="changeTemporalView(this.value)">
+                                <option value="year">Vista: Años</option>
+                                <option value="month">Vista: Meses</option>
+                                <option value="day">Vista: Días Semanal</option>
+                            </select>
+                            <button class="btn-maximize" onclick="toggleFullscreen('container-timeline')">
+                                <i class="fa-solid fa-maximize"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="canvas-wrapper">
+                        <canvas id="chart-timeline"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-container" id="container-category">
+                    <div class="chart-header">
+                        <h4>Top Categorías</h4>
+                        <button class="btn-maximize" onclick="toggleFullscreen('container-category')">
+                            <i class="fa-solid fa-maximize"></i>
+                        </button>
+                    </div>
+                    <div class="canvas-wrapper">
+                        <canvas id="chart-category"></canvas>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- MAPA Y FRANJAS HORARIAS -->
+            <div class="bottom-grid">
+
+            <div class="chart-container" id="container-hours">
+                <div class="chart-header">
+                    <h4>Actividad por Horas</h4>
+                    <button class="btn-maximize" onclick="toggleFullscreen('container-hours')">
+                        <i class="fa-solid fa-maximize"></i>
+                    </button>
+                </div>
+                <div class="canvas-wrapper">
+                    <canvas id="chart-hours"></canvas>
+                </div>
+            </div>
+                
+                <div class="map-container-wrapper" id="container-map">
+                    <div class="chart-header">
+                        <h4>Mapa de Calor e Incidencias</h4>
+                        <div class="header-actions">
+                            <button class="btn-mini" id="btn-heatmap" onclick="toggleHeatmap(this)">
+                                <i class="fa-solid fa-fire"></i> Modo: Calor
+                            </button>
+                            <button class="btn-mini" onclick="toggleSatelite(this)">
+                                <i class="fa-solid fa-earth-americas"></i> Satélite
+                            </button>
+                            <button class="btn-mini" onclick="toggle3D()">
+                                <i class="fa-solid fa-cube"></i> 3D
+                            </button>
+                            <button class="btn-maximize" onclick="toggleFullscreen('container-map')">
+                                <i class="fa-solid fa-expand"></i>
+                            </button>
+                        </div>
+
+                    </div>
+                    <div class="canvas-wrapper">
+                        <div id="main-map"></div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </section>
+
+    <!-- =========================================
+       LIBRERÍAS EXTERNAS
+    ========================================== -->
+    <!-- PapaParse (CSV) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <!-- SheetJS (Excel) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script> 
+    <!-- Chart.js (Gráficos) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- MapLibre GL JS (Mapa) -->
+    <script src="https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js"></script>
+    
+    <!-- Lógica Principal -->
+    <script src="script.js"></script>
+    <!-- Módulo Independiente de PDF -->
+    <script src="FncConvertirPdf.js"></script>
+
+</body>
+</html>
