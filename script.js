@@ -1,6 +1,6 @@
 /**
  * EUROCOP ANALYTICS - SCRIPT INTEGRADO PROFESIONAL 2026
- * Versión: Smart Locality (Auto-Centroide) + Full Responsive + Fullscreen Fix
+ * Versión: Full Fix (Dropdowns Dinámicos, Selección Masiva y Mapeo)
  */
 
 // ============================================================
@@ -83,30 +83,22 @@ function goToMapping() {
 function showMapping(data) {
     rawData = data;
     const headers = Object.keys(data[0]);
-    // Localidad eliminada del mapeo según requerimiento
     const mappingIds = ['map-expediente', 'map-fecha', 'map-hora', 'map-lat', 'map-lon', 'map-categoria'];
     
     mappingIds.forEach(id => {
         const sel = document.getElementById(id);
         if (!sel) return;
-        
         sel.addEventListener('change', refreshMappingStatus);
         sel.innerHTML = id === 'map-hora' ? '<option value="">-- Sin hora (00:00) --</option>' : '<option value="" disabled selected>Seleccionar...</option>';
-        
         headers.forEach(h => {
             const opt = document.createElement('option');
-            opt.value = h; 
-            opt.textContent = h;
+            opt.value = h; opt.textContent = h;
             sel.appendChild(opt);
         });
 
-        // AUTO-DETECCIÓN INTELIGENTE
         headers.forEach(h => {
             const s = h.toLowerCase();
-            if (id.includes('exp')) {
-                if (s === 'refexp') sel.value = h;
-                else if (!sel.value && (s.includes('exp') || s.includes('id') || s.includes('num'))) sel.value = h;
-            }
+            if (id.includes('exp') && (s.includes('exp') || s.includes('id') || s.includes('num'))) sel.value = h;
             if (id.includes('fecha') && (s.includes('fec') || s.includes('date'))) sel.value = h;
             if (id.includes('hora') && (s.includes('hor') || s.includes('time'))) sel.value = h;
             if (id.includes('lat') && (s.includes('lat') || s === 'y')) sel.value = h;
@@ -181,7 +173,7 @@ document.getElementById('btn-visualizar').onclick = () => {
 };
 
 // ============================================================
-// 5. FILTROS Y UI DINÁMICA
+// 5. FILTROS (DROPDOWNS DINÁMICOS)
 // ============================================================
 function setupFilters() {
     const years = [...new Set(finalData.map(d => d.year))].sort((a,b) => b-a);
@@ -205,92 +197,86 @@ function renderCheckboxes(containerId, items, defaultValue) {
     });
 }
 
+function toggleDropdown(id) {
+    const el = document.getElementById(id);
+    const isActive = el.classList.contains('active');
+    document.querySelectorAll('.dropdown-content').forEach(d => d.classList.remove('active'));
+    
+    if (!isActive) {
+        el.classList.add('active');
+        // Cálculo de altura dinámica
+        const rect = el.getBoundingClientRect();
+        const spaceAvailable = window.innerHeight - rect.top - 25;
+        const itemsCont = el.querySelector('.dropdown-items');
+        const controlsH = el.querySelector('.dropdown-controls').offsetHeight || 45;
+        itemsCont.style.maxHeight = (spaceAvailable - controlsH) + "px";
+    }
+}
+
+// CERRAR SI CLIC FUERA
+window.onclick = (e) => {
+    if (!e.target.closest('.custom-dropdown')) {
+        document.querySelectorAll('.dropdown-content').forEach(d => d.classList.remove('active'));
+    }
+};
+
+// FIX: BOTONES TODOS / NINGUNO
+function toggleGroup(containerId, state, event) {
+    if (event) event.stopPropagation(); // Evita que el menú se cierre
+    // Usamos el ID del contenedor de items (items-year, etc)
+    const container = document.getElementById(containerId);
+    if (container) {
+        container.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = state);
+        updateUI();
+    }
+}
+
 function updateUI() {
     const getChecked = (id) => Array.from(document.querySelectorAll(`#${id} input:checked`)).map(i => i.value);
-    
-    const getLabels = (id, isNavbar = false) => {
+    const getLabels = (id) => {
         const checked = Array.from(document.querySelectorAll(`#${id} input:checked`));
         const total = document.querySelectorAll(`#${id} input`).length;
-        if (checked.length === 0) return "NINGUNO";
-        if (checked.length === total) return "TODOS";
-        const names = checked.map(i => i.nextElementSibling.innerText).join(', ');
-        return (!isNavbar && names.length > 20) ? `${checked.length} SELECC.` : names;
+        if (checked.length === 0) return "Ninguno";
+        if (checked.length === total) return "Todos";
+        return checked.length === 1 ? checked[0].nextElementSibling.innerText : `${checked.length} selecc.`;
     };
 
     const selYears = getChecked('items-year').map(Number);
     const selMonths = getChecked('items-month').map(Number);
     const selCats = getChecked('items-category');
 
-    // Actualizar Labels Sidebar
+    // Actualizar Textos de los Combos
     document.getElementById('label-year').innerText = getLabels('items-year');
     document.getElementById('label-month').innerText = getLabels('items-month');
     document.getElementById('label-category').innerText = getLabels('items-category');
 
-    // Actualizar Navbar Superior
-    if (document.getElementById('header-year')) document.getElementById('header-year').innerText = getLabels('items-year', true).toUpperCase();
-    if (document.getElementById('header-month')) document.getElementById('header-month').innerText = getLabels('items-month', true).toUpperCase();
-    if (document.getElementById('header-category')) document.getElementById('header-category').innerText = getLabels('items-category', true).toUpperCase();
+    // Actualizar Navbar
+    document.getElementById('header-year').innerText = getLabels('items-year').toUpperCase();
+    document.getElementById('header-month').innerText = getLabels('items-month').toUpperCase();
 
-    const filtered = finalData.filter(d => 
-        selYears.includes(d.year) && selMonths.includes(d.month) && selCats.includes(d.cat)
-    );
-
+    const filtered = finalData.filter(d => selYears.includes(d.year) && selMonths.includes(d.month) && selCats.includes(d.cat));
     document.getElementById('kpi-count').innerText = filtered.length.toLocaleString();
-    document.getElementById('kpi-total-filas').innerText = `${filtered.length} REGISTROS`;
+    const badge = document.getElementById('kpi-total-filas');
+    if(badge) badge.innerText = `${filtered.length} REGISTROS`;
 
     updateMapData(filtered);
     updateCharts(filtered, selYears);
-    updatePrincipalZone(filtered); // Autodetección de localidad
-}
-
-/**
- * DETECTAR ZONA PRINCIPAL AUTOMÁTICAMENTE (Geocodificación Inversa)
- */
-async function updatePrincipalZone(data) {
-    const kpiLoc = document.getElementById('kpi-localidad');
-    if (!kpiLoc) return;
-
-    if (!data || data.length === 0) {
-        kpiLoc.innerText = "SIN DATOS";
-        return;
-    }
-
-    // Calculamos el centroide (promedio lat/lon de los puntos filtrados)
-    const avgLat = data.reduce((sum, d) => sum + d.lat, 0) / data.length;
-    const avgLon = data.reduce((sum, d) => sum + d.lon, 0) / data.length;
-
-    try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3000);
-
-        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${avgLat}&lon=${avgLon}&zoom=12`, { signal: controller.signal });
-        const result = await response.json();
-        
-        const city = result.address.city || result.address.town || result.address.village || result.address.county || "ZONA LOCAL";
-        kpiLoc.innerText = city.toUpperCase();
-        clearTimeout(timeoutId);
-    } catch (error) {
-        kpiLoc.innerText = "LOCALIDAD DETECTADA";
-    }
 }
 
 // ============================================================
-// 6. GRÁFICOS (CHART.JS)
+// 6. GRÁFICOS
 // ============================================================
 function changeTemporalView(v) { temporalView = v; updateUI(); }
 
 function updateCharts(data, selYears) {
     const allYearsMaster = [...new Set(finalData.map(d => d.year))].sort((a,b) => a-b);
-    const commonOpts = { responsive: true, maintainAspectRatio: false };
-
-    // Gráfico Evolución
     const ctxTimeline = document.getElementById('chart-timeline');
     if (ctxTimeline) {
         const sortedYears = [...selYears].sort((a,b) => a-b);
         let labels = [], datasets = [];
         if (temporalView === 'year') {
             labels = sortedYears.map(y => y.toString());
-            datasets = [{ label: 'Registros', data: sortedYears.map(y => data.filter(d => d.year === y).length), backgroundColor: sortedYears.map(y => yearColors[allYearsMaster.indexOf(y) % yearColors.length].bg) }];
+            datasets = [{ label: 'Registros', data: sortedYears.map(y => data.filter(d => d.year === y).length), backgroundColor: sortedYears.map(y => yearColors[allYearsMaster.indexOf(y) % yearColors.length].bg), borderColor: sortedYears.map(y => yearColors[allYearsMaster.indexOf(y) % yearColors.length].border), borderWidth: 2 }];
         } else if (temporalView === 'month') {
             labels = monthsConfig.map(m => m.abbr);
             datasets = sortedYears.map(y => {
@@ -307,29 +293,27 @@ function updateCharts(data, selYears) {
             });
         }
         if (chartTimeline) chartTimeline.destroy();
-        chartTimeline = new Chart(ctxTimeline, { type: 'bar', data: { labels, datasets }, options: commonOpts });
+        chartTimeline = new Chart(ctxTimeline, { type: 'bar', data: { labels, datasets }, options: { responsive: true, maintainAspectRatio: false } });
     }
 
-    // Gráfico Categorías
     const ctxCat = document.getElementById('chart-category');
     if (ctxCat) {
         const catData = {}; data.forEach(d => catData[d.cat] = (catData[d.cat] || 0) + 1);
         const sorted = Object.entries(catData).sort((a,b) => b[1]-a[1]).slice(0,5);
         if (chartCategory) chartCategory.destroy();
-        chartCategory = new Chart(ctxCat, { type: 'doughnut', data: { labels: sorted.map(s => s[0]), datasets: [{ data: sorted.map(s => s[1]), backgroundColor: yearColors.map(c => c.bg) }] }, options: { ...commonOpts, plugins: { legend: { position: 'right' } } } });
+        chartCategory = new Chart(ctxCat, { type: 'doughnut', data: { labels: sorted.map(s => s[0]), datasets: [{ data: sorted.map(s => s[1]), backgroundColor: yearColors.map(c => c.bg) }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } } });
     }
 
-    // Gráfico Horas
     const ctxHours = document.getElementById('chart-hours');
     if (ctxHours) {
         const hC = Array(24).fill(0); data.forEach(d => hC[d.hour]++);
         if (chartHours) chartHours.destroy();
-        chartHours = new Chart(ctxHours, { type: 'line', data: { labels: Array.from({length: 24}, (_,i) => i+'h'), datasets: [{ label: 'Actividad', data: hC, borderColor: '#11cdef', fill: true, backgroundColor: 'rgba(17,205,239,0.1)', tension: 0.4 }] }, options: commonOpts });
+        chartHours = new Chart(ctxHours, { type: 'line', data: { labels: Array.from({length: 24}, (_,i) => i+'h'), datasets: [{ label: 'Actividad', data: hC, borderColor: '#11cdef', fill: true, backgroundColor: 'rgba(17,205,239,0.1)', tension: 0.4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } } });
     }
 }
 
 // ============================================================
-// 7. MAPA (MAPLIBRE)
+// 7. MAPA
 // ============================================================
 function initMap() {
     if (map) map.remove();
@@ -340,79 +324,22 @@ function initMap() {
         map.addSource('puntos', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
         map.addLayer({ id: 'heat-layer', type: 'heatmap', source: 'puntos', layout: { 'visibility': 'none' }, paint: { 'heatmap-weight': 1, 'heatmap-intensity': 3, 'heatmap-radius': 20 } });
         map.addLayer({ id: 'point-layer', type: 'circle', source: 'puntos', layout: { 'visibility': 'visible' }, paint: { 'circle-radius': 6, 'circle-stroke-width': 2, 'circle-stroke-color': '#fff', 'circle-color': '#5e72e4' } });
-        // Busca y reemplaza este bloque dentro de initMap
         map.on('click', 'point-layer', (e) => {
             const p = e.features[0].properties;
-            
-            // Formateamos el título como EXP: AÑO-NÚMERO
-            const tituloExpediente = `EXP: ${p.year}-${p.exp}`;
-
-            new maplibregl.Popup({ offset: 10 })
-                .setLngLat(e.features[0].geometry.coordinates)
-                .setHTML(`
-                    <div style="padding:10px; font-family:'Inter', sans-serif; min-width:200px;">
-                        <div style="color:#5e72e4; font-weight:800; font-size:13px; margin-bottom:8px; border-bottom:1px solid #eee; padding-bottom:5px;">
-                            ${tituloExpediente}
-                        </div>
-                        <div style="font-size:11px; line-height:1.6;">
-                            <span style="color:#8898aa; font-weight:600;">CATEGORÍA:</span> 
-                            <span style="color:#32325d;">${p.cat}</span><br>
-                            
-                            <span style="color:#8898aa; font-weight:600;">UBICACIÓN:</span> 
-                            <span style="color:#32325d;">${p.calle} ${p.numero}</span><br>
-                            
-                            <span style="color:#8898aa; font-weight:600;">FECHA:</span> 
-                            <span style="color:#32325d;">${p.fullDate}</span><br>
-                            
-                            <span style="color:#8898aa; font-weight:600;">HORA:</span> 
-                            <span style="color:#32325d; font-weight:700;">${p.time} h</span>
-                        </div>
-                    </div>
-                `)
-                .addTo(map);
+            new maplibregl.Popup({ offset: 10 }).setLngLat(e.features[0].geometry.coordinates).setHTML(`<div style="padding:8px; font-family:'Inter', sans-serif; min-width:180px;"><div style="color:#5e72e4; font-weight:800; font-size:13px; margin-bottom:5px; border-bottom:1px solid #eee; padding-bottom:3px;">REF${p.refanno}-${p.refnum}</div><div style="font-size:11px;"><span><b>Exp:</b> ${p.exp}</span><br><span><b>Ubicación:</b> ${p.calle} ${p.numero}</span><br><span><b>Cat:</b> ${p.cat}</span><br><span><b>Fecha:</b> ${p.fullDate}</span></div></div>`).addTo(map);
         });
     });
 }
 
 function updateMapData(data) {
     if (!map || !map.getSource('puntos')) return;
-
-    const geojson = { 
-        type: 'FeatureCollection', 
-        features: data.map(d => {
-            // Formatear hora a HH:mm
-            const hh = d.date.getHours().toString().padStart(2, '0');
-            const mm = d.date.getMinutes().toString().padStart(2, '0');
-            const timeStr = `${hh}:${mm}`;
-
-            return { 
-                type: 'Feature', 
-                geometry: { type: 'Point', coordinates: [d.lon, d.lat] }, 
-                properties: { 
-                    exp: d.exp, 
-                    cat: d.cat, // Aquí va el tipo de categoría del Excel
-                    year: d.year, // Guardamos el año para el título del popup
-                    calle: d.calle || "No disp.",
-                    numero: d.numero || "",
-                    fullDate: d.date.toLocaleDateString('es-ES'),
-                    time: timeStr
-                } 
-            };
-        }) 
-    };
-
+    const geojson = { type: 'FeatureCollection', features: data.map(d => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [d.lon, d.lat] }, properties: { exp: d.exp, cat: d.cat, year: d.year, fullDate: d.date.toLocaleString('es-ES'), calle: d.calle, numero: d.numero, refnum: d.refnum, refanno: d.refanno } })) };
     map.getSource('puntos').setData(geojson);
-
-    // Colores por año en el mapa (Mantenemos tu lógica anterior)
     const allY = [...new Set(finalData.map(d => d.year))].sort((a,b) => a-b);
     const colorExpr = ['match', ['get', 'year']];
-    allY.forEach(y => {
-        const color = yearColors[allY.indexOf(y) % yearColors.length].border;
-        colorExpr.push(y, color);
-    });
+    allY.forEach(y => colorExpr.push(y, yearColors[allY.indexOf(y) % yearColors.length].border));
     colorExpr.push('#5e72e4');
     map.setPaintProperty('point-layer', 'circle-color', colorExpr);
-
     if (data.length > 0) {
         const bounds = new maplibregl.LngLatBounds();
         data.forEach(d => bounds.extend([d.lon, d.lat]));
@@ -423,109 +350,7 @@ function updateMapData(data) {
 // ============================================================
 // 8. UTILIDADES UI
 // ============================================================
-function toggleDropdown(id) {
-    const el = document.getElementById(id);
-    const isActive = el.classList.contains('active');
-    document.querySelectorAll('.dropdown-content').forEach(d => d.classList.remove('active'));
-    if (!isActive) el.classList.add('active');
-}
-
-window.onclick = (e) => { if (!e.target.closest('.custom-dropdown')) document.querySelectorAll('.dropdown-content').forEach(d => d.classList.remove('active')); };
-
-function toggleGroup(containerId, state, event) {
-    if (event) event.stopPropagation();
-    const container = document.getElementById(containerId);
-    if (container) {
-        container.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = state);
-        updateUI();
-    }
-}
-
 function toggleSatelite(btn) { isSatelite = !isSatelite; map.setLayoutProperty('satellite-layer', 'visibility', isSatelite ? 'visible' : 'none'); btn.style.background = isSatelite ? '#5e72e4' : ''; btn.style.color = isSatelite ? '#fff' : ''; }
-function toggleHeatmap(btn) { isHeatmap = !isHeatmap; map.setLayoutProperty('heat-layer', 'visibility', isHeatmap ? 'visible' : 'none'); map.setLayoutProperty('point-layer', 'visibility', isHeatmap ? 'none' : 'visible'); }
-function toggle3D() { map.easeTo({ pitch: map.getPitch() > 0 ? 0 : 60, duration: 1000 }); }
-function toggleFullscreen(id) {
-    const el = document.getElementById(id);
-    el.classList.toggle('fullscreen');
-    document.body.style.overflow = el.classList.contains('fullscreen') ? 'hidden' : 'auto';
-    setTimeout(() => {
-        if (chartTimeline) chartTimeline.resize();
-        if (chartCategory) chartCategory.resize();
-        if (chartHours) chartHours.resize();
-        if (map) map.resize();
-        window.dispatchEvent(new Event('resize'));
-    }, 350);
-}
-
-// ============================================================
-// 8. UTILIDADES UI Y RESPONSIVE
-// ============================================================
-function toggleMobileMenu() {
-    const sidebar = document.getElementById('sidebar');
-    if (sidebar) {
-        sidebar.classList.toggle('active');
-    }
-}
-
-// Cerrar menú al hacer clic fuera (solo móvil)
-document.addEventListener('click', (e) => {
-    const sidebar = document.getElementById('sidebar');
-    const menuToggle = document.getElementById('menu-toggle');
-    
-    if (sidebar && sidebar.classList.contains('active')) {
-        if (!sidebar.contains(e.target) && !menuToggle.contains(e.target)) {
-            sidebar.classList.remove('active');
-        }
-    }
-});
-
-function toggleSatelite(btn) { 
-    isSatelite = !isSatelite; 
-    map.setLayoutProperty('satellite-layer', 'visibility', isSatelite ? 'visible' : 'none'); 
-    btn.style.background = isSatelite ? '#5e72e4' : ''; 
-    btn.style.color = isSatelite ? '#fff' : ''; 
-}
-
-function toggleHeatmap(btn) { 
-    isHeatmap = !isHeatmap; 
-    map.setLayoutProperty('heat-layer', 'visibility', isHeatmap ? 'visible' : 'none'); 
-    map.setLayoutProperty('point-layer', 'visibility', isHeatmap ? 'none' : 'visible'); 
-    btn.innerHTML = isHeatmap ? '<i class="fa-solid fa-location-dot"></i> Puntos' : '<i class="fa-solid fa-fire"></i> Calor'; 
-}
-
-function toggle3D() { 
-    const p = map.getPitch(); 
-    map.easeTo({ pitch: p > 0 ? 0 : 60, bearing: p > 0 ? 0 : -20, duration: 1000 }); 
-}
-
-function toggleFullscreen(id) { 
-    const el = document.getElementById(id);
-    el.classList.toggle('fullscreen'); 
-    
-    // Cerrar menú móvil si está abierto
-    const sidebar = document.getElementById('sidebar');
-    if (sidebar && sidebar.classList.contains('active')) {
-        sidebar.classList.remove('active');
-    }
-    
-    setTimeout(() => { 
-        if(chartTimeline) chartTimeline.resize(); 
-        if(chartCategory) chartCategory.resize(); 
-        if(chartHours) chartHours.resize(); 
-        if(map) map.resize(); 
-    }, 300); 
-}
-
-// Resize charts on window resize (responsive)
-let resizeTimeout;
-window.addEventListener('resize', () => {
-    clearTimeout(resizeTimeout);
-    resizeTimeout = setTimeout(() => {
-        if(chartTimeline) chartTimeline.resize();
-        if(chartCategory) chartCategory.resize();
-        if(chartHours) chartHours.resize();
-        if(map) map.resize();
-    }, 250);
-});
-
-
+function toggleHeatmap(btn) { isHeatmap = !isHeatmap; map.setLayoutProperty('heat-layer', 'visibility', isHeatmap ? 'visible' : 'none'); map.setLayoutProperty('point-layer', 'visibility', isHeatmap ? 'none' : 'visible'); btn.innerHTML = isHeatmap ? '<i class="fa-solid fa-location-dot"></i> Puntos' : '<i class="fa-solid fa-fire"></i> Calor'; }
+function toggle3D() { const p = map.getPitch(); map.easeTo({ pitch: p > 0 ? 0 : 60, bearing: p > 0 ? 0 : -20, duration: 1000 }); }
+function toggleFullscreen(id) { document.getElementById(id).classList.toggle('fullscreen'); setTimeout(() => { if(chartTimeline) chartTimeline.resize(); if(chartCategory) chartCategory.resize(); if(chartHours) chartHours.resize(); if(map) map.resize(); }, 300); }
