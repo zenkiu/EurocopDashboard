@@ -26,30 +26,28 @@
     <!-- =========================================
        NAVBAR SUPERIOR
     ========================================== -->
-    <nav class="navbar">
-        <!-- Izquierda: Logo (Con función para regresar) -->
-        <div class="logo" onclick="goToMapping()" style="cursor:pointer" title="Volver a Configuración">
-            <span class="logo-icon"><i class="fa-solid fa-shield-halved"></i></span>
-            <span class="logo-text">EUROCOP ANALYTICS<span class="dot">.</span></span>
-        </div>
+<nav class="navbar">
+    <!-- Botón Menú Móvil -->
+    <div class="menu-toggle" onclick="toggleSidebar()">
+        <i class="fa-solid fa-bars"></i>
+    </div>
 
-        <!-- Centro: Nombre del archivo -->
-        <div class="nav-center">
-            <div id="display-filename" class="filename-pill">SIN ARCHIVO CARGADO</div>
-        </div>
+    <!-- Izquierda: Logo -->
+    <div class="logo" onclick="goToMapping()" style="cursor:pointer" title="Volver a Configuración">
+        <span class="logo-icon"><i class="fa-solid fa-shield-halved"></i></span>
+        <span class="logo-text">EUROCOP<span class="mobile-hide"> ANALYTICS</span><span class="dot">.</span></span>
+    </div>
 
-        <!-- Derecha: Registros y Filtros Dinámicos -->
-        <!-- Busca la clase nav-filters-info y añade la línea de CAT -->
-        <div class="nav-right">
-            <span id="kpi-total-filas" class="badge-records">0 REGISTROS</span>
-            <div class="nav-filters-info">
-                <strong>AÑO:</strong> <span id="header-year">----</span>
-                <strong>MES:</strong> <span id="header-month">----</span>
-                <!-- NUEVO CAMPO ABAJO -->
-                <strong style="margin-left: 10px;">CAT:</strong> <span id="header-category">----</span>
-            </div>
-        </div>
-    </nav>
+    <!-- Centro: Nombre del archivo -->
+    <div class="nav-center">
+        <div id="display-filename" class="filename-pill">SIN ARCHIVO</div>
+    </div>
+
+    <!-- Derecha -->
+    <div class="nav-right">
+        <span id="kpi-total-filas" class="badge-records">0 REG.</span>
+    </div>
+</nav>
 
     <!-- =========================================
        VISTA 1: CARGA DE ARCHIVOS

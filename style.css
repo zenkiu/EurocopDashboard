@@ -411,3 +411,106 @@ select.styled-select option {
 .checkbox-item:hover {
     background: #f4f6f9;
 }
+/* =========================================
+   RESPONSIVE DESIGN (MEDIA QUERIES)
+   ========================================= */
+
+/* Botón de menú (oculto por defecto en PC) */
+.menu-toggle {
+    display: none;
+    color: white;
+    font-size: 1.2rem;
+    cursor: pointer;
+    margin-right: 15px;
+}
+
+/* Ajustes para Tablets (Menos de 1024px) */
+@media (max-width: 1024px) {
+    .charts-grid-top, .bottom-grid {
+        grid-template-columns: 1fr !important; /* Apilar gráficos */
+    }
+    
+    .mapping-layout {
+        grid-template-columns: 1fr 1fr !important; /* 2 columnas en mapping */
+    }
+    
+    .canvas-wrapper {
+        min-height: 300px; /* Asegurar altura mínima */
+    }
+}
+
+/* Ajustes para Móviles (Menos de 768px) */
+@media (max-width: 768px) {
+    body {
+        overflow-y: auto; /* Permitir scroll en el cuerpo si es necesario */
+    }
+
+    .navbar {
+        grid-template-columns: auto 1fr auto;
+    }
+
+    .mobile-hide { display: none; }
+    
+    .nav-filters-info { display: none; } /* Ocultar info extra en navbar móvil */
+
+    /* Sidebar modo "Cajón extraíble" */
+    .sidebar {
+        position: fixed;
+        left: -100%;
+        top: var(--nav-height);
+        bottom: 0;
+        z-index: 999;
+        transition: 0.3s;
+        box-shadow: 10px 0 15px rgba(0,0,0,0.1);
+        width: 280px;
+    }
+
+    .sidebar.active {
+        left: 0;
+    }
+
+    .menu-toggle {
+        display: block;
+    }
+
+    /* Mapping View */
+    .mapping-layout {
+        grid-template-columns: 1fr !important;
+        padding: 15px !important;
+    }
+
+    .config-panel {
+        width: 100%;
+        margin: 10px;
+    }
+
+    /* Dashboards */
+    .main-content {
+        padding: 10px;
+        overflow-y: visible; /* Dejar que el contenido fluya */
+    }
+
+    .kpi-grid {
+        grid-template-columns: 1fr; /* KPIs uno debajo de otro */
+    }
+
+    .kpi-card {
+        padding: 15px;
+    }
+
+    .view-container {
+        height: auto;
+        min-height: calc(100vh - var(--nav-height));
+    }
+
+    /* Ajuste para que el mapa no desaparezca */
+    #container-map {
+        height: 400px;
+    }
+}
+
+/* Ajuste fino para pantallas muy pequeñas */
+@media (max-width: 480px) {
+    .logo-text { font-size: 0.8rem; }
+    .filename-pill { font-size: 0.6rem; padding: 4px 10px; }
+}

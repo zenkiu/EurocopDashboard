@@ -405,3 +405,32 @@ function toggleSatelite(btn) { isSatelite = !isSatelite; map.setLayoutProperty('
 function toggleHeatmap(btn) { isHeatmap = !isHeatmap; map.setLayoutProperty('heat-layer', 'visibility', isHeatmap ? 'visible' : 'none'); map.setLayoutProperty('point-layer', 'visibility', isHeatmap ? 'none' : 'visible'); btn.innerHTML = isHeatmap ? '<i class="fa-solid fa-location-dot"></i> Puntos' : '<i class="fa-solid fa-fire"></i> Calor'; }
 function toggle3D() { const p = map.getPitch(); map.easeTo({ pitch: p > 0 ? 0 : 60, bearing: p > 0 ? 0 : -20, duration: 1000 }); }
 function toggleFullscreen(id) { document.getElementById(id).classList.toggle('fullscreen'); setTimeout(() => { if(chartTimeline) chartTimeline.resize(); if(chartCategory) chartCategory.resize(); if(chartHours) chartHours.resize(); if(map) map.resize(); }, 300); }
+
+// Función para abrir/cerrar menú lateral en móviles
+function toggleSidebar() {
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebar) {
+        sidebar.classList.toggle('active');
+    }
+}
+
+// Cerrar sidebar automáticamente al hacer click en un filtro (opcional, para mejor UX en móvil)
+document.addEventListener('click', (e) => {
+    const sidebar = document.querySelector('.sidebar');
+    const toggleBtn = document.querySelector('.menu-toggle');
+    
+    if (window.innerWidth <= 768 && 
+        sidebar.classList.contains('active') && 
+        !sidebar.contains(e.target) && 
+        !toggleBtn.contains(e.target)) {
+        sidebar.classList.remove('active');
+    }
+});
+
+// Re-ajustar gráficos cuando la ventana cambia de tamaño
+window.addEventListener('resize', () => {
+    if (chartTimeline) chartTimeline.resize();
+    if (chartCategory) chartCategory.resize();
+    if (chartHours) chartHours.resize();
+    if (map) map.resize();
+});
