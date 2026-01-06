@@ -1,6 +1,6 @@
 /**
  * EUROCOP ANALYTICS - SCRIPT INTEGRADO PROFESIONAL 2026
- * Versión: Full Fix (Dropdowns Dinámicos, Selección Masiva y Mapeo)
+ * Versión: Full Fix (Labels de Navbar detallados + Dropdowns Dinámicos)
  */
 
 // ============================================================
@@ -88,17 +88,31 @@ function showMapping(data) {
     mappingIds.forEach(id => {
         const sel = document.getElementById(id);
         if (!sel) return;
+        
         sel.addEventListener('change', refreshMappingStatus);
         sel.innerHTML = id === 'map-hora' ? '<option value="">-- Sin hora (00:00) --</option>' : '<option value="" disabled selected>Seleccionar...</option>';
+        
         headers.forEach(h => {
             const opt = document.createElement('option');
-            opt.value = h; opt.textContent = h;
+            opt.value = h; 
+            opt.textContent = h;
             sel.appendChild(opt);
         });
 
+        // AUTO-DETECCIÓN INTELIGENTE
         headers.forEach(h => {
             const s = h.toLowerCase();
-            if (id.includes('exp') && (s.includes('exp') || s.includes('id') || s.includes('num'))) sel.value = h;
+            
+            // Lógica para CONTADOR / ID (Prioridad absoluta a REFEXP)
+            if (id.includes('exp')) {
+                if (s === 'refexp') {
+                    sel.value = h; // Coincidencia exacta
+                } else if (!sel.value && (s.includes('exp') || s.includes('id') || s.includes('num'))) {
+                    sel.value = h; // Coincidencia genérica si no se ha encontrado REFEXP aún
+                }
+            }
+
+            // Resto de campos
             if (id.includes('fecha') && (s.includes('fec') || s.includes('date'))) sel.value = h;
             if (id.includes('hora') && (s.includes('hor') || s.includes('time'))) sel.value = h;
             if (id.includes('lat') && (s.includes('lat') || s === 'y')) sel.value = h;
@@ -109,6 +123,7 @@ function showMapping(data) {
 
     refreshMappingStatus();
     document.getElementById('upload-view').style.display = 'none';
+    document.getElementById('upload-view').classList.remove('active');
     document.getElementById('mapping-view').classList.add('active');
 }
 
@@ -204,7 +219,6 @@ function toggleDropdown(id) {
     
     if (!isActive) {
         el.classList.add('active');
-        // Cálculo de altura dinámica
         const rect = el.getBoundingClientRect();
         const spaceAvailable = window.innerHeight - rect.top - 25;
         const itemsCont = el.querySelector('.dropdown-items');
@@ -213,17 +227,14 @@ function toggleDropdown(id) {
     }
 }
 
-// CERRAR SI CLIC FUERA
 window.onclick = (e) => {
     if (!e.target.closest('.custom-dropdown')) {
         document.querySelectorAll('.dropdown-content').forEach(d => d.classList.remove('active'));
     }
 };
 
-// FIX: BOTONES TODOS / NINGUNO
 function toggleGroup(containerId, state, event) {
-    if (event) event.stopPropagation(); // Evita que el menú se cierre
-    // Usamos el ID del contenedor de items (items-year, etc)
+    if (event) event.stopPropagation(); 
     const container = document.getElementById(containerId);
     if (container) {
         container.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = state);
@@ -231,38 +242,78 @@ function toggleGroup(containerId, state, event) {
     }
 }
 
+// Busca la función updateUI() y asegúrate de que incluya estas líneas:
+
 function updateUI() {
+    // 1. Función interna para obtener los valores (IDs) de los checkboxes marcados
     const getChecked = (id) => Array.from(document.querySelectorAll(`#${id} input:checked`)).map(i => i.value);
-    const getLabels = (id) => {
+    
+    // 2. Función interna para generar etiquetas legibles (Nombres reales)
+    // isNavbar: true -> Muestra la lista completa para el Navbar
+    // isNavbar: false -> Muestra lista corta o "X selecc." para el combobox lateral
+    const getLabels = (id, isNavbar = false) => {
         const checked = Array.from(document.querySelectorAll(`#${id} input:checked`));
         const total = document.querySelectorAll(`#${id} input`).length;
+        
         if (checked.length === 0) return "Ninguno";
         if (checked.length === total) return "Todos";
-        return checked.length === 1 ? checked[0].nextElementSibling.innerText : `${checked.length} selecc.`;
+        
+        // Mapeamos los textos de los <span> que están junto a los checkboxes
+        const names = checked.map(i => i.nextElementSibling.innerText).join(', ');
+        
+        // En el lateral (combobox), si el texto es muy largo, ponemos contador para no romper el diseño
+        if (!isNavbar && names.length > 20) {
+            return `${checked.length} selecc.`;
+        }
+        
+        return names;
     };
 
+    // 3. Obtener las selecciones actuales de los 3 filtros
     const selYears = getChecked('items-year').map(Number);
     const selMonths = getChecked('items-month').map(Number);
     const selCats = getChecked('items-category');
 
-    // Actualizar Textos de los Combos
-    document.getElementById('label-year').innerText = getLabels('items-year');
-    document.getElementById('label-month').innerText = getLabels('items-month');
-    document.getElementById('label-category').innerText = getLabels('items-category');
+    // 4. Actualizar etiquetas de los COMBOBOX laterales (Sidebar)
+    const labelYear = document.getElementById('label-year');
+    const labelMonth = document.getElementById('label-month');
+    const labelCat = document.getElementById('label-category');
 
-    // Actualizar Navbar
-    document.getElementById('header-year').innerText = getLabels('items-year').toUpperCase();
-    document.getElementById('header-month').innerText = getLabels('items-month').toUpperCase();
+    if (labelYear) labelYear.innerText = getLabels('items-year');
+    if (labelMonth) labelMonth.innerText = getLabels('items-month');
+    if (labelCat) labelCat.innerText = getLabels('items-category');
 
-    const filtered = finalData.filter(d => selYears.includes(d.year) && selMonths.includes(d.month) && selCats.includes(d.cat));
-    document.getElementById('kpi-count').innerText = filtered.length.toLocaleString();
-    const badge = document.getElementById('kpi-total-filas');
-    if(badge) badge.innerText = `${filtered.length} REGISTROS`;
+    // 5. Actualizar etiquetas del NAVBAR superior (Header)
+    const headYear = document.getElementById('header-year');
+    const headMonth = document.getElementById('header-month');
+    const headCat = document.getElementById('header-category');
 
+    if (headYear) headYear.innerText = getLabels('items-year', true).toUpperCase();
+    if (headMonth) headMonth.innerText = getLabels('items-month', true).toUpperCase();
+    if (headCat) headCat.innerText = getLabels('items-category', true).toUpperCase();
+
+    // 6. Filtrar el conjunto de datos global (finalData)
+    const filtered = finalData.filter(d => 
+        selYears.includes(d.year) && 
+        selMonths.includes(d.month) && 
+        selCats.includes(d.cat)
+    );
+
+    // 7. Actualizar Contadores y KPIs
+    const kpiCount = document.getElementById('kpi-count');
+    const navBadge = document.getElementById('kpi-total-filas');
+
+    if (kpiCount) kpiCount.innerText = filtered.length.toLocaleString();
+    if (navBadge) navBadge.innerText = `${filtered.length} REGISTROS`;
+
+    // 8. Actualizar Componentes Visuales
+    // Actualizar puntos en el mapa
     updateMapData(filtered);
+    
+    // Actualizar Gráfico de Evolución, Categorías y Horas
+    // Pasamos selYears para que el gráfico de evolución sepa qué años comparar
     updateCharts(filtered, selYears);
 }
-
 // ============================================================
 // 6. GRÁFICOS
 // ============================================================

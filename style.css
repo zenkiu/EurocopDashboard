@@ -74,8 +74,19 @@ body {
     padding: 5px 14px; border-radius: 16px;
     font-size: 0.7rem; font-weight: 800;
 }
-.nav-filters-info { color: var(--text-muted); font-size: 0.7rem; display: flex; gap: 8px; }
-.nav-filters-info span { color: var(--accent-cyan); font-weight: 700; }
+.nav-filters-info {
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    display: flex;
+    gap: 12px; /* Aumentamos el espacio entre bloques */
+    align-items: center;
+}
+
+.nav-filters-info span {
+    color: var(--accent-cyan);
+    font-weight: 700;
+    white-space: nowrap; /* Evita saltos de línea raros */
+}
 
 /* =========================================
    VISTA DE CARGA (UPLOAD)
