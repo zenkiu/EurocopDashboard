@@ -1,6 +1,6 @@
 /**
  * EUROCOP ANALYTICS - SCRIPT INTEGRADO PROFESIONAL 2026
- * Versión: Dashboard de Seguridad Pública con Exportación Pro
+ * Versión: Full Fix (Dropdowns Dinámicos, Selección Masiva y Mapeo)
  */
 
 // ============================================================
@@ -10,14 +10,12 @@ let rawData = [];
 let finalData = [];
 let map;
 let chartTimeline, chartCategory, chartHours;
-let nombreArchivoSubido = "INFORME ANALYTICS"; // Para el título del PDF
+let nombreArchivoSubido = "INFORME ANALYTICS";
 
-// Estados de la interfaz
 let isSatelite = false;
 let isHeatmap = false; 
 let temporalView = 'year'; 
 
-// Configuración de etiquetas y tiempos
 const dayLabels = ['L-Lunes', 'M-Martes', 'X-Miércoles', 'J-Jueves', 'V-Viernes', 'S-Sábado', 'D-Domingo'];
 const monthsConfig = [
     { id: 1, name: 'Enero', abbr: 'Ene' }, { id: 2, name: 'Febrero', abbr: 'Feb' },
@@ -28,19 +26,18 @@ const monthsConfig = [
     { id: 11, name: 'Noviembre', abbr: 'Nov' }, { id: 12, name: 'Diciembre', abbr: 'Dic' }
 ];
 
-// Paleta de colores profesional
 const yearColors = [
-    { bg: 'rgba(94, 114, 228, 0.7)', border: '#5e72e4' },   // Azul
-    { bg: 'rgba(45, 206, 137, 0.7)', border: '#2dce89' },   // Verde
-    { bg: 'rgba(251, 99, 64, 0.7)', border: '#fb6340' },    // Naranja
-    { bg: 'rgba(17, 205, 239, 0.7)', border: '#11cdef' },   // Cyan
-    { bg: 'rgba(245, 54, 92, 0.7)', border: '#f5365c' },    // Rojo
-    { bg: 'rgba(137, 101, 224, 0.7)', border: '#8965e0' },  // Púrpura
-    { bg: 'rgba(255, 214, 0, 0.7)', border: '#ffd600' }     // Amarillo
+    { bg: 'rgba(94, 114, 228, 0.7)', border: '#5e72e4' },   
+    { bg: 'rgba(45, 206, 137, 0.7)', border: '#2dce89' },   
+    { bg: 'rgba(251, 99, 64, 0.7)', border: '#fb6340' },    
+    { bg: 'rgba(17, 205, 239, 0.7)', border: '#11cdef' },   
+    { bg: 'rgba(245, 54, 92, 0.7)', border: '#f5365c' },    
+    { bg: 'rgba(137, 101, 224, 0.7)', border: '#8965e0' },  
+    { bg: 'rgba(155, 14, 14, 0.7)', border: '#b71825ff' }    
 ];
 
 // ============================================================
-// 2. CARGA DE ARCHIVOS Y CAPTURA DE NOMBRE
+// 2. CARGA DE ARCHIVOS Y NAVEGACIÓN
 // ============================================================
 document.addEventListener('DOMContentLoaded', () => {
     const dropZone = document.getElementById('drop-zone');
@@ -48,25 +45,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (dropZone) {
         dropZone.onclick = () => fileInput.click();
-        
         fileInput.onchange = (e) => {
             const file = e.target.files[0];
             if (!file) return;
             
-            // CAPTURAR NOMBRE PARA EL PDF (Sin extensión)
             nombreArchivoSubido = file.name.replace(/\.[^/.]+$/, "").toUpperCase();
-                // ACTUALIZAR EL TÍTULO EN LA INTERFAZ HTML
             const displayEl = document.getElementById('display-filename');
-            if (displayEl) {
-                displayEl.textContent = nombreArchivoSubido;
-            }
+            if (displayEl) displayEl.textContent = nombreArchivoSubido;
+
             if (file.name.endsWith('.csv')) {
-                Papa.parse(file, { 
-                    header: true, 
-                    skipEmptyLines: true, 
-                    encoding: "UTF-8",
-                    complete: (res) => showMapping(res.data) 
-                });
+                Papa.parse(file, { header: true, skipEmptyLines: true, encoding: "UTF-8", complete: (res) => showMapping(res.data) });
             } else {
                 const reader = new FileReader();
                 reader.onload = (e) => {
@@ -81,6 +69,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+function goToMapping() {
+    if (document.getElementById('dashboard-view').classList.contains('active')) {
+        document.getElementById('dashboard-view').classList.remove('active');
+        document.getElementById('mapping-view').classList.add('active');
+        setTimeout(() => { if(map) map.resize(); }, 300);
+    }
+}
+
+// ============================================================
+// 3. LOGICA DE MAPEO
+// ============================================================
 function showMapping(data) {
     rawData = data;
     const headers = Object.keys(data[0]);
@@ -89,32 +88,47 @@ function showMapping(data) {
     mappingIds.forEach(id => {
         const sel = document.getElementById(id);
         if (!sel) return;
-        sel.innerHTML = id === 'map-hora' ? '<option value="">-- Sin hora (Usar 00:00) --</option>' : '<option value="" disabled selected>Seleccionar...</option>';
-        
+        sel.addEventListener('change', refreshMappingStatus);
+        sel.innerHTML = id === 'map-hora' ? '<option value="">-- Sin hora (00:00) --</option>' : '<option value="" disabled selected>Seleccionar...</option>';
         headers.forEach(h => {
             const opt = document.createElement('option');
             opt.value = h; opt.textContent = h;
             sel.appendChild(opt);
         });
 
-        // Auto-detección inteligente
         headers.forEach(h => {
             const s = h.toLowerCase();
             if (id.includes('exp') && (s.includes('exp') || s.includes('id') || s.includes('num'))) sel.value = h;
             if (id.includes('fecha') && (s.includes('fec') || s.includes('date'))) sel.value = h;
             if (id.includes('hora') && (s.includes('hor') || s.includes('time'))) sel.value = h;
-            if (id.includes('lat') && (s.includes('lat') || s.includes('coord_y') || s === 'y')) sel.value = h;
-            if (id.includes('lon') && (s.includes('lon') || s.includes('coord_x') || s === 'x')) sel.value = h;
-            if (id.includes('cat') && (s.includes('cat') || s.includes('tipo') || s.includes('delito'))) sel.value = h;
+            if (id.includes('lat') && (s.includes('lat') || s === 'y')) sel.value = h;
+            if (id.includes('lon') && (s.includes('lon') || s === 'x')) sel.value = h;
+            if (id.includes('cat') && (s.includes('cat') || s.includes('tipo'))) sel.value = h;
         });
     });
 
+    refreshMappingStatus();
     document.getElementById('upload-view').style.display = 'none';
     document.getElementById('mapping-view').classList.add('active');
 }
 
+function refreshMappingStatus() {
+    const mappingIds = ['map-expediente', 'map-fecha', 'map-hora', 'map-lat', 'map-lon', 'map-categoria'];
+    const currentSelections = mappingIds.map(id => document.getElementById(id).value).filter(val => val !== "");
+
+    mappingIds.forEach(id => {
+        const sel = document.getElementById(id);
+        Array.from(sel.options).forEach(opt => {
+            if (opt.value === "" || opt.disabled) return;
+            const isUsedElsewhere = currentSelections.includes(opt.value) && sel.value !== opt.value;
+            opt.textContent = (isUsedElsewhere ? "✕ " : (sel.value === opt.value ? "✓ " : "• ")) + opt.value.replace("✓ ", "").replace("• ", "").replace("✕ ", "");
+            opt.style.color = isUsedElsewhere ? "#cbd5e0" : "#5e72e4";
+        });
+    });
+}
+
 // ============================================================
-// 3. PROCESAMIENTO Y GENERACIÓN DEL DASHBOARD
+// 4. PROCESAMIENTO
 // ============================================================
 document.getElementById('btn-visualizar').onclick = () => {
     const config = {
@@ -127,60 +141,46 @@ document.getElementById('btn-visualizar').onclick = () => {
     };
 
     if (!config.fecha || !config.lat || !config.lon) {
-        alert("Por favor, mapea al menos Fecha, Latitud y Longitud.");
+        alert("Mapea al menos Fecha, Latitud y Longitud.");
         return;
     }
 
     finalData = rawData.map(row => {
         let d = new Date(row[config.fecha]);
         if (isNaN(d.getTime())) return null;
-
-        // Procesar hora si existe
         if (config.hora && row[config.hora]) {
             const t = String(row[config.hora]);
-            if (t.includes(':')) {
-                const parts = t.split(':');
-                d.setHours(parseInt(parts[0]) || 0, parseInt(parts[1]) || 0, 0);
-            }
+            if (t.includes(':')) { const p = t.split(':'); d.setHours(parseInt(p[0]) || 0, parseInt(p[1]) || 0, 0); }
         }
-
-        // Limpieza de coordenadas (gestión de comas por puntos)
         const lat = parseFloat(String(row[config.lat]).replace(',', '.'));
         const lon = parseFloat(String(row[config.lon]).replace(',', '.'));
         if (isNaN(lat) || isNaN(lon)) return null;
 
         return {
             exp: row[config.exp] || "N/A",
-            date: d, 
-            year: d.getFullYear(), 
-            month: d.getMonth() + 1, 
-            hour: d.getHours(),
-            lat: lat, 
-            lon: lon, 
-            cat: row[config.cat] || "General"
+            date: d, year: d.getFullYear(), month: d.getMonth() + 1, hour: d.getHours(),
+            lat, lon, cat: row[config.cat] || "General",
+            calle: row['CALLE'] || row['calle'] || "", numero: row['NUMERO'] || row['numero'] || "",
+            refnum: row['REFNUM'] || "", refanno: row['REFANNO'] || ""
         };
     }).filter(v => v !== null);
 
-    if (finalData.length === 0) {
-        alert("No se pudieron procesar datos válidos. Revise el formato de fecha y coordenadas.");
-        return;
-    }
-
     document.getElementById('mapping-view').classList.remove('active');
     document.getElementById('dashboard-view').classList.add('active');
-    
     setupFilters();
     initMap();
-    setTimeout(() => { updateUI(); }, 500);
+    setTimeout(updateUI, 500);
 };
 
+// ============================================================
+// 5. FILTROS (DROPDOWNS DINÁMICOS)
+// ============================================================
 function setupFilters() {
     const years = [...new Set(finalData.map(d => d.year))].sort((a,b) => b-a);
     const cats = [...new Set(finalData.map(d => d.cat))].sort();
-    
-    renderCheckboxes('list-year', years, years[0]); // Seleccionamos el año más reciente por defecto
-    renderCheckboxes('list-month', monthsConfig, 'all');
-    renderCheckboxes('list-category', cats, 'all');
+    renderCheckboxes('items-year', years, years[0]); 
+    renderCheckboxes('items-month', monthsConfig, 'all');
+    renderCheckboxes('items-category', cats, 'all');
 }
 
 function renderCheckboxes(containerId, items, defaultValue) {
@@ -197,301 +197,160 @@ function renderCheckboxes(containerId, items, defaultValue) {
     });
 }
 
+function toggleDropdown(id) {
+    const el = document.getElementById(id);
+    const isActive = el.classList.contains('active');
+    document.querySelectorAll('.dropdown-content').forEach(d => d.classList.remove('active'));
+    
+    if (!isActive) {
+        el.classList.add('active');
+        // Cálculo de altura dinámica
+        const rect = el.getBoundingClientRect();
+        const spaceAvailable = window.innerHeight - rect.top - 25;
+        const itemsCont = el.querySelector('.dropdown-items');
+        const controlsH = el.querySelector('.dropdown-controls').offsetHeight || 45;
+        itemsCont.style.maxHeight = (spaceAvailable - controlsH) + "px";
+    }
+}
+
+// CERRAR SI CLIC FUERA
+window.onclick = (e) => {
+    if (!e.target.closest('.custom-dropdown')) {
+        document.querySelectorAll('.dropdown-content').forEach(d => d.classList.remove('active'));
+    }
+};
+
+// FIX: BOTONES TODOS / NINGUNO
+function toggleGroup(containerId, state, event) {
+    if (event) event.stopPropagation(); // Evita que el menú se cierre
+    // Usamos el ID del contenedor de items (items-year, etc)
+    const container = document.getElementById(containerId);
+    if (container) {
+        container.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = state);
+        updateUI();
+    }
+}
+
 function updateUI() {
     const getChecked = (id) => Array.from(document.querySelectorAll(`#${id} input:checked`)).map(i => i.value);
     const getLabels = (id) => {
         const checked = Array.from(document.querySelectorAll(`#${id} input:checked`));
         const total = document.querySelectorAll(`#${id} input`).length;
-        if (checked.length === 0) return "NINGUNO";
-        if (checked.length === total) return "TODOS";
-        return checked.map(i => i.nextElementSibling.innerText).join(', ');
+        if (checked.length === 0) return "Ninguno";
+        if (checked.length === total) return "Todos";
+        return checked.length === 1 ? checked[0].nextElementSibling.innerText : `${checked.length} selecc.`;
     };
 
-    const selYears = getChecked('list-year').map(Number);
-    const selMonths = getChecked('list-month').map(Number);
-    const selCats = getChecked('list-category');
+    const selYears = getChecked('items-year').map(Number);
+    const selMonths = getChecked('items-month').map(Number);
+    const selCats = getChecked('items-category');
 
-    const filtered = finalData.filter(d => 
-        selYears.includes(d.year) && selMonths.includes(d.month) && selCats.includes(d.cat)
-    );
+    // Actualizar Textos de los Combos
+    document.getElementById('label-year').innerText = getLabels('items-year');
+    document.getElementById('label-month').innerText = getLabels('items-month');
+    document.getElementById('label-category').innerText = getLabels('items-category');
 
-    // 1. Actualizar Contador (Imagen 2)
+    // Actualizar Navbar
+    document.getElementById('header-year').innerText = getLabels('items-year').toUpperCase();
+    document.getElementById('header-month').innerText = getLabels('items-month').toUpperCase();
+
+    const filtered = finalData.filter(d => selYears.includes(d.year) && selMonths.includes(d.month) && selCats.includes(d.cat));
     document.getElementById('kpi-count').innerText = filtered.length.toLocaleString();
     const badge = document.getElementById('kpi-total-filas');
     if(badge) badge.innerText = `${filtered.length} REGISTROS`;
-
-    // 2. Actualizar Info de Filtros en el Header (Imagen 1)
-    document.getElementById('header-year').innerText = getLabels('list-year');
-    document.getElementById('header-month').innerText = getLabels('list-month');
 
     updateMapData(filtered);
     updateCharts(filtered, selYears);
 }
 
 // ============================================================
-// 4. LÓGICA DE GRÁFICOS (CHART.JS)
+// 6. GRÁFICOS
 // ============================================================
-function changeTemporalView(val) {
-    temporalView = val;
-    updateUI();
-}
+function changeTemporalView(v) { temporalView = v; updateUI(); }
 
 function updateCharts(data, selYears) {
     const allYearsMaster = [...new Set(finalData.map(d => d.year))].sort((a,b) => a-b);
-    
-    // --- GRÁFICO 1: EVOLUCIÓN TEMPORAL ---
     const ctxTimeline = document.getElementById('chart-timeline');
     if (ctxTimeline) {
-        const sortedSelYears = [...selYears].sort((a,b) => a-b);
-        let labels = [];
-        let datasets = [];
-
+        const sortedYears = [...selYears].sort((a,b) => a-b);
+        let labels = [], datasets = [];
         if (temporalView === 'year') {
-            labels = sortedSelYears.map(y => y.toString());
-            const counts = sortedSelYears.map(year => data.filter(d => d.year === year).length);
-            datasets = [{
-                label: 'Registros',
-                data: counts,
-                backgroundColor: sortedSelYears.map(year => yearColors[allYearsMaster.indexOf(year) % yearColors.length].bg),
-                borderColor: sortedSelYears.map(year => yearColors[allYearsMaster.indexOf(year) % yearColors.length].border),
-                borderWidth: 2
-            }];
-        } 
-        else if (temporalView === 'month') {
+            labels = sortedYears.map(y => y.toString());
+            datasets = [{ label: 'Registros', data: sortedYears.map(y => data.filter(d => d.year === y).length), backgroundColor: sortedYears.map(y => yearColors[allYearsMaster.indexOf(y) % yearColors.length].bg), borderColor: sortedYears.map(y => yearColors[allYearsMaster.indexOf(y) % yearColors.length].border), borderWidth: 2 }];
+        } else if (temporalView === 'month') {
             labels = monthsConfig.map(m => m.abbr);
-            datasets = sortedSelYears.map(year => {
-                const yearData = data.filter(d => d.year === year);
-                const counts = Array(12).fill(0);
-                yearData.forEach(d => counts[d.month - 1]++);
-                const color = yearColors[allYearsMaster.indexOf(year) % yearColors.length];
-                return { label: year.toString(), data: counts, backgroundColor: color.bg, borderColor: color.border, borderWidth: 2 };
+            datasets = sortedYears.map(y => {
+                const c = Array(12).fill(0); data.filter(d => d.year === y).forEach(d => c[d.month - 1]++);
+                const col = yearColors[allYearsMaster.indexOf(y) % yearColors.length];
+                return { label: y.toString(), data: c, backgroundColor: col.bg, borderColor: col.border, borderWidth: 2 };
             });
-        } 
-        else if (temporalView === 'day') {
+        } else if (temporalView === 'day') {
             labels = dayLabels;
-            datasets = sortedSelYears.map(year => {
-                const yearData = data.filter(d => d.year === year);
-                const counts = Array(7).fill(0);
-                yearData.forEach(d => {
-                    let dayIdx = d.date.getDay(); 
-                    let remappedIdx = dayIdx === 0 ? 6 : dayIdx - 1; 
-                    counts[remappedIdx]++;
-                });
-                const color = yearColors[allYearsMaster.indexOf(year) % yearColors.length];
-                return { label: year.toString(), data: counts, backgroundColor: color.bg, borderColor: color.border, borderWidth: 2 };
+            datasets = sortedYears.map(y => {
+                const c = Array(7).fill(0); data.filter(d => d.year === y).forEach(d => { let idx = d.date.getDay(); c[idx === 0 ? 6 : idx - 1]++; });
+                const col = yearColors[allYearsMaster.indexOf(y) % yearColors.length];
+                return { label: y.toString(), data: c, backgroundColor: col.bg, borderColor: col.border, borderWidth: 2 };
             });
         }
-
         if (chartTimeline) chartTimeline.destroy();
-        chartTimeline = new Chart(ctxTimeline, {
-            type: 'bar',
-            data: { labels: labels, datasets: datasets },
-            options: { 
-                responsive: true, maintainAspectRatio: false, 
-                plugins: { legend: { display: temporalView !== 'year', labels: { color: '#8898aa' } } },
-                scales: { 
-                    y: { beginAtZero: true, ticks: { color: '#8898aa', stepSize: 1 } },
-                    x: { ticks: { color: '#8898aa' } }
-                }
-            }
-        });
+        chartTimeline = new Chart(ctxTimeline, { type: 'bar', data: { labels, datasets }, options: { responsive: true, maintainAspectRatio: false } });
     }
 
-    // --- GRÁFICO 2: CATEGORÍAS (TOP 5) ---
     const ctxCat = document.getElementById('chart-category');
     if (ctxCat) {
-        const catData = {};
-        data.forEach(d => catData[d.cat] = (catData[d.cat] || 0) + 1);
+        const catData = {}; data.forEach(d => catData[d.cat] = (catData[d.cat] || 0) + 1);
         const sorted = Object.entries(catData).sort((a,b) => b[1]-a[1]).slice(0,5);
-        
         if (chartCategory) chartCategory.destroy();
-        chartCategory = new Chart(ctxCat, {
-            type: 'doughnut',
-            data: { 
-                labels: sorted.map(s => s[0]), 
-                datasets: [{ 
-                    data: sorted.map(s => s[1]), 
-                    backgroundColor: yearColors.map(c => c.bg), 
-                    hoverOffset: 10 
-                }] 
-            },
-            options: { 
-                responsive: true, 
-                maintainAspectRatio: false, 
-                plugins: { legend: { position: 'right', labels: { color: '#8898aa', padding: 20 } } } 
-            }
-        });
+        chartCategory = new Chart(ctxCat, { type: 'doughnut', data: { labels: sorted.map(s => s[0]), datasets: [{ data: sorted.map(s => s[1]), backgroundColor: yearColors.map(c => c.bg) }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } } });
     }
 
-    // --- GRÁFICO 3: ACTIVIDAD POR HORAS ---
     const ctxHours = document.getElementById('chart-hours');
     if (ctxHours) {
-        const hourCounts = Array(24).fill(0);
-        data.forEach(d => hourCounts[d.hour]++);
-        
+        const hC = Array(24).fill(0); data.forEach(d => hC[d.hour]++);
         if (chartHours) chartHours.destroy();
-        chartHours = new Chart(ctxHours, {
-            type: 'line',
-            data: { 
-                labels: Array.from({length: 24}, (_,i) => i+'h'), 
-                datasets: [{ 
-                    label: 'Registros', 
-                    data: hourCounts, 
-                    borderColor: '#11cdef', 
-                    backgroundColor: 'rgba(17,205,239,0.1)',
-                    fill: true, 
-                    tension: 0.4,
-                    pointRadius: 3
-                }] 
-            },
-            options: { 
-                responsive: true, 
-                maintainAspectRatio: false, 
-                plugins: { legend: { display: false } },
-                scales: { 
-                    y: { beginAtZero: true, ticks: { color: '#8898aa' } },
-                    x: { ticks: { color: '#8898aa' } }
-                }
-            }
-        });
+        chartHours = new Chart(ctxHours, { type: 'line', data: { labels: Array.from({length: 24}, (_,i) => i+'h'), datasets: [{ label: 'Actividad', data: hC, borderColor: '#11cdef', fill: true, backgroundColor: 'rgba(17,205,239,0.1)', tension: 0.4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } } });
     }
 }
 
 // ============================================================
-// 5. MAPLIBRE GL JS (MAPA)
+// 7. MAPA
 // ============================================================
 function initMap() {
     if (map) map.remove();
-    map = new maplibregl.Map({
-        container: 'main-map',
-        style: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
-        center: [-2.63, 43.17], 
-        zoom: 12,
-        preserveDrawingBuffer: true, // Vital para la captura del PDF
-        antialias: true  
-    });
-
+    map = new maplibregl.Map({ container: 'main-map', style: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json', center: [-2.63, 43.17], zoom: 12, preserveDrawingBuffer: true });
     map.on('load', () => {
-        // Capa Satélite
         map.addSource('satellite-tiles', { 'type': 'raster', 'tiles': ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'], 'tileSize': 256 });
         map.addLayer({ 'id': 'satellite-layer', 'type': 'raster', 'source': 'satellite-tiles', 'layout': { 'visibility': 'none' } });
-        
-        // Fuente de Datos GeoJSON
         map.addSource('puntos', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
-        
-        // Capa Calor
-        map.addLayer({
-            id: 'heat-layer', type: 'heatmap', source: 'puntos', layout: { 'visibility': 'none' },
-            paint: { 
-                'heatmap-weight': 1, 'heatmap-intensity': 3, 'heatmap-radius': 20, 
-                'heatmap-color': ['interpolate', ['linear'], ['heatmap-density'], 0, 'rgba(0,0,0,0)', 0.2, 'blue', 0.4, 'cyan', 0.6, 'lime', 0.8, 'yellow', 1, 'red'] 
-            }
-        });
-
-        // Capa Puntos
-        map.addLayer({
-            id: 'point-layer', type: 'circle', source: 'puntos', layout: { 'visibility': 'visible' },
-            paint: { 'circle-radius': 6, 'circle-stroke-width': 2, 'circle-stroke-color': '#fff', 'circle-color': '#5e72e4' }
-        });
-
-        // Popup al hacer click
+        map.addLayer({ id: 'heat-layer', type: 'heatmap', source: 'puntos', layout: { 'visibility': 'none' }, paint: { 'heatmap-weight': 1, 'heatmap-intensity': 3, 'heatmap-radius': 20 } });
+        map.addLayer({ id: 'point-layer', type: 'circle', source: 'puntos', layout: { 'visibility': 'visible' }, paint: { 'circle-radius': 6, 'circle-stroke-width': 2, 'circle-stroke-color': '#fff', 'circle-color': '#5e72e4' } });
         map.on('click', 'point-layer', (e) => {
-            const props = e.features[0].properties;
-            new maplibregl.Popup({ offset: 10 })
-                .setLngLat(e.features[0].geometry.coordinates)
-                .setHTML(`
-                    <div style="padding:5px; font-family:Inter, sans-serif;">
-                        <strong style="color:#5e72e4">Exp: ${props.exp}</strong><br>
-                        <small><b>Categoría:</b> ${props.cat}</small><br>
-                        <small><b>Fecha:</b> ${props.fullDate}</small>
-                    </div>
-                `)
-                .addTo(map);
+            const p = e.features[0].properties;
+            new maplibregl.Popup({ offset: 10 }).setLngLat(e.features[0].geometry.coordinates).setHTML(`<div style="padding:8px; font-family:'Inter', sans-serif; min-width:180px;"><div style="color:#5e72e4; font-weight:800; font-size:13px; margin-bottom:5px; border-bottom:1px solid #eee; padding-bottom:3px;">REF${p.refanno}-${p.refnum}</div><div style="font-size:11px;"><span><b>Exp:</b> ${p.exp}</span><br><span><b>Ubicación:</b> ${p.calle} ${p.numero}</span><br><span><b>Cat:</b> ${p.cat}</span><br><span><b>Fecha:</b> ${p.fullDate}</span></div></div>`).addTo(map);
         });
-
-        map.on('mouseenter', 'point-layer', () => map.getCanvas().style.cursor = 'pointer');
-        map.on('mouseleave', 'point-layer', () => map.getCanvas().style.cursor = '');
     });
 }
 
 function updateMapData(data) {
     if (!map || !map.getSource('puntos')) return;
-    
-    const geojson = {
-        type: 'FeatureCollection',
-        features: data.map(d => ({
-            type: 'Feature',
-            geometry: { type: 'Point', coordinates: [d.lon, d.lat] },
-            properties: { 
-                exp: d.exp, cat: d.cat, year: d.year,
-                fullDate: d.date.toLocaleString('es-ES')
-            }
-        }))
-    };
-    
+    const geojson = { type: 'FeatureCollection', features: data.map(d => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [d.lon, d.lat] }, properties: { exp: d.exp, cat: d.cat, year: d.year, fullDate: d.date.toLocaleString('es-ES'), calle: d.calle, numero: d.numero, refnum: d.refnum, refanno: d.refanno } })) };
     map.getSource('puntos').setData(geojson);
-
-    // Color dinámico según año para consistencia visual
-    const allYearsMaster = [...new Set(finalData.map(d => d.year))].sort((a,b) => a-b);
-    const colorExpression = ['match', ['get', 'year']];
-    allYearsMaster.forEach(year => {
-        colorExpression.push(year, yearColors[allYearsMaster.indexOf(year) % yearColors.length].border);
-    });
-    colorExpression.push('#5e72e4'); // Color por defecto
-    map.setPaintProperty('point-layer', 'circle-color', colorExpression);
-
-    // Ajustar vista a los puntos
+    const allY = [...new Set(finalData.map(d => d.year))].sort((a,b) => a-b);
+    const colorExpr = ['match', ['get', 'year']];
+    allY.forEach(y => colorExpr.push(y, yearColors[allY.indexOf(y) % yearColors.length].border));
+    colorExpr.push('#5e72e4');
+    map.setPaintProperty('point-layer', 'circle-color', colorExpr);
     if (data.length > 0) {
         const bounds = new maplibregl.LngLatBounds();
         data.forEach(d => bounds.extend([d.lon, d.lat]));
-        map.fitBounds(bounds, { padding: 60, maxZoom: 16 });
+        map.fitBounds(bounds, { padding: 50, maxZoom: 16 });
     }
 }
 
 // ============================================================
-// 6. CONTROLES DE INTERFAZ (UI)
+// 8. UTILIDADES UI
 // ============================================================
-function toggleSatelite(btn) {
-    isSatelite = !isSatelite;
-    map.setLayoutProperty('satellite-layer', 'visibility', isSatelite ? 'visible' : 'none');
-    btn.classList.toggle('active-btn', isSatelite);
-    btn.style.background = isSatelite ? '#5e72e4' : '';
-    btn.style.color = isSatelite ? '#fff' : '';
-}
-
-function toggleHeatmap(btn) {
-    isHeatmap = !isHeatmap;
-    map.setLayoutProperty('heat-layer', 'visibility', isHeatmap ? 'visible' : 'none');
-    map.setLayoutProperty('point-layer', 'visibility', isHeatmap ? 'none' : 'visible');
-    btn.innerHTML = isHeatmap ? '<i class="fa-solid fa-location-dot"></i> Modo: Puntos' : '<i class="fa-solid fa-fire"></i> Modo: Calor';
-}
-
-function toggle3D() {
-    const p = map.getPitch();
-    map.easeTo({ pitch: p > 0 ? 0 : 60, bearing: p > 0 ? 0 : -20, duration: 1000 });
-}
-
-function toggleFullscreen(id) {
-    const el = document.getElementById(id);
-    if (!el) return;
-
-    el.classList.toggle('fullscreen');
-
-    // Función para forzar el redibujado de los gráficos
-    const resizeCharts = () => {
-        if (chartTimeline) chartTimeline.resize();
-        if (chartCategory) chartCategory.resize();
-        if (chartHours) chartHours.resize();
-        if (map) map.resize();
-    };
-
-    // Ejecutamos el resize varias veces para pillar la animación de CSS
-    resizeCharts();
-    setTimeout(resizeCharts, 100);
-    setTimeout(resizeCharts, 500);
-}
-
-function toggleGroup(containerId, state) {
-    document.querySelectorAll(`#${containerId} input`).forEach(cb => cb.checked = state);
-    updateUI();
-}
+function toggleSatelite(btn) { isSatelite = !isSatelite; map.setLayoutProperty('satellite-layer', 'visibility', isSatelite ? 'visible' : 'none'); btn.style.background = isSatelite ? '#5e72e4' : ''; btn.style.color = isSatelite ? '#fff' : ''; }
+function toggleHeatmap(btn) { isHeatmap = !isHeatmap; map.setLayoutProperty('heat-layer', 'visibility', isHeatmap ? 'visible' : 'none'); map.setLayoutProperty('point-layer', 'visibility', isHeatmap ? 'none' : 'visible'); btn.innerHTML = isHeatmap ? '<i class="fa-solid fa-location-dot"></i> Puntos' : '<i class="fa-solid fa-fire"></i> Calor'; }
+function toggle3D() { const p = map.getPitch(); map.easeTo({ pitch: p > 0 ? 0 : 60, bearing: p > 0 ? 0 : -20, duration: 1000 }); }
+function toggleFullscreen(id) { document.getElementById(id).classList.toggle('fullscreen'); setTimeout(() => { if(chartTimeline) chartTimeline.resize(); if(chartCategory) chartCategory.resize(); if(chartHours) chartHours.resize(); if(map) map.resize(); }, 300); }
