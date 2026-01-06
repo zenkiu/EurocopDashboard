@@ -440,72 +440,61 @@ select.styled-select option {
 }
 
 /* Ajustes para Móviles (Menos de 768px) */
+/* =========================================
+   FIX ESPECÍFICO PARA GRÁFICOS EN MÓVIL
+   ========================================= */
+
 @media (max-width: 768px) {
-    body {
-        overflow-y: auto; /* Permitir scroll en el cuerpo si es necesario */
-    }
-
-    .navbar {
-        grid-template-columns: auto 1fr auto;
-    }
-
-    .mobile-hide { display: none; }
-    
-    .nav-filters-info { display: none; } /* Ocultar info extra en navbar móvil */
-
-    /* Sidebar modo "Cajón extraíble" */
-    .sidebar {
-        position: fixed;
-        left: -100%;
-        top: var(--nav-height);
-        bottom: 0;
-        z-index: 999;
-        transition: 0.3s;
-        box-shadow: 10px 0 15px rgba(0,0,0,0.1);
-        width: 280px;
-    }
-
-    .sidebar.active {
-        left: 0;
-    }
-
-    .menu-toggle {
-        display: block;
-    }
-
-    /* Mapping View */
-    .mapping-layout {
-        grid-template-columns: 1fr !important;
-        padding: 15px !important;
-    }
-
-    .config-panel {
-        width: 100%;
-        margin: 10px;
-    }
-
-    /* Dashboards */
+    /* 1. Evitar que el contenido principal tenga márgenes laterales excesivos */
     .main-content {
-        padding: 10px;
-        overflow-y: visible; /* Dejar que el contenido fluya */
+        padding: 8px !important;
+        gap: 8px !important;
+        overflow-y: auto !important; /* Permitir scroll para ver todos los gráficos */
     }
 
-    .kpi-grid {
-        grid-template-columns: 1fr; /* KPIs uno debajo de otro */
+    /* 2. Forzar altura mínima en los contenedores de gráficos */
+    .chart-container {
+        min-height: 320px !important; /* Altura suficiente para que la gráfica respire */
+        margin-bottom: 5px;
     }
 
-    .kpi-card {
-        padding: 15px;
-    }
-
-    .view-container {
-        height: auto;
-        min-height: calc(100vh - var(--nav-height));
-    }
-
-    /* Ajuste para que el mapa no desaparezca */
+    /* 3. El mapa necesita un poco más de espacio en móvil */
     #container-map {
-        height: 400px;
+        min-height: 450px !important;
+    }
+
+    /* 4. Optimizar encabezados de los cuadros (títulos y botones) */
+    .chart-header {
+        flex-direction: column; /* Título arriba, botones abajo */
+        align-items: flex-start !important;
+        gap: 8px;
+        margin-bottom: 12px;
+    }
+
+    .header-actions {
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        gap: 4px;
+    }
+
+    /* Hacer los selectores y botones más usables en móvil */
+    .btn-mini {
+        padding: 8px 12px !important;
+        font-size: 0.75rem !important;
+        flex: 1; /* Que ocupen el ancho disponible */
+        text-align: center;
+    }
+
+    /* 5. Asegurar que el canvas de Chart.js ocupe todo el espacio restante */
+    .canvas-wrapper {
+        min-height: 220px !important; /* Espacio mínimo para el dibujo */
+        height: 100%;
+    }
+
+    /* 6. Ajustar las cajas de KPIs para que no sean tan altas */
+    .kpi-card {
+        padding: 12px !important;
     }
 }
 
