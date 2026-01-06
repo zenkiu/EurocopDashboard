@@ -26,28 +26,28 @@
     <!-- =========================================
        NAVBAR SUPERIOR
     ========================================== -->
-<nav class="navbar">
-    <!-- Botón Menú Móvil -->
-    <div class="menu-toggle" onclick="toggleSidebar()">
-        <i class="fa-solid fa-bars"></i>
-    </div>
+    <nav class="navbar">
+        <!-- Izquierda: Logo -->
+        <div class="logo" onclick="goToMapping()" style="cursor:pointer" title="Volver a Configuración">
+            <span class="logo-icon"><i class="fa-solid fa-shield-halved"></i></span>
+            <span class="logo-text">EUROCOP ANALYTICS<span class="dot">.</span></span>
+        </div>
 
-    <!-- Izquierda: Logo -->
-    <div class="logo" onclick="goToMapping()" style="cursor:pointer" title="Volver a Configuración">
-        <span class="logo-icon"><i class="fa-solid fa-shield-halved"></i></span>
-        <span class="logo-text">EUROCOP<span class="mobile-hide"> ANALYTICS</span><span class="dot">.</span></span>
-    </div>
+        <!-- Centro: Nombre del archivo -->
+        <div class="nav-center">
+            <div id="display-filename" class="filename-pill">SIN ARCHIVO CARGADO</div>
+        </div>
 
-    <!-- Centro: Nombre del archivo -->
-    <div class="nav-center">
-        <div id="display-filename" class="filename-pill">SIN ARCHIVO</div>
-    </div>
-
-    <!-- Derecha -->
-    <div class="nav-right">
-        <span id="kpi-total-filas" class="badge-records">0 REG.</span>
-    </div>
-</nav>
+        <!-- Derecha: Registros y Filtros Dinámicos -->
+        <div class="nav-right">
+            <span id="kpi-total-filas" class="badge-records">0 REGISTROS</span>
+            <div class="nav-filters-info">
+                <strong>AÑO:</strong> <span id="header-year">----</span>
+                <strong>MES:</strong> <span id="header-month">----</span>
+                <strong style="margin-left: 10px;">CAT:</strong> <span id="header-category">----</span>
+            </div>
+        </div>
+    </nav>
 
     <!-- =========================================
        VISTA 1: CARGA DE ARCHIVOS
@@ -84,7 +84,7 @@
             </div>
             
             <div class="cards-grid mapping-layout">
-                <!-- COLUMNA 1: 3 FILAS (CONTADOR, LAT, LON) -->
+                <!-- COLUMNA 1: CONTADOR, LAT, LON (Localidad eliminada de aquí) -->
                 <div class="mapping-col">
                     <div class="card">
                         <label><strong>CONTADOR / ID</strong></label>
@@ -138,69 +138,69 @@
     <section id="dashboard-view" class="view-container">
         
         <!-- SIDEBAR DE FILTROS -->
-<aside class="sidebar">
-    <div class="sidebar-actions">
-        <button class="btn-export-pdf" onclick="FncConvertirPdf.exportar()">
-            <i class="fa-solid fa-file-pdf"></i> EXPORTAR A PDF (A4)
-        </button>
-    </div>
+        <aside class="sidebar">
+            <div class="sidebar-actions">
+                <button class="btn-export-pdf" onclick="FncConvertirPdf.exportar()">
+                    <i class="fa-solid fa-file-pdf"></i> EXPORTAR A PDF (A4)
+                </button>
+            </div>
 
-    <div class="filter-header"><i class="fa-solid fa-filter"></i> FILTROS AVANZADOS</div>
-    
-    <!-- Filtro Años -->
-    <div class="filter-group">
-        <label>Años</label>
-        <div class="custom-dropdown" id="drop-year">
-            <div class="dropdown-header" onclick="toggleDropdown('list-year')">
-                <span id="label-year">Seleccionar...</span>
-                <i class="fa-solid fa-chevron-down"></i>
-            </div>
-            <div id="list-year" class="dropdown-content">
-                <div class="dropdown-controls">
-                    <button class="btn-mini" onclick="toggleGroup('items-year', true, event)">Todos</button>
-                    <button class="btn-mini" onclick="toggleGroup('items-year', false, event)">Ninguno</button>
+            <div class="filter-header"><i class="fa-solid fa-filter"></i> FILTROS AVANZADOS</div>
+            
+            <!-- Filtro Años -->
+            <div class="filter-group">
+                <label>Años</label>
+                <div class="custom-dropdown" id="drop-year">
+                    <div class="dropdown-header" onclick="toggleDropdown('list-year')">
+                        <span id="label-year">Seleccionar...</span>
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </div>
+                    <div id="list-year" class="dropdown-content">
+                        <div class="dropdown-controls">
+                            <button class="btn-mini" onclick="toggleGroup('items-year', true, event)">Todos</button>
+                            <button class="btn-mini" onclick="toggleGroup('items-year', false, event)">Ninguno</button>
+                        </div>
+                        <div class="dropdown-items" id="items-year"></div>
+                    </div>
                 </div>
-                <div class="dropdown-items" id="items-year"></div>
             </div>
-        </div>
-    </div>
 
-    <!-- Filtro Meses -->
-    <div class="filter-group">
-        <label>Meses</label>
-        <div class="custom-dropdown" id="drop-month">
-            <div class="dropdown-header" onclick="toggleDropdown('list-month')">
-                <span id="label-month">Seleccionar...</span>
-                <i class="fa-solid fa-chevron-down"></i>
-            </div>
-            <div id="list-month" class="dropdown-content">
-                <div class="dropdown-controls">
-                    <button class="btn-mini" onclick="toggleGroup('list-month', true)">Todos</button>
-                    <button class="btn-mini" onclick="toggleGroup('list-month', false)">Ninguno</button>
+            <!-- Filtro Meses -->
+            <div class="filter-group">
+                <label>Meses</label>
+                <div class="custom-dropdown" id="drop-month">
+                    <div class="dropdown-header" onclick="toggleDropdown('list-month')">
+                        <span id="label-month">Seleccionar...</span>
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </div>
+                    <div id="list-month" class="dropdown-content">
+                        <div class="dropdown-controls">
+                            <button class="btn-mini" onclick="toggleGroup('items-month', true, event)">Todos</button>
+                            <button class="btn-mini" onclick="toggleGroup('items-month', false, event)">Ninguno</button>
+                        </div>
+                        <div class="dropdown-items" id="items-month"></div>
+                    </div>
                 </div>
-                <div class="dropdown-items" id="items-month"></div>
             </div>
-        </div>
-    </div>
 
-    <!-- Filtro Categorías -->
-    <div class="filter-group">
-        <label>Categorías</label>
-        <div class="custom-dropdown" id="drop-category">
-            <div class="dropdown-header" onclick="toggleDropdown('list-category')">
-                <span id="label-category">Seleccionar...</span>
-                <i class="fa-solid fa-chevron-down"></i>
-            </div>
-            <div id="list-category" class="dropdown-content">
-                <div class="dropdown-controls">
-                    <button class="btn-mini" onclick="toggleGroup('list-category', true)">Todos</button>
-                    <button class="btn-mini" onclick="toggleGroup('list-category', false)">Ninguno</button>
+            <!-- Filtro Categorías -->
+            <div class="filter-group">
+                <label>Categorías</label>
+                <div class="custom-dropdown" id="drop-category">
+                    <div class="dropdown-header" onclick="toggleDropdown('list-category')">
+                        <span id="label-category">Seleccionar...</span>
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </div>
+                    <div id="list-category" class="dropdown-content">
+                        <div class="dropdown-controls">
+                            <button class="btn-mini" onclick="toggleGroup('items-category', true, event)">Todos</button>
+                            <button class="btn-mini" onclick="toggleGroup('items-category', false, event)">Ninguno</button>
+                        </div>
+                        <div class="dropdown-items" id="items-category"></div>
+                    </div>
                 </div>
-                <div class="dropdown-items" id="items-category"></div>
             </div>
-        </div>
-    </div>
-</aside>
+        </aside>
 
         <!-- CONTENIDO PRINCIPAL -->
         <main class="main-content">
@@ -212,7 +212,7 @@
                 </div>
                 <div class="kpi-card">
                     <div class="kpi-icon" style="background: #2dce89;"><i class="fa-solid fa-location-crosshairs"></i></div>
-                    <div class="kpi-data"><h3>Zona Principal</h3><span>Durango / Local</span></div>
+                    <div class="kpi-data"><h3>Zona Principal</h3><span id="kpi-localidad">Calculando...</span></div>
                 </div>
                 <div class="kpi-card">
                     <div class="kpi-icon" style="background: #fb6340;"><i class="fa-solid fa-calendar-check"></i></div>

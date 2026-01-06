@@ -1,6 +1,6 @@
 /**
  * EUROCOP ANALYTICS - SCRIPT INTEGRADO PROFESIONAL 2026
- * Versión: Full Fix (Labels de Navbar detallados + Dropdowns Dinámicos)
+ * Versión: Smart Locality (Auto-Centroide) + Full Responsive + Fullscreen Fix
  */
 
 // ============================================================
@@ -83,6 +83,7 @@ function goToMapping() {
 function showMapping(data) {
     rawData = data;
     const headers = Object.keys(data[0]);
+    // Localidad eliminada del mapeo según requerimiento
     const mappingIds = ['map-expediente', 'map-fecha', 'map-hora', 'map-lat', 'map-lon', 'map-categoria'];
     
     mappingIds.forEach(id => {
@@ -102,17 +103,10 @@ function showMapping(data) {
         // AUTO-DETECCIÓN INTELIGENTE
         headers.forEach(h => {
             const s = h.toLowerCase();
-            
-            // Lógica para CONTADOR / ID (Prioridad absoluta a REFEXP)
             if (id.includes('exp')) {
-                if (s === 'refexp') {
-                    sel.value = h; // Coincidencia exacta
-                } else if (!sel.value && (s.includes('exp') || s.includes('id') || s.includes('num'))) {
-                    sel.value = h; // Coincidencia genérica si no se ha encontrado REFEXP aún
-                }
+                if (s === 'refexp') sel.value = h;
+                else if (!sel.value && (s.includes('exp') || s.includes('id') || s.includes('num'))) sel.value = h;
             }
-
-            // Resto de campos
             if (id.includes('fecha') && (s.includes('fec') || s.includes('date'))) sel.value = h;
             if (id.includes('hora') && (s.includes('hor') || s.includes('time'))) sel.value = h;
             if (id.includes('lat') && (s.includes('lat') || s === 'y')) sel.value = h;
@@ -123,7 +117,6 @@ function showMapping(data) {
 
     refreshMappingStatus();
     document.getElementById('upload-view').style.display = 'none';
-    document.getElementById('upload-view').classList.remove('active');
     document.getElementById('mapping-view').classList.add('active');
 }
 
@@ -188,7 +181,7 @@ document.getElementById('btn-visualizar').onclick = () => {
 };
 
 // ============================================================
-// 5. FILTROS (DROPDOWNS DINÁMICOS)
+// 5. FILTROS Y UI DINÁMICA
 // ============================================================
 function setupFilters() {
     const years = [...new Set(finalData.map(d => d.year))].sort((a,b) => b-a);
@@ -212,122 +205,92 @@ function renderCheckboxes(containerId, items, defaultValue) {
     });
 }
 
-function toggleDropdown(id) {
-    const el = document.getElementById(id);
-    const isActive = el.classList.contains('active');
-    document.querySelectorAll('.dropdown-content').forEach(d => d.classList.remove('active'));
-    
-    if (!isActive) {
-        el.classList.add('active');
-        const rect = el.getBoundingClientRect();
-        const spaceAvailable = window.innerHeight - rect.top - 25;
-        const itemsCont = el.querySelector('.dropdown-items');
-        const controlsH = el.querySelector('.dropdown-controls').offsetHeight || 45;
-        itemsCont.style.maxHeight = (spaceAvailable - controlsH) + "px";
-    }
-}
-
-window.onclick = (e) => {
-    if (!e.target.closest('.custom-dropdown')) {
-        document.querySelectorAll('.dropdown-content').forEach(d => d.classList.remove('active'));
-    }
-};
-
-function toggleGroup(containerId, state, event) {
-    if (event) event.stopPropagation(); 
-    const container = document.getElementById(containerId);
-    if (container) {
-        container.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = state);
-        updateUI();
-    }
-}
-
-// Busca la función updateUI() y asegúrate de que incluya estas líneas:
-
 function updateUI() {
-    // 1. Función interna para obtener los valores (IDs) de los checkboxes marcados
     const getChecked = (id) => Array.from(document.querySelectorAll(`#${id} input:checked`)).map(i => i.value);
     
-    // 2. Función interna para generar etiquetas legibles (Nombres reales)
-    // isNavbar: true -> Muestra la lista completa para el Navbar
-    // isNavbar: false -> Muestra lista corta o "X selecc." para el combobox lateral
     const getLabels = (id, isNavbar = false) => {
         const checked = Array.from(document.querySelectorAll(`#${id} input:checked`));
         const total = document.querySelectorAll(`#${id} input`).length;
-        
-        if (checked.length === 0) return "Ninguno";
-        if (checked.length === total) return "Todos";
-        
-        // Mapeamos los textos de los <span> que están junto a los checkboxes
+        if (checked.length === 0) return "NINGUNO";
+        if (checked.length === total) return "TODOS";
         const names = checked.map(i => i.nextElementSibling.innerText).join(', ');
-        
-        // En el lateral (combobox), si el texto es muy largo, ponemos contador para no romper el diseño
-        if (!isNavbar && names.length > 20) {
-            return `${checked.length} selecc.`;
-        }
-        
-        return names;
+        return (!isNavbar && names.length > 20) ? `${checked.length} SELECC.` : names;
     };
 
-    // 3. Obtener las selecciones actuales de los 3 filtros
     const selYears = getChecked('items-year').map(Number);
     const selMonths = getChecked('items-month').map(Number);
     const selCats = getChecked('items-category');
 
-    // 4. Actualizar etiquetas de los COMBOBOX laterales (Sidebar)
-    const labelYear = document.getElementById('label-year');
-    const labelMonth = document.getElementById('label-month');
-    const labelCat = document.getElementById('label-category');
+    // Actualizar Labels Sidebar
+    document.getElementById('label-year').innerText = getLabels('items-year');
+    document.getElementById('label-month').innerText = getLabels('items-month');
+    document.getElementById('label-category').innerText = getLabels('items-category');
 
-    if (labelYear) labelYear.innerText = getLabels('items-year');
-    if (labelMonth) labelMonth.innerText = getLabels('items-month');
-    if (labelCat) labelCat.innerText = getLabels('items-category');
+    // Actualizar Navbar Superior
+    if (document.getElementById('header-year')) document.getElementById('header-year').innerText = getLabels('items-year', true).toUpperCase();
+    if (document.getElementById('header-month')) document.getElementById('header-month').innerText = getLabels('items-month', true).toUpperCase();
+    if (document.getElementById('header-category')) document.getElementById('header-category').innerText = getLabels('items-category', true).toUpperCase();
 
-    // 5. Actualizar etiquetas del NAVBAR superior (Header)
-    const headYear = document.getElementById('header-year');
-    const headMonth = document.getElementById('header-month');
-    const headCat = document.getElementById('header-category');
-
-    if (headYear) headYear.innerText = getLabels('items-year', true).toUpperCase();
-    if (headMonth) headMonth.innerText = getLabels('items-month', true).toUpperCase();
-    if (headCat) headCat.innerText = getLabels('items-category', true).toUpperCase();
-
-    // 6. Filtrar el conjunto de datos global (finalData)
     const filtered = finalData.filter(d => 
-        selYears.includes(d.year) && 
-        selMonths.includes(d.month) && 
-        selCats.includes(d.cat)
+        selYears.includes(d.year) && selMonths.includes(d.month) && selCats.includes(d.cat)
     );
 
-    // 7. Actualizar Contadores y KPIs
-    const kpiCount = document.getElementById('kpi-count');
-    const navBadge = document.getElementById('kpi-total-filas');
+    document.getElementById('kpi-count').innerText = filtered.length.toLocaleString();
+    document.getElementById('kpi-total-filas').innerText = `${filtered.length} REGISTROS`;
 
-    if (kpiCount) kpiCount.innerText = filtered.length.toLocaleString();
-    if (navBadge) navBadge.innerText = `${filtered.length} REGISTROS`;
-
-    // 8. Actualizar Componentes Visuales
-    // Actualizar puntos en el mapa
     updateMapData(filtered);
-    
-    // Actualizar Gráfico de Evolución, Categorías y Horas
-    // Pasamos selYears para que el gráfico de evolución sepa qué años comparar
     updateCharts(filtered, selYears);
+    updatePrincipalZone(filtered); // Autodetección de localidad
 }
+
+/**
+ * DETECTAR ZONA PRINCIPAL AUTOMÁTICAMENTE (Geocodificación Inversa)
+ */
+async function updatePrincipalZone(data) {
+    const kpiLoc = document.getElementById('kpi-localidad');
+    if (!kpiLoc) return;
+
+    if (!data || data.length === 0) {
+        kpiLoc.innerText = "SIN DATOS";
+        return;
+    }
+
+    // Calculamos el centroide (promedio lat/lon de los puntos filtrados)
+    const avgLat = data.reduce((sum, d) => sum + d.lat, 0) / data.length;
+    const avgLon = data.reduce((sum, d) => sum + d.lon, 0) / data.length;
+
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
+
+        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${avgLat}&lon=${avgLon}&zoom=12`, { signal: controller.signal });
+        const result = await response.json();
+        
+        const city = result.address.city || result.address.town || result.address.village || result.address.county || "ZONA LOCAL";
+        kpiLoc.innerText = city.toUpperCase();
+        clearTimeout(timeoutId);
+    } catch (error) {
+        kpiLoc.innerText = "LOCALIDAD DETECTADA";
+    }
+}
+
 // ============================================================
-// 6. GRÁFICOS
+// 6. GRÁFICOS (CHART.JS)
 // ============================================================
 function changeTemporalView(v) { temporalView = v; updateUI(); }
 
 function updateCharts(data, selYears) {
     const allYearsMaster = [...new Set(finalData.map(d => d.year))].sort((a,b) => a-b);
+    const commonOpts = { responsive: true, maintainAspectRatio: false };
+
+    // Gráfico Evolución
     const ctxTimeline = document.getElementById('chart-timeline');
     if (ctxTimeline) {
         const sortedYears = [...selYears].sort((a,b) => a-b);
         let labels = [], datasets = [];
         if (temporalView === 'year') {
             labels = sortedYears.map(y => y.toString());
-            datasets = [{ label: 'Registros', data: sortedYears.map(y => data.filter(d => d.year === y).length), backgroundColor: sortedYears.map(y => yearColors[allYearsMaster.indexOf(y) % yearColors.length].bg), borderColor: sortedYears.map(y => yearColors[allYearsMaster.indexOf(y) % yearColors.length].border), borderWidth: 2 }];
+            datasets = [{ label: 'Registros', data: sortedYears.map(y => data.filter(d => d.year === y).length), backgroundColor: sortedYears.map(y => yearColors[allYearsMaster.indexOf(y) % yearColors.length].bg) }];
         } else if (temporalView === 'month') {
             labels = monthsConfig.map(m => m.abbr);
             datasets = sortedYears.map(y => {
@@ -344,27 +307,29 @@ function updateCharts(data, selYears) {
             });
         }
         if (chartTimeline) chartTimeline.destroy();
-        chartTimeline = new Chart(ctxTimeline, { type: 'bar', data: { labels, datasets }, options: { responsive: true, maintainAspectRatio: false } });
+        chartTimeline = new Chart(ctxTimeline, { type: 'bar', data: { labels, datasets }, options: commonOpts });
     }
 
+    // Gráfico Categorías
     const ctxCat = document.getElementById('chart-category');
     if (ctxCat) {
         const catData = {}; data.forEach(d => catData[d.cat] = (catData[d.cat] || 0) + 1);
         const sorted = Object.entries(catData).sort((a,b) => b[1]-a[1]).slice(0,5);
         if (chartCategory) chartCategory.destroy();
-        chartCategory = new Chart(ctxCat, { type: 'doughnut', data: { labels: sorted.map(s => s[0]), datasets: [{ data: sorted.map(s => s[1]), backgroundColor: yearColors.map(c => c.bg) }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } } });
+        chartCategory = new Chart(ctxCat, { type: 'doughnut', data: { labels: sorted.map(s => s[0]), datasets: [{ data: sorted.map(s => s[1]), backgroundColor: yearColors.map(c => c.bg) }] }, options: { ...commonOpts, plugins: { legend: { position: 'right' } } } });
     }
 
+    // Gráfico Horas
     const ctxHours = document.getElementById('chart-hours');
     if (ctxHours) {
         const hC = Array(24).fill(0); data.forEach(d => hC[d.hour]++);
         if (chartHours) chartHours.destroy();
-        chartHours = new Chart(ctxHours, { type: 'line', data: { labels: Array.from({length: 24}, (_,i) => i+'h'), datasets: [{ label: 'Actividad', data: hC, borderColor: '#11cdef', fill: true, backgroundColor: 'rgba(17,205,239,0.1)', tension: 0.4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } } });
+        chartHours = new Chart(ctxHours, { type: 'line', data: { labels: Array.from({length: 24}, (_,i) => i+'h'), datasets: [{ label: 'Actividad', data: hC, borderColor: '#11cdef', fill: true, backgroundColor: 'rgba(17,205,239,0.1)', tension: 0.4 }] }, options: commonOpts });
     }
 }
 
 // ============================================================
-// 7. MAPA
+// 7. MAPA (MAPLIBRE)
 // ============================================================
 function initMap() {
     if (map) map.remove();
@@ -375,22 +340,79 @@ function initMap() {
         map.addSource('puntos', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
         map.addLayer({ id: 'heat-layer', type: 'heatmap', source: 'puntos', layout: { 'visibility': 'none' }, paint: { 'heatmap-weight': 1, 'heatmap-intensity': 3, 'heatmap-radius': 20 } });
         map.addLayer({ id: 'point-layer', type: 'circle', source: 'puntos', layout: { 'visibility': 'visible' }, paint: { 'circle-radius': 6, 'circle-stroke-width': 2, 'circle-stroke-color': '#fff', 'circle-color': '#5e72e4' } });
+        // Busca y reemplaza este bloque dentro de initMap
         map.on('click', 'point-layer', (e) => {
             const p = e.features[0].properties;
-            new maplibregl.Popup({ offset: 10 }).setLngLat(e.features[0].geometry.coordinates).setHTML(`<div style="padding:8px; font-family:'Inter', sans-serif; min-width:180px;"><div style="color:#5e72e4; font-weight:800; font-size:13px; margin-bottom:5px; border-bottom:1px solid #eee; padding-bottom:3px;">REF${p.refanno}-${p.refnum}</div><div style="font-size:11px;"><span><b>Exp:</b> ${p.exp}</span><br><span><b>Ubicación:</b> ${p.calle} ${p.numero}</span><br><span><b>Cat:</b> ${p.cat}</span><br><span><b>Fecha:</b> ${p.fullDate}</span></div></div>`).addTo(map);
+            
+            // Formateamos el título como EXP: AÑO-NÚMERO
+            const tituloExpediente = `EXP: ${p.year}-${p.exp}`;
+
+            new maplibregl.Popup({ offset: 10 })
+                .setLngLat(e.features[0].geometry.coordinates)
+                .setHTML(`
+                    <div style="padding:10px; font-family:'Inter', sans-serif; min-width:200px;">
+                        <div style="color:#5e72e4; font-weight:800; font-size:13px; margin-bottom:8px; border-bottom:1px solid #eee; padding-bottom:5px;">
+                            ${tituloExpediente}
+                        </div>
+                        <div style="font-size:11px; line-height:1.6;">
+                            <span style="color:#8898aa; font-weight:600;">CATEGORÍA:</span> 
+                            <span style="color:#32325d;">${p.cat}</span><br>
+                            
+                            <span style="color:#8898aa; font-weight:600;">UBICACIÓN:</span> 
+                            <span style="color:#32325d;">${p.calle} ${p.numero}</span><br>
+                            
+                            <span style="color:#8898aa; font-weight:600;">FECHA:</span> 
+                            <span style="color:#32325d;">${p.fullDate}</span><br>
+                            
+                            <span style="color:#8898aa; font-weight:600;">HORA:</span> 
+                            <span style="color:#32325d; font-weight:700;">${p.time} h</span>
+                        </div>
+                    </div>
+                `)
+                .addTo(map);
         });
     });
 }
 
 function updateMapData(data) {
     if (!map || !map.getSource('puntos')) return;
-    const geojson = { type: 'FeatureCollection', features: data.map(d => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [d.lon, d.lat] }, properties: { exp: d.exp, cat: d.cat, year: d.year, fullDate: d.date.toLocaleString('es-ES'), calle: d.calle, numero: d.numero, refnum: d.refnum, refanno: d.refanno } })) };
+
+    const geojson = { 
+        type: 'FeatureCollection', 
+        features: data.map(d => {
+            // Formatear hora a HH:mm
+            const hh = d.date.getHours().toString().padStart(2, '0');
+            const mm = d.date.getMinutes().toString().padStart(2, '0');
+            const timeStr = `${hh}:${mm}`;
+
+            return { 
+                type: 'Feature', 
+                geometry: { type: 'Point', coordinates: [d.lon, d.lat] }, 
+                properties: { 
+                    exp: d.exp, 
+                    cat: d.cat, // Aquí va el tipo de categoría del Excel
+                    year: d.year, // Guardamos el año para el título del popup
+                    calle: d.calle || "No disp.",
+                    numero: d.numero || "",
+                    fullDate: d.date.toLocaleDateString('es-ES'),
+                    time: timeStr
+                } 
+            };
+        }) 
+    };
+
     map.getSource('puntos').setData(geojson);
+
+    // Colores por año en el mapa (Mantenemos tu lógica anterior)
     const allY = [...new Set(finalData.map(d => d.year))].sort((a,b) => a-b);
     const colorExpr = ['match', ['get', 'year']];
-    allY.forEach(y => colorExpr.push(y, yearColors[allY.indexOf(y) % yearColors.length].border));
+    allY.forEach(y => {
+        const color = yearColors[allY.indexOf(y) % yearColors.length].border;
+        colorExpr.push(y, color);
+    });
     colorExpr.push('#5e72e4');
     map.setPaintProperty('point-layer', 'circle-color', colorExpr);
+
     if (data.length > 0) {
         const bounds = new maplibregl.LngLatBounds();
         data.forEach(d => bounds.extend([d.lon, d.lat]));
@@ -401,33 +423,41 @@ function updateMapData(data) {
 // ============================================================
 // 8. UTILIDADES UI
 // ============================================================
-function toggleSatelite(btn) { isSatelite = !isSatelite; map.setLayoutProperty('satellite-layer', 'visibility', isSatelite ? 'visible' : 'none'); btn.style.background = isSatelite ? '#5e72e4' : ''; btn.style.color = isSatelite ? '#fff' : ''; }
-function toggleHeatmap(btn) { isHeatmap = !isHeatmap; map.setLayoutProperty('heat-layer', 'visibility', isHeatmap ? 'visible' : 'none'); map.setLayoutProperty('point-layer', 'visibility', isHeatmap ? 'none' : 'visible'); btn.innerHTML = isHeatmap ? '<i class="fa-solid fa-location-dot"></i> Puntos' : '<i class="fa-solid fa-fire"></i> Calor'; }
-function toggle3D() { const p = map.getPitch(); map.easeTo({ pitch: p > 0 ? 0 : 60, bearing: p > 0 ? 0 : -20, duration: 1000 }); }
-function toggleFullscreen(id) { document.getElementById(id).classList.toggle('fullscreen'); setTimeout(() => { if(chartTimeline) chartTimeline.resize(); if(chartCategory) chartCategory.resize(); if(chartHours) chartHours.resize(); if(map) map.resize(); }, 300); }
+function toggleDropdown(id) {
+    const el = document.getElementById(id);
+    const isActive = el.classList.contains('active');
+    document.querySelectorAll('.dropdown-content').forEach(d => d.classList.remove('active'));
+    if (!isActive) el.classList.add('active');
+}
 
-// Función para abrir/cerrar menú lateral en móviles
-function toggleSidebar() {
-    const sidebar = document.querySelector('.sidebar');
-    if (sidebar) {
-        sidebar.classList.toggle('active');
+window.onclick = (e) => { if (!e.target.closest('.custom-dropdown')) document.querySelectorAll('.dropdown-content').forEach(d => d.classList.remove('active')); };
+
+function toggleGroup(containerId, state, event) {
+    if (event) event.stopPropagation();
+    const container = document.getElementById(containerId);
+    if (container) {
+        container.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = state);
+        updateUI();
     }
 }
 
-// Cerrar sidebar automáticamente al hacer click en un filtro (opcional, para mejor UX en móvil)
-document.addEventListener('click', (e) => {
-    const sidebar = document.querySelector('.sidebar');
-    const toggleBtn = document.querySelector('.menu-toggle');
-    
-    if (window.innerWidth <= 768 && 
-        sidebar.classList.contains('active') && 
-        !sidebar.contains(e.target) && 
-        !toggleBtn.contains(e.target)) {
-        sidebar.classList.remove('active');
-    }
-});
+function toggleSatelite(btn) { isSatelite = !isSatelite; map.setLayoutProperty('satellite-layer', 'visibility', isSatelite ? 'visible' : 'none'); btn.style.background = isSatelite ? '#5e72e4' : ''; btn.style.color = isSatelite ? '#fff' : ''; }
+function toggleHeatmap(btn) { isHeatmap = !isHeatmap; map.setLayoutProperty('heat-layer', 'visibility', isHeatmap ? 'visible' : 'none'); map.setLayoutProperty('point-layer', 'visibility', isHeatmap ? 'none' : 'visible'); }
+function toggle3D() { map.easeTo({ pitch: map.getPitch() > 0 ? 0 : 60, duration: 1000 }); }
 
-// Re-ajustar gráficos cuando la ventana cambia de tamaño
+function toggleFullscreen(id) {
+    const el = document.getElementById(id);
+    el.classList.toggle('fullscreen');
+    document.body.style.overflow = el.classList.contains('fullscreen') ? 'hidden' : 'auto';
+    setTimeout(() => {
+        if (chartTimeline) chartTimeline.resize();
+        if (chartCategory) chartCategory.resize();
+        if (chartHours) chartHours.resize();
+        if (map) map.resize();
+        window.dispatchEvent(new Event('resize'));
+    }, 350);
+}
+
 window.addEventListener('resize', () => {
     if (chartTimeline) chartTimeline.resize();
     if (chartCategory) chartCategory.resize();
