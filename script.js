@@ -444,7 +444,6 @@ function toggleGroup(containerId, state, event) {
 function toggleSatelite(btn) { isSatelite = !isSatelite; map.setLayoutProperty('satellite-layer', 'visibility', isSatelite ? 'visible' : 'none'); btn.style.background = isSatelite ? '#5e72e4' : ''; btn.style.color = isSatelite ? '#fff' : ''; }
 function toggleHeatmap(btn) { isHeatmap = !isHeatmap; map.setLayoutProperty('heat-layer', 'visibility', isHeatmap ? 'visible' : 'none'); map.setLayoutProperty('point-layer', 'visibility', isHeatmap ? 'none' : 'visible'); }
 function toggle3D() { map.easeTo({ pitch: map.getPitch() > 0 ? 0 : 60, duration: 1000 }); }
-
 function toggleFullscreen(id) {
     const el = document.getElementById(id);
     el.classList.toggle('fullscreen');
@@ -458,9 +457,75 @@ function toggleFullscreen(id) {
     }, 350);
 }
 
-window.addEventListener('resize', () => {
-    if (chartTimeline) chartTimeline.resize();
-    if (chartCategory) chartCategory.resize();
-    if (chartHours) chartHours.resize();
-    if (map) map.resize();
+// ============================================================
+// 8. UTILIDADES UI Y RESPONSIVE
+// ============================================================
+function toggleMobileMenu() {
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar) {
+        sidebar.classList.toggle('active');
+    }
+}
+
+// Cerrar menú al hacer clic fuera (solo móvil)
+document.addEventListener('click', (e) => {
+    const sidebar = document.getElementById('sidebar');
+    const menuToggle = document.getElementById('menu-toggle');
+    
+    if (sidebar && sidebar.classList.contains('active')) {
+        if (!sidebar.contains(e.target) && !menuToggle.contains(e.target)) {
+            sidebar.classList.remove('active');
+        }
+    }
 });
+
+function toggleSatelite(btn) { 
+    isSatelite = !isSatelite; 
+    map.setLayoutProperty('satellite-layer', 'visibility', isSatelite ? 'visible' : 'none'); 
+    btn.style.background = isSatelite ? '#5e72e4' : ''; 
+    btn.style.color = isSatelite ? '#fff' : ''; 
+}
+
+function toggleHeatmap(btn) { 
+    isHeatmap = !isHeatmap; 
+    map.setLayoutProperty('heat-layer', 'visibility', isHeatmap ? 'visible' : 'none'); 
+    map.setLayoutProperty('point-layer', 'visibility', isHeatmap ? 'none' : 'visible'); 
+    btn.innerHTML = isHeatmap ? '<i class="fa-solid fa-location-dot"></i> Puntos' : '<i class="fa-solid fa-fire"></i> Calor'; 
+}
+
+function toggle3D() { 
+    const p = map.getPitch(); 
+    map.easeTo({ pitch: p > 0 ? 0 : 60, bearing: p > 0 ? 0 : -20, duration: 1000 }); 
+}
+
+function toggleFullscreen(id) { 
+    const el = document.getElementById(id);
+    el.classList.toggle('fullscreen'); 
+    
+    // Cerrar menú móvil si está abierto
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar && sidebar.classList.contains('active')) {
+        sidebar.classList.remove('active');
+    }
+    
+    setTimeout(() => { 
+        if(chartTimeline) chartTimeline.resize(); 
+        if(chartCategory) chartCategory.resize(); 
+        if(chartHours) chartHours.resize(); 
+        if(map) map.resize(); 
+    }, 300); 
+}
+
+// Resize charts on window resize (responsive)
+let resizeTimeout;
+window.addEventListener('resize', () => {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+        if(chartTimeline) chartTimeline.resize();
+        if(chartCategory) chartCategory.resize();
+        if(chartHours) chartHours.resize();
+        if(map) map.resize();
+    }, 250);
+});
+
+
