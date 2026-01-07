@@ -244,8 +244,53 @@ body {
 .btn-primary { background: var(--accent-blue); color: white; border: none; padding: 12px 30px; border-radius: 8px; font-weight: 700; cursor: pointer; }
 
 /* Fullscreen */
-.fullscreen { position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; z-index: 9999 !important; background: #f4f6f9 !important; padding: 20px !important; }
+/* =========================================
+   ESTILOS DE PANTALLA COMPLETA (FIX)
+   ========================================= */
 
+/* Clase que se activa al maximizar */
+.fullscreen {
+    position: fixed !important; 
+    top: 0 !important; 
+    left: 0 !important;
+    width: 100vw !important; 
+    height: 100vh !important; 
+    height: 100dvh !important; /* Altura real en móviles */
+    z-index: 9999 !important; 
+    background: #ffffff !important; 
+    padding: 20px !important; 
+    border-radius: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    box-shadow: none !important;
+}
+
+/* Cuando está en fullscreen, el header se ajusta */
+.fullscreen .chart-header {
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+/* El botón de cerrar se vuelve más obvio en fullscreen */
+.fullscreen .btn-maximize {
+    background: #fceceb;
+    color: var(--pdf-red);
+    width: 35px; height: 35px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem;
+}
+
+/* En móvil, aseguramos que el canvas ocupe todo el espacio disponible */
+.fullscreen .canvas-wrapper {
+    flex-grow: 1;
+    height: auto !important; /* Importante para que Chart.js se expanda */
+}
+
+/* --- REVISIÓN MEDIA QUERY MÓVIL --- */
+/* Asegúrate de BORRAR la línea ".btn-maximize { display: none; }" 
+   dentro de @media (max-width: 768px) si aún la tienes. */
 /* =========================================
    5. RESPONSIVE (MÓVIL Y TABLET)
    ========================================= */

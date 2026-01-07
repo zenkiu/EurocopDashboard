@@ -357,18 +357,62 @@ function updateCharts(data, selYears) {
         chartTimeline = new Chart(ctxTimeline, { type: 'bar', data: { labels, datasets }, options: commonOptions });
     }
 
-    // CATEGORY
+// CATEGORY (Gráfico de Donut)
     const ctxCat = document.getElementById('chart-category');
     if (ctxCat) {
-        const catData = {}; data.forEach(d => catData[d.cat] = (catData[d.cat] || 0) + 1);
+        const catData = {}; 
+        data.forEach(d => catData[d.cat] = (catData[d.cat] || 0) + 1);
+        
+        // Ordenar y coger el TOP 5
         const sorted = Object.entries(catData).sort((a,b) => b[1]-a[1]).slice(0,5);
+        
         if (chartCategory) chartCategory.destroy();
+        
         chartCategory = new Chart(ctxCat, { 
             type: 'doughnut', 
-            data: { labels: sorted.map(s => s[0]), datasets: [{ data: sorted.map(s => s[1]), backgroundColor: yearColors.map(c => c.bg) }] }, 
+            data: { 
+                labels: sorted.map(s => s[0]), 
+                datasets: [{ 
+                    data: sorted.map(s => s[1]), 
+                    backgroundColor: yearColors.map(c => c.bg),
+                    borderColor: '#ffffff',
+                    borderWidth: 2
+                }] 
+            }, 
             options: { 
                 ...commonOptions, 
-                plugins: { legend: { position: window.innerWidth < 768 ? 'bottom' : 'right' } } 
+                cutout: '60%', // Hace el agujero del donut más elegante
+                layout: {
+                    padding: 10
+                },
+                scales: {
+                    // IMPORTANTE: Ocultar ejes en gráficos circulares
+                    x: { display: false },
+                    y: { display: false }
+                },
+                plugins: { 
+                    legend: { 
+                        // En móvil ABAJO, en PC a la DERECHA
+                        position: window.innerWidth < 768 ? 'bottom' : 'right',
+                        labels: {
+                            boxWidth: 15,
+                            padding: 15,
+                            font: { size: 11 }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                // Mostrar porcentaje en el tooltip
+                                let label = context.label || '';
+                                let value = context.parsed;
+                                let total = context.chart._metasets[context.datasetIndex].total;
+                                let percentage = ((value / total) * 100).toFixed(1) + "%";
+                                return ` ${label}: ${value} (${percentage})`;
+                            }
+                        }
+                    }
+                } 
             } 
         });
     }
@@ -427,10 +471,52 @@ function updateMapData(data) {
 function toggleSatelite(btn) { isSatelite = !isSatelite; map.setLayoutProperty('satellite-layer', 'visibility', isSatelite ? 'visible' : 'none'); btn.style.background = isSatelite ? '#5e72e4' : ''; btn.style.color = isSatelite ? '#fff' : ''; }
 function toggleHeatmap(btn) { isHeatmap = !isHeatmap; map.setLayoutProperty('heat-layer', 'visibility', isHeatmap ? 'visible' : 'none'); map.setLayoutProperty('point-layer', 'visibility', isHeatmap ? 'none' : 'visible'); btn.innerHTML = isHeatmap ? '<i class="fa-solid fa-location-dot"></i>' : '<i class="fa-solid fa-fire"></i>'; }
 function toggle3D() { const p = map.getPitch(); map.easeTo({ pitch: p > 0 ? 0 : 60, bearing: p > 0 ? 0 : -20, duration: 1000 }); }
-function toggleFullscreen(id) { 
-    if(window.innerWidth < 768) return; // Desactivar en móvil
-    document.getElementById(id).classList.toggle('fullscreen'); 
-    setTimeout(() => { if(chartTimeline) chartTimeline.resize(); if(chartCategory) chartCategory.resize(); if(chartHours) chartHours.resize(); if(map) map.resize(); }, 300); 
+// ============================================================
+// FUNCIÓN MAXIMIZAR / MINIMIZAR (MEJORADA MÓVIL)
+// ============================================================
+function toggleFullscreen(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    // 1. Alternar clase fullscreen
+    const isFullscreen = container.classList.toggle('fullscreen');
+    
+    // 2. Buscar el botón dentro de este contenedor para cambiar el icono
+    const btnIcon = container.querySelector('.btn-maximize i');
+    
+    if (isFullscreen) {
+        // ESTADO: ABIERTO
+        // Cambiar icono a "Cerrar" (X)
+        if (btnIcon) {
+            btnIcon.classList.remove('fa-maximize', 'fa-expand');
+            btnIcon.classList.add('fa-xmark');
+        }
+        // Bloquear scroll del fondo (body) para experiencia "App nativa"
+        document.body.style.overflow = 'hidden';
+    } else {
+        // ESTADO: CERRADO
+        // Restaurar icono a "Maximizar"
+        if (btnIcon) {
+            btnIcon.classList.remove('fa-xmark');
+            // Usamos el icono correcto según el contenedor (mapa usa expand, gráficos maximize)
+            if (containerId === 'container-map') {
+                btnIcon.classList.add('fa-expand');
+            } else {
+                btnIcon.classList.add('fa-maximize');
+            }
+        }
+        // Restaurar scroll del body
+        document.body.style.overflow = '';
+    }
+
+    // 3. Forzar redibujado de gráficos/mapa
+    // Damos un pequeño delay (300ms) para que la animación CSS termine antes de redibujar
+    setTimeout(() => {
+        if (chartTimeline) chartTimeline.resize();
+        if (chartCategory) chartCategory.resize();
+        if (chartHours) chartHours.resize();
+        if (map) map.resize();
+    }, 300);
 }
 
 // ============================================================
