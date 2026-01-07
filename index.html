@@ -2,7 +2,8 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Viewport optimizado para prevenir zoom accidental en inputs -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Eurocop Analytics | Seguridad Pública</title>
     
     <!-- FUENTES: Inter -->
@@ -23,41 +24,39 @@
 </head>
 <body>
 
-    <!-- =========================================
-       NAVBAR SUPERIOR
-    ========================================== -->
-<!-- index.html -->
-<nav class="navbar">
-    <!-- Izquierda: Logo (Con función para regresar) -->
-    <div class="logo" onclick="goToMapping()" style="cursor:pointer" title="Volver a Configuración">
-        <span class="logo-icon"><i class="fa-solid fa-shield-halved"></i></span>
-        <span class="logo-text">EUROCOP ANALYTICS<span class="dot">.</span></span>
-    </div>
+    <!-- OVERLAY PARA MÓVIL (Fondo oscuro al abrir menú) -->
+    <div id="mobile-overlay" class="mobile-overlay" onclick="toggleSidebarMobile()"></div>
 
-    <!-- Centro: Nombre del archivo - ESTE BLOQUE SE ELIMINA -->
-    <!-- <div class="nav-center">
-        <div id="display-filename" class="filename-pill">SIN ARCHIVO CARGADO</div>
-    </div> -->
-
-    <!-- Derecha: Registros y Filtros Dinámicos -->
-    <div class="nav-right">
-        <!-- AÑADIDO / MOVIDO: La píldora del nombre del archivo, ahora dentro de nav-right -->
-        <div id="display-filename" class="filename-pill">SIN ARCHIVO CARGADO</div>
-        
-        <span id="kpi-total-filas" class="badge-records">0 REGISTROS</span>
-        <div class="nav-filters-info">
-            <strong>AÑO:</strong> <span id="header-year" class="info-text">----</span>
-            <span class="sep">|</span>
-            <strong>MES:</strong> <span id="header-month" class="info-text">----</span>
-            <span class="sep">|</span>
-            <strong>CAT:</strong> <span id="header-category" class="info-text">----</span>
+    <!-- NAVBAR SUPERIOR -->
+    <nav class="navbar">
+        <!-- Izquierda: Logo y Botón Menú Móvil -->
+        <div class="nav-left-group">
+            <!-- Botón Hamburguesa (Solo Móvil) -->
+            <button class="mobile-menu-btn" onclick="toggleSidebarMobile()">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+            
+            <div class="logo" onclick="goToMapping()" style="cursor:pointer" title="Volver a Configuración">
+                <span class="logo-icon"><i class="fa-solid fa-shield-halved"></i></span>
+                <span class="logo-text">EUROCOP<span class="hide-mobile"> ANALYTICS</span><span class="dot">.</span></span>
+            </div>
         </div>
-    </div>
-</nav>
 
-    <!-- =========================================
-       VISTA 1: CARGA DE ARCHIVOS
-    ========================================== -->
+        <!-- Derecha: Registros y Filtros -->
+        <div class="nav-right">
+            <div id="display-filename" class="filename-pill">SIN ARCHIVO</div>
+            
+            <span id="kpi-total-filas" class="badge-records">0 REG</span>
+            <!-- La info detallada se oculta en móviles muy pequeños mediante CSS -->
+            <div class="nav-filters-info">
+                <span class="hide-mobile"><strong>AÑO:</strong> <span id="header-year" class="info-text">----</span> <span class="sep">|</span></span>
+                <span class="hide-mobile"><strong>MES:</strong> <span id="header-month" class="info-text">----</span> <span class="sep">|</span></span>
+                <span class="hide-mobile"><strong>CAT:</strong> <span id="header-category" class="info-text">----</span></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- VISTA 1: CARGA DE ARCHIVOS -->
     <section id="upload-view" class="view-container active">
         <div class="upload-center">
             <div class="upload-card">
@@ -65,32 +64,30 @@
                     <i class="fa-solid fa-file-import"></i>
                 </div>
                 <h1>Carga de Datos</h1>
-                <p>Sube tu archivo Excel (.xlsx) o CSV para comenzar el análisis.</p>
+                <p>Sube tu archivo Excel (.xlsx) o CSV.</p>
                 
                 <div class="drop-zone" id="drop-zone">
                     <i class="fa-solid fa-cloud-arrow-up upload-icon"></i>
-                    <span>ARRASTRAR O HACER CLIC</span>
+                    <span>TOCA PARA SUBIR</span>
                     <input type="file" id="file-input" accept=".csv, .xlsx, .xls" hidden>
                 </div>
                 <div class="csv-info">
-                    <small><i class="fa-solid fa-circle-info"></i> El sistema procesará coordenadas y categorías automáticamente.</small>
+                    <small><i class="fa-solid fa-circle-info"></i> Compatible con móviles</small>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- =========================================
-       VISTA 2: CONFIGURACIÓN (MAPEO EN 3 COLUMNAS)
-    ========================================== -->
+    <!-- VISTA 2: CONFIGURACIÓN -->
     <section id="mapping-view" class="view-container">
         <div class="config-panel">
             <div class="panel-header">
-                <h2><i class="fa-solid fa-sliders"></i> CONFIGURACIÓN DE CAMPOS</h2>
-                <p>Relaciona las columnas de tu archivo con los datos del sistema.</p>
+                <h2><i class="fa-solid fa-sliders"></i> CONFIGURACIÓN</h2>
+                <p>Vincula las columnas de tu archivo.</p>
             </div>
             
             <div class="cards-grid mapping-layout">
-                <!-- COLUMNA 1: 3 FILAS (CONTADOR, LAT, LON) -->
+                <!-- Las columnas se apilarán en móvil gracias a CSS Grid -->
                 <div class="mapping-col">
                     <div class="card">
                         <label><strong>CONTADOR / ID</strong></label>
@@ -106,7 +103,6 @@
                     </div>
                 </div>
 
-                <!-- COLUMNA 2: FECHA Y HORA -->
                 <div class="mapping-col">
                     <div class="card full-height">
                         <div style="margin-bottom: 25px;">
@@ -120,12 +116,11 @@
                     </div>
                 </div>
 
-                <!-- COLUMNA 3: CATEGORÍA (Diferenciada) -->
                 <div class="mapping-col">
                     <div class="card full-height highlighted-card">
                         <div class="highlight-badge">ANÁLISIS</div>
                         <label><strong>CATEGORÍA / TIPO</strong></label>
-                        <p class="card-desc">Selecciona la columna que define el tipo de incidencia para clasificar los datos.</p>
+                        <p class="card-desc">Define el tipo de incidencia.</p>
                         <select id="map-categoria" class="styled-select select-accent"></select>
                     </div>
                 </div>
@@ -138,75 +133,78 @@
         </div>
     </section>
 
-    <!-- =========================================
-       VISTA 3: DASHBOARD INTERACTIVO
-    ========================================== -->
+    <!-- VISTA 3: DASHBOARD INTERACTIVO -->
     <section id="dashboard-view" class="view-container">
         
-        <!-- SIDEBAR DE FILTROS -->
-<aside class="sidebar">
-    <div class="sidebar-actions">
-        <button class="btn-export-pdf" onclick="FncConvertirPdf.exportar()">
-            <i class="fa-solid fa-file-pdf"></i> EXPORTAR A PDF (A4)
-        </button>
-    </div>
+        <!-- SIDEBAR DE FILTROS (Off-canvas en móvil) -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header-mobile">
+                <h3>Filtros</h3>
+                <button class="btn-close-sidebar" onclick="toggleSidebarMobile()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
 
-    <div class="filter-header"><i class="fa-solid fa-filter"></i> FILTROS AVANZADOS</div>
-    
-    <!-- Filtro Años -->
-    <div class="filter-group">
-        <label>Años</label>
-        <div class="custom-dropdown" id="drop-year">
-            <div class="dropdown-header" onclick="toggleDropdown('list-year')">
-                <span id="label-year">Seleccionar...</span>
-                <i class="fa-solid fa-chevron-down"></i>
+            <div class="sidebar-actions">
+                <button class="btn-export-pdf" onclick="FncConvertirPdf.exportar()">
+                    <i class="fa-solid fa-file-pdf"></i> EXPORTAR A PDF
+                </button>
             </div>
-            <div id="list-year" class="dropdown-content">
-                <div class="dropdown-controls">
-                    <button class="btn-mini" onclick="toggleGroup('items-year', true, event)">Todos</button>
-                    <button class="btn-mini" onclick="toggleGroup('items-year', false, event)">Ninguno</button>
-                </div>
-                <div class="dropdown-items" id="items-year"></div>
-            </div>
-        </div>
-    </div>
 
-    <!-- Filtro Meses -->
-    <div class="filter-group">
-        <label>Meses</label>
-        <div class="custom-dropdown" id="drop-month">
-            <div class="dropdown-header" onclick="toggleDropdown('list-month')">
-                <span id="label-month">Seleccionar...</span>
-                <i class="fa-solid fa-chevron-down"></i>
-            </div>
-            <div id="list-month" class="dropdown-content">
-                <div class="dropdown-controls">
-                    <button class="btn-mini" onclick="toggleGroup('list-month', true)">Todos</button>
-                    <button class="btn-mini" onclick="toggleGroup('list-month', false)">Ninguno</button>
+            <div class="filter-header"><i class="fa-solid fa-filter"></i> FILTROS AVANZADOS</div>
+            
+            <!-- Filtro Años -->
+            <div class="filter-group">
+                <label>Años</label>
+                <div class="custom-dropdown" id="drop-year">
+                    <div class="dropdown-header" onclick="toggleDropdown('list-year')">
+                        <span id="label-year">Seleccionar...</span>
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </div>
+                    <div id="list-year" class="dropdown-content">
+                        <div class="dropdown-controls">
+                            <button class="btn-mini" onclick="toggleGroup('items-year', true, event)">Todos</button>
+                            <button class="btn-mini" onclick="toggleGroup('items-year', false, event)">Ninguno</button>
+                        </div>
+                        <div class="dropdown-items" id="items-year"></div>
+                    </div>
                 </div>
-                <div class="dropdown-items" id="items-month"></div>
             </div>
-        </div>
-    </div>
 
-    <!-- Filtro Categorías -->
-    <div class="filter-group">
-        <label>Categorías</label>
-        <div class="custom-dropdown" id="drop-category">
-            <div class="dropdown-header" onclick="toggleDropdown('list-category')">
-                <span id="label-category">Seleccionar...</span>
-                <i class="fa-solid fa-chevron-down"></i>
-            </div>
-            <div id="list-category" class="dropdown-content">
-                <div class="dropdown-controls">
-                    <button class="btn-mini" onclick="toggleGroup('list-category', true)">Todos</button>
-                    <button class="btn-mini" onclick="toggleGroup('list-category', false)">Ninguno</button>
+            <!-- Filtro Meses -->
+            <div class="filter-group">
+                <label>Meses</label>
+                <div class="custom-dropdown" id="drop-month">
+                    <div class="dropdown-header" onclick="toggleDropdown('list-month')">
+                        <span id="label-month">Seleccionar...</span>
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </div>
+                    <div id="list-month" class="dropdown-content">
+                        <div class="dropdown-controls">
+                            <button class="btn-mini" onclick="toggleGroup('items-month', true, event)">Todos</button>
+                            <button class="btn-mini" onclick="toggleGroup('items-month', false, event)">Ninguno</button>
+                        </div>
+                        <div class="dropdown-items" id="items-month"></div>
+                    </div>
                 </div>
-                <div class="dropdown-items" id="items-category"></div>
             </div>
-        </div>
-    </div>
-</aside>
+
+            <!-- Filtro Categorías -->
+            <div class="filter-group">
+                <label>Categorías</label>
+                <div class="custom-dropdown" id="drop-category">
+                    <div class="dropdown-header" onclick="toggleDropdown('list-category')">
+                        <span id="label-category">Seleccionar...</span>
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </div>
+                    <div id="list-category" class="dropdown-content">
+                        <div class="dropdown-controls">
+                            <button class="btn-mini" onclick="toggleGroup('items-category', true, event)">Todos</button>
+                            <button class="btn-mini" onclick="toggleGroup('items-category', false, event)">Ninguno</button>
+                        </div>
+                        <div class="dropdown-items" id="items-category"></div>
+                    </div>
+                </div>
+            </div>
+        </aside>
 
         <!-- CONTENIDO PRINCIPAL -->
         <main class="main-content">
@@ -218,7 +216,7 @@
                 </div>
                 <div class="kpi-card">
                     <div class="kpi-icon" style="background: #2dce89;"><i class="fa-solid fa-location-crosshairs"></i></div>
-                     <div class="kpi-data"><h3>Zona Principal</h3><span id="kpi-location">Esperando datos...</span></div>
+                     <div class="kpi-data"><h3>Zona</h3><span id="kpi-location">Esperando...</span></div>
                 </div>
                 <div class="kpi-card">
                     <div class="kpi-icon" style="background: #fb6340;"><i class="fa-solid fa-calendar-check"></i></div>
@@ -230,12 +228,12 @@
             <div class="charts-grid-top">
                 <div class="chart-container" id="container-timeline">
                     <div class="chart-header">
-                        <h4>Evolución Temporal</h4>
+                        <h4>Evolución</h4>
                         <div class="header-actions">
                             <select id="select-temporal-view" class="btn-mini" onchange="changeTemporalView(this.value)">
-                                <option value="year">Vista: Años</option>
-                                <option value="month">Vista: Meses</option>
-                                <option value="day">Vista: Días Semanal</option>
+                                <option value="year">Años</option>
+                                <option value="month">Meses</option>
+                                <option value="day">Día Sem.</option>
                             </select>
                             <button class="btn-maximize" onclick="toggleFullscreen('container-timeline')">
                                 <i class="fa-solid fa-maximize"></i>
@@ -247,7 +245,7 @@
 
                 <div class="chart-container" id="container-category">
                     <div class="chart-header">
-                        <h4>Top Categorías</h4>
+                        <h4>Top Tipos</h4>
                         <button class="btn-maximize" onclick="toggleFullscreen('container-category')">
                             <i class="fa-solid fa-maximize"></i>
                         </button>
@@ -260,7 +258,7 @@
             <div class="bottom-grid">
                 <div class="chart-container" id="container-hours">
                     <div class="chart-header">
-                        <h4>Actividad por Horas</h4>
+                        <h4>Horas</h4>
                         <button class="btn-maximize" onclick="toggleFullscreen('container-hours')">
                             <i class="fa-solid fa-maximize"></i>
                         </button>
@@ -270,16 +268,16 @@
                 
                 <div class="map-container-wrapper" id="container-map">
                     <div class="chart-header">
-                        <h4>Mapa de Calor e Incidencias</h4>
+                        <h4>Mapa</h4>
                         <div class="header-actions">
                             <button class="btn-mini" id="btn-heatmap" onclick="toggleHeatmap(this)">
-                                <i class="fa-solid fa-fire"></i> Modo: Calor
+                                <i class="fa-solid fa-fire"></i>
                             </button>
                             <button class="btn-mini" onclick="toggleSatelite(this)">
-                                <i class="fa-solid fa-earth-americas"></i> Satélite
+                                <i class="fa-solid fa-earth-americas"></i>
                             </button>
                             <button class="btn-mini" onclick="toggle3D()">
-                                <i class="fa-solid fa-cube"></i> 3D
+                                <i class="fa-solid fa-cube"></i>
                             </button>
                             <button class="btn-maximize" onclick="toggleFullscreen('container-map')">
                                 <i class="fa-solid fa-expand"></i>
