@@ -231,36 +231,93 @@ function toggleGroup(containerId, state, event) {
     }
 }
 
+// ============================================================
+// FUNCIÓN CENTRAL: ACTUALIZAR UI (FILTROS Y VISUALIZACIONES)
+// ============================================================
 function updateUI() {
-    const getChecked = (id) => Array.from(document.querySelectorAll(`#${id} input:checked`)).map(i => i.value);
-    const getLabels = (id) => {
-        const checked = Array.from(document.querySelectorAll(`#${id} input:checked`));
-        const total = document.querySelectorAll(`#${id} input`).length;
-        if (checked.length === 0) return "Ninguno";
-        if (checked.length === total) return "Todos";
-        return checked.length === 1 ? checked[0].nextElementSibling.innerText : `${checked.length} selecc.`;
+    
+    // --- 1. FUNCIONES AUXILIARES INTERNAS ---
+
+    // Obtener array de VALORES (para filtrar los datos)
+    const getValues = (containerId) => {
+        return Array.from(document.querySelectorAll(`#${containerId} input:checked`))
+                    .map(input => input.value);
     };
 
-    const selYears = getChecked('items-year').map(Number);
-    const selMonths = getChecked('items-month').map(Number);
-    const selCats = getChecked('items-category');
+    // Obtener TEXTO legible (para mostrar en Navbar y Sidebar)
+    const getLabels = (containerId) => {
+        const allInputs = document.querySelectorAll(`#${containerId} input`);
+        const checkedInputs = Array.from(document.querySelectorAll(`#${containerId} input:checked`));
 
-    // Actualizar Textos de los Combos
-    document.getElementById('label-year').innerText = getLabels('items-year');
-    document.getElementById('label-month').innerText = getLabels('items-month');
-    document.getElementById('label-category').innerText = getLabels('items-category');
+        if (checkedInputs.length === 0) return "NINGUNO";
+        if (checkedInputs.length === allInputs.length) return "TODOS";
 
-    // Actualizar Navbar
-    document.getElementById('header-year').innerText = getLabels('items-year').toUpperCase();
-    document.getElementById('header-month').innerText = getLabels('items-month').toUpperCase();
+        // Obtener el texto del <span> que está al lado del checkbox
+        return checkedInputs.map(input => input.nextElementSibling.innerText).join(", ");
+    };
 
-    const filtered = finalData.filter(d => selYears.includes(d.year) && selMonths.includes(d.month) && selCats.includes(d.cat));
+    // --- 2. CAPTURAR SELECCIONES ---
+    
+    // Convertimos años y meses a número para comparar correctamente
+    const selYears = getValues('items-year').map(Number);
+    const selMonths = getValues('items-month').map(Number);
+    const selCats = getValues('items-category'); // Categorías son strings
+
+    // --- 3. ACTUALIZAR TEXTOS EN INTERFAZ (Sidebar y Navbar) ---
+
+    // AÑOS
+    const txtYears = getLabels('items-year');
+    document.getElementById('label-year').innerText = txtYears; // Sidebar
+    const headYear = document.getElementById('header-year');    // Navbar
+    if (headYear) {
+        headYear.innerText = txtYears;
+        headYear.title = txtYears; // Tooltip por si se corta
+    }
+
+    // MESES
+    const txtMonths = getLabels('items-month');
+    document.getElementById('label-month').innerText = txtMonths; // Sidebar
+    const headMonth = document.getElementById('header-month');    // Navbar
+    if (headMonth) {
+        headMonth.innerText = txtMonths;
+        headMonth.title = txtMonths;
+    }
+
+    // CATEGORÍAS
+    const txtCats = getLabels('items-category');
+    document.getElementById('label-category').innerText = txtCats; // Sidebar
+    const headCat = document.getElementById('header-category');    // Navbar (Nuevo)
+    if (headCat) {
+        headCat.innerText = txtCats;
+        headCat.title = txtCats;
+    }
+
+    // --- 4. FILTRADO DE DATOS ---
+
+    const filtered = finalData.filter(d => 
+        selYears.includes(d.year) && 
+        selMonths.includes(d.month) && 
+        selCats.includes(d.cat)
+    );
+
+    // --- 5. ACTUALIZAR KPIs ---
+
+    // Contador Grande
     document.getElementById('kpi-count').innerText = filtered.length.toLocaleString();
+    
+    // Badge Navbar
     const badge = document.getElementById('kpi-total-filas');
     if(badge) badge.innerText = `${filtered.length} REGISTROS`;
 
-    updateMapData(filtered);
-    updateCharts(filtered, selYears);
+    // --- 6. ACTUALIZAR VISUALIZACIONES ---
+
+    updateMapData(filtered);         // Puntos en el mapa
+    updateCharts(filtered, selYears);// Gráficos
+
+    // Actualizar nombre de la ciudad (Geolocalización)
+    if (typeof updateLocationKPI === "function") {
+        updateLocationKPI(filtered);
+    }
 }
 
 // ============================================================
@@ -354,3 +411,58 @@ function toggleSatelite(btn) { isSatelite = !isSatelite; map.setLayoutProperty('
 function toggleHeatmap(btn) { isHeatmap = !isHeatmap; map.setLayoutProperty('heat-layer', 'visibility', isHeatmap ? 'visible' : 'none'); map.setLayoutProperty('point-layer', 'visibility', isHeatmap ? 'none' : 'visible'); btn.innerHTML = isHeatmap ? '<i class="fa-solid fa-location-dot"></i> Puntos' : '<i class="fa-solid fa-fire"></i> Calor'; }
 function toggle3D() { const p = map.getPitch(); map.easeTo({ pitch: p > 0 ? 0 : 60, bearing: p > 0 ? 0 : -20, duration: 1000 }); }
 function toggleFullscreen(id) { document.getElementById(id).classList.toggle('fullscreen'); setTimeout(() => { if(chartTimeline) chartTimeline.resize(); if(chartCategory) chartCategory.resize(); if(chartHours) chartHours.resize(); if(map) map.resize(); }, 300); }
+// ============================================================
+// NUEVA FUNCIÓN: OBTENER CIUDAD POR GEOLOCALIZACIÓN
+// ============================================================
+// ============================================================
+// FUNCIÓN MEJORADA: GEOLOCALIZACIÓN CON PREFERENCIA EUSKERA
+// ============================================================
+async function updateLocationKPI(data) {
+    const el = document.getElementById('kpi-location');
+    
+    if (!data || data.length === 0) {
+        el.innerText = "Sin Datos";
+        return;
+    }
+
+    // 1. Calcular el centro (promedio)
+    let totalLat = 0, totalLon = 0;
+    data.forEach(d => {
+        totalLat += d.lat;
+        totalLon += d.lon;
+    });
+    
+    const centerLat = totalLat / data.length;
+    const centerLon = totalLon / data.length;
+
+    // Mostramos coord. temporalmente
+    el.innerText = `${centerLat.toFixed(3)}, ${centerLon.toFixed(3)}`;
+
+    // 2. Petición a OpenStreetMap con preferencia de idioma (eu = Euskera, es = Español)
+    try {
+        // AÑADIDO: &accept-language=eu,es
+        const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${centerLat}&lon=${centerLon}&zoom=10&accept-language=eu,es`;
+        
+        const response = await fetch(url, { headers: { 'User-Agent': 'EurocopAnalytics/1.0' } });
+        if(response.ok) {
+            const json = await response.json();
+            const addr = json.address;
+            
+            // Lógica de jerarquía para encontrar el nombre correcto
+            // A veces viene como ciudad, pueblo, villa o municipio
+            let placeName = addr.city || addr.town || addr.village || addr.municipality || addr.county;
+
+            // CASO ESPECIAL: Si es Bilbao, a veces OSM devuelve "Bilbo" en Euskera puro.
+            // Si prefieres el nombre oficial bilingüe (ej: Vitoria-Gasteiz), OSM suele devolver 
+            // el nombre oficial primero si usamos 'accept-language=eu,es'.
+            
+            if (placeName) {
+                el.innerText = placeName.toUpperCase();
+            } else {
+                el.innerText = "ZONA DESCONOCIDA";
+            }
+        }
+    } catch (error) {
+        console.warn("Error obteniendo localidad:", error);
+    }
+}

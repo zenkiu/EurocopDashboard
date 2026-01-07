@@ -26,27 +26,34 @@
     <!-- =========================================
        NAVBAR SUPERIOR
     ========================================== -->
-    <nav class="navbar">
-        <!-- Izquierda: Logo (Con función para regresar) -->
-        <div class="logo" onclick="goToMapping()" style="cursor:pointer" title="Volver a Configuración">
-            <span class="logo-icon"><i class="fa-solid fa-shield-halved"></i></span>
-            <span class="logo-text">EUROCOP ANALYTICS<span class="dot">.</span></span>
-        </div>
+<!-- index.html -->
+<nav class="navbar">
+    <!-- Izquierda: Logo (Con función para regresar) -->
+    <div class="logo" onclick="goToMapping()" style="cursor:pointer" title="Volver a Configuración">
+        <span class="logo-icon"><i class="fa-solid fa-shield-halved"></i></span>
+        <span class="logo-text">EUROCOP ANALYTICS<span class="dot">.</span></span>
+    </div>
 
-        <!-- Centro: Nombre del archivo -->
-        <div class="nav-center">
-            <div id="display-filename" class="filename-pill">SIN ARCHIVO CARGADO</div>
-        </div>
+    <!-- Centro: Nombre del archivo - ESTE BLOQUE SE ELIMINA -->
+    <!-- <div class="nav-center">
+        <div id="display-filename" class="filename-pill">SIN ARCHIVO CARGADO</div>
+    </div> -->
 
-        <!-- Derecha: Registros y Filtros Dinámicos -->
-        <div class="nav-right">
-            <span id="kpi-total-filas" class="badge-records">0 REGISTROS</span>
-            <div class="nav-filters-info">
-                <strong>AÑO:</strong> <span id="header-year">----</span>
-                <strong>MES:</strong> <span id="header-month">----</span>
-            </div>
+    <!-- Derecha: Registros y Filtros Dinámicos -->
+    <div class="nav-right">
+        <!-- AÑADIDO / MOVIDO: La píldora del nombre del archivo, ahora dentro de nav-right -->
+        <div id="display-filename" class="filename-pill">SIN ARCHIVO CARGADO</div>
+        
+        <span id="kpi-total-filas" class="badge-records">0 REGISTROS</span>
+        <div class="nav-filters-info">
+            <strong>AÑO:</strong> <span id="header-year" class="info-text">----</span>
+            <span class="sep">|</span>
+            <strong>MES:</strong> <span id="header-month" class="info-text">----</span>
+            <span class="sep">|</span>
+            <strong>CAT:</strong> <span id="header-category" class="info-text">----</span>
         </div>
-    </nav>
+    </div>
+</nav>
 
     <!-- =========================================
        VISTA 1: CARGA DE ARCHIVOS
@@ -211,7 +218,7 @@
                 </div>
                 <div class="kpi-card">
                     <div class="kpi-icon" style="background: #2dce89;"><i class="fa-solid fa-location-crosshairs"></i></div>
-                    <div class="kpi-data"><h3>Zona Principal</h3><span>Durango / Local</span></div>
+                     <div class="kpi-data"><h3>Zona Principal</h3><span id="kpi-location">Esperando datos...</span></div>
                 </div>
                 <div class="kpi-card">
                     <div class="kpi-icon" style="background: #fb6340;"><i class="fa-solid fa-calendar-check"></i></div>
