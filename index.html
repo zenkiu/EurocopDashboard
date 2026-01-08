@@ -68,7 +68,8 @@
                 
                 <div class="drop-zone" id="drop-zone">
                     <i class="fa-solid fa-cloud-arrow-up upload-icon"></i>
-                    <span>TOCA PARA SUBIR</span>
+                    <!-- TEXTO CAMBIADO -->
+                    <span>ARRASTRAR O TOCAR PARA SUBIR</span>
                     <input type="file" id="file-input" accept=".csv, .xlsx, .xls" hidden>
                 </div>
                 <div class="csv-info">
@@ -116,12 +117,22 @@
                     </div>
                 </div>
 
+                <!-- COLUMNA 3: CATEGORÍA Y LOCALIDAD -->
                 <div class="mapping-col">
-                    <div class="card full-height highlighted-card">
+                    <!-- Tarjeta Categoría -->
+                    <div class="card highlighted-card">
                         <div class="highlight-badge">ANÁLISIS</div>
                         <label><strong>CATEGORÍA / TIPO</strong></label>
-                        <p class="card-desc">Define el tipo de incidencia.</p>
+                        <p class="card-desc">Selecciona la columna que define el tipo de incidencia.</p>
                         <select id="map-categoria" class="styled-select select-accent"></select>
+                    </div>
+
+                    <!-- NUEVA TARJETA: LOCALIDAD (TEXTO LIBRE) -->
+                    <div class="card">
+                        <label><strong>LOCALIDAD (Opcional)</strong></label>
+                        <p class="card-desc">Escribe el nombre para forzar la zona. Déjalo vacío para GPS.</p>
+                        <!-- CAMBIO: Ahora es un input de texto, no un select -->
+                        <input type="text" id="map-localidad" class="styled-select" placeholder="Ej: DURANGO" autocomplete="off">
                     </div>
                 </div>
             </div>
@@ -226,32 +237,59 @@
 
             <!-- GRÁFICOS SUPERIORES -->
             <div class="charts-grid-top">
-                <div class="chart-container" id="container-timeline">
-                    <div class="chart-header">
-                        <h4>Evolución</h4>
-                        <div class="header-actions">
-                            <select id="select-temporal-view" class="btn-mini" onchange="changeTemporalView(this.value)">
-                                <option value="year">Años</option>
-                                <option value="month">Meses</option>
-                                <option value="day">Día Sem.</option>
-                            </select>
-                            <button class="btn-maximize" onclick="toggleFullscreen('container-timeline')">
-                                <i class="fa-solid fa-maximize"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="canvas-wrapper"><canvas id="chart-timeline"></canvas></div>
-                </div>
+            <div class="chart-container" id="container-timeline">
+                <div class="chart-header">
+                    <h4>Evolución Temporal</h4>
+                    <div class="header-actions">
+                        <!-- Selector de Vista (Año/Mes/Día) -->
+                        <select id="select-temporal-view" class="btn-mini" onchange="changeTemporalView(this.value)">
+                            <option value="year">Vista: Años</option>
+                            <option value="month" selected>Vista: Meses</option>
+                            <option value="day">Vista: Días Semanal</option>
+                        </select>
+                        
+                        <!-- NUEVO: Botón alternar Gráfico / Tabla -->
+                        <button class="btn-mini" id="btn-toggle-view" onclick="toggleTimelineView()" title="Ver Tabla de Datos">
+                            <i class="fa-solid fa-table"></i>
+                        </button>
 
-                <div class="chart-container" id="container-category">
-                    <div class="chart-header">
-                        <h4>Top Tipos</h4>
+                        <!-- Botón Maximizar -->
+                        <button class="btn-maximize" onclick="toggleFullscreen('container-timeline')">
+                            <i class="fa-solid fa-maximize"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="canvas-wrapper">
+                    <!-- El Canvas del Gráfico -->
+                    <canvas id="chart-timeline"></canvas>
+                    
+                    <!-- NUEVO: El Contenedor de la Tabla (Oculto por defecto) -->
+                    <div id="table-timeline-view" class="table-view" style="display: none;"></div>
+                </div>
+            </div>
+
+            <div class="chart-container" id="container-category">
+                <div class="chart-header">
+                    <h4>Top Tipos</h4>
+                    <div class="header-actions">
+                        <!-- NUEVO: Botón alternar Tabla/Gráfico -->
+                        <button class="btn-mini" id="btn-toggle-view-cat" onclick="toggleCategoryView()" title="Ver Tabla de Datos">
+                            <i class="fa-solid fa-table"></i>
+                        </button>
+                        
+                        <!-- Botón Maximizar -->
                         <button class="btn-maximize" onclick="toggleFullscreen('container-category')">
                             <i class="fa-solid fa-maximize"></i>
                         </button>
                     </div>
-                    <div class="canvas-wrapper"><canvas id="chart-category"></canvas></div>
                 </div>
+                <div class="canvas-wrapper">
+                    <canvas id="chart-category"></canvas>
+                    <!-- NUEVO: Contenedor para la tabla -->
+                    <div id="table-category-view" class="table-view" style="display: none;"></div>
+                </div>
+            </div>
             </div>
 
             <!-- MAPA Y HORAS -->

@@ -355,3 +355,73 @@ body {
     .mapping-layout { grid-template-columns: 1fr; padding: 15px; }
     .upload-card { width: 100%; padding: 20px; }
 }
+/* =========================================
+   ESTILOS NUEVOS: TABLA DE DATOS
+   ========================================= */
+
+/* Contenedor de la tabla (para scroll si es muy larga) */
+.table-view {
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background: white;
+}
+
+/* Estilo de la Tabla */
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+    font-family: 'Inter', sans-serif;
+    color: var(--text-dark);
+}
+
+.data-table th, .data-table td {
+    padding: 10px 15px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+
+/* Encabezados Ordenables */
+.data-table th {
+    background-color: #f8f9fe;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    position: sticky; /* Fija el encabezado al hacer scroll */
+    top: 0;
+    cursor: pointer; /* Manita para indicar click */
+    user-select: none; /* Evita selección de texto al hacer click rápido */
+    transition: background 0.2s;
+}
+
+.data-table th:hover {
+    background-color: #e9ecef;
+    color: var(--accent-blue);
+}
+
+/* Iconos de ordenación (Flechas) */
+.data-table th i {
+    margin-left: 5px;
+    opacity: 0.3;
+}
+.data-table th.sorted-asc i { opacity: 1; transform: rotate(180deg); } /* Flecha arriba */
+.data-table th.sorted-desc i { opacity: 1; transform: rotate(0deg); }   /* Flecha abajo */
+
+/* Filas Alternas */
+.data-table tbody tr:hover {
+    background-color: #f6f9fc;
+}
+
+/* Alineación de columnas numéricas a la derecha */
+.data-table td:not(:first-child), .data-table th:not(:first-child) {
+    text-align: right;
+}
+/* Efecto al arrastrar archivo encima */
+.drop-zone.dragover {
+    background-color: #eef2ff; /* Fondo azul claro */
+    border-color: var(--accent-blue); /* Borde azul intenso */
+    transform: scale(1.02); /* Efecto de crecimiento */
+    color: var(--accent-blue);
+}
