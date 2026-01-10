@@ -90,22 +90,57 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function processFile(file) {
     if (!file) return;
-    nombreArchivoSubido = file.name.replace(/\.[^/.]+$/, "").toUpperCase();
-    const displayEl = document.getElementById('display-filename');
-    if (displayEl) displayEl.textContent = nombreArchivoSubido;
 
-    if (file.name.endsWith('.csv')) {
-        Papa.parse(file, { header: true, skipEmptyLines: true, encoding: "UTF-8", complete: (res) => showMapping(res.data) });
-    } else {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const dataArr = new Uint8Array(e.target.result);
-            const wb = XLSX.read(dataArr, {type: 'array', cellDates: true});
-            const data = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: "" });
-            showMapping(data);
-        };
-        reader.readAsArrayBuffer(file);
-    }
+    // 1. Mostrar el indicador de carga
+    document.getElementById('loading-overlay').classList.add('active');
+
+    // Usamos setTimeout para permitir que el navegador renderice el loader
+    // antes de bloquearse procesando el Excel.
+    setTimeout(() => {
+        try {
+            nombreArchivoSubido = file.name.replace(/\.[^/.]+$/, "").toUpperCase();
+            const displayEl = document.getElementById('display-filename');
+            if (displayEl) displayEl.textContent = nombreArchivoSubido;
+
+            if (file.name.endsWith('.csv')) {
+                Papa.parse(file, {
+                    header: true,
+                    skipEmptyLines: true,
+                    encoding: "UTF-8",
+                    complete: (res) => {
+                        showMapping(res.data);
+                        // Ocultar loader tras procesar CSV
+                        document.getElementById('loading-overlay').classList.remove('active');
+                    },
+                    error: (err) => {
+                        console.error(err);
+                        alert("Error al leer CSV");
+                        document.getElementById('loading-overlay').classList.remove('active');
+                    }
+                });
+            } else {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const dataArr = new Uint8Array(e.target.result);
+                        const wb = XLSX.read(dataArr, {type: 'array', cellDates: true});
+                        const data = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: "" });
+                        showMapping(data);
+                    } catch (error) {
+                        console.error(error);
+                        alert("El archivo Excel parece dañado o no es válido.");
+                    } finally {
+                        // Ocultar loader SIEMPRE al finalizar, haya error o no
+                        document.getElementById('loading-overlay').classList.remove('active');
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            }
+        } catch (e) {
+            console.error(e);
+            document.getElementById('loading-overlay').classList.remove('active');
+        }
+    }, 100); // 100ms de retraso para asegurar que el loader aparezca visualmente
 }
 
 function goToMapping() {
@@ -123,7 +158,6 @@ function showMapping(data) {
     rawData = data;
     const headers = Object.keys(data[0]);
     
-    // NOTA: Hemos quitado 'map-localidad' de aquí porque ya no es un desplegable
     const mappingIds = ['map-expediente', 'map-fecha', 'map-hora', 'map-lat', 'map-lon', 'map-categoria'];
     
     mappingIds.forEach(id => {
@@ -143,10 +177,14 @@ function showMapping(data) {
             newSel.appendChild(opt);
         });
 
-        // Auto-detección
+        // Auto-detección MEJORADA
         headers.forEach(h => {
             const s = h.toLowerCase();
-            if (id.includes('exp') && (s.includes('exp') || s.includes('id'))) newSel.value = h;
+            
+            // AQUÍ ESTÁ EL CAMBIO SOLICITADO PARA CONTADOR/ID
+            // Agregamos 'refnum' como condición prioritaria o parte del OR
+            if (id.includes('exp') && (s === 'refnum' || s.includes('exp') || s.includes('id'))) newSel.value = h;
+
             if (id.includes('fecha') && (s.includes('fec') || s.includes('date'))) newSel.value = h;
             if (id.includes('hora') && (s.includes('hor') || s.includes('time'))) newSel.value = h;
             if (id.includes('lat') && (s.includes('lat') || s === 'y')) newSel.value = h;
@@ -155,7 +193,6 @@ function showMapping(data) {
         });
     });
 
-    // Limpiar el campo de localidad por si acaso
     const locInput = document.getElementById('map-localidad');
     if(locInput) locInput.value = "";
 
