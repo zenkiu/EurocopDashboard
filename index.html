@@ -57,6 +57,7 @@
     </nav>
 
     <!-- VISTA 1: CARGA DE ARCHIVOS -->
+<!-- VISTA 1: CARGA DE ARCHIVOS -->
     <section id="upload-view" class="view-container active">
         <div class="upload-center">
             <div class="upload-card">
@@ -68,13 +69,25 @@
                 
                 <div class="drop-zone" id="drop-zone">
                     <i class="fa-solid fa-cloud-arrow-up upload-icon"></i>
-                    <!-- TEXTO CAMBIADO -->
                     <span>ARRASTRAR O TOCAR PARA SUBIR</span>
                     <input type="file" id="file-input" accept=".csv, .xlsx, .xls" hidden>
                 </div>
+                
                 <div class="csv-info">
                     <small><i class="fa-solid fa-circle-info"></i> Compatible con móviles</small>
                 </div>
+
+                <!-- NUEVO: BOTÓN DE MANUAL PDF (CORREGIDO) -->
+<!-- Dentro de <div class="upload-card"> ... -->
+
+            <!-- BOTÓN QUE ABRE EL VISOR INTEGRADO -->
+            <div class="manual-container">
+                <button onclick="openPdfModal()" class="btn-manual-pill">
+                    <i class="fa-solid fa-book-open"></i>
+                    <span>Ver Manual de Ayuda</span>
+                </button>
+            </div>
+                
             </div>
         </div>
     </section>
@@ -337,6 +350,21 @@
             <small>Esto puede tardar unos segundos si el archivo es grande.</small>
         </div>
     </div>
+    <!-- MODAL VISOR PDF (NUEVO) -->
+    <div id="pdf-modal" class="pdf-modal-overlay">
+        <div class="pdf-modal-content">
+            <div class="pdf-header">
+                <h3><i class="fa-solid fa-book"></i> Manual de Usuario</h3>
+                <button onclick="closePdfModal()" class="btn-close-pdf"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="pdf-body">
+                <!-- AQUÍ CARGAMOS EL ARCHIVO manual.pdf -->
+                <iframe src="./manual.pdf" id="pdf-frame" frameborder="0"></iframe>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
     <!-- LIBRERÍAS EXTERNAS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script> 

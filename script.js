@@ -713,3 +713,27 @@ function updateSortIcons(activeCol, containerSelector, sortObj) {
         }
     }
 }
+// ============================================================
+// LÓGICA DEL VISOR PDF
+// ============================================================
+function openPdfModal() {
+    document.getElementById('pdf-modal').classList.add('active');
+}
+
+function closePdfModal() {
+    document.getElementById('pdf-modal').classList.remove('active');
+}
+
+// Cerrar si se hace clic fuera de la caja blanca (en el fondo oscuro)
+document.getElementById('pdf-modal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closePdfModal();
+    }
+});
+
+// Cerrar con la tecla ESC
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && document.getElementById('pdf-modal').classList.contains('active')) {
+        closePdfModal();
+    }
+});
