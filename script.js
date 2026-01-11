@@ -419,40 +419,79 @@ function updateCharts(data, selYears) {
     };
 
     // TIMELINE
+// TIMELINE
     const ctxTimeline = document.getElementById('chart-timeline');
     if (ctxTimeline) {
         const sortedYears = [...selYears].sort((a,b) => a-b);
         let labels = [], datasets = [];
         
+        // 1. VISTA POR AÑOS
         if (temporalView === 'year') {
             labels = sortedYears.map(y => y.toString());
-            datasets = [{ label: 'Registros', data: sortedYears.map(y => data.filter(d => d.year === y).length), backgroundColor: sortedYears.map(y => yearColors[allYearsMaster.indexOf(y) % yearColors.length].bg), borderColor: sortedYears.map(y => yearColors[allYearsMaster.indexOf(y) % yearColors.length].border), borderWidth: 2 }];
+            datasets = [{ 
+                label: 'Registros', 
+                data: sortedYears.map(y => data.filter(d => d.year === y).length), 
+                backgroundColor: sortedYears.map(y => yearColors[allYearsMaster.indexOf(y) % yearColors.length].bg), 
+                borderColor: sortedYears.map(y => yearColors[allYearsMaster.indexOf(y) % yearColors.length].border), 
+                borderWidth: 2 
+            }];
+
+        // 2. VISTA POR MESES
         } else if (temporalView === 'month') {
             labels = monthsConfig.map(m => m.abbr);
             datasets = sortedYears.map(y => {
-                const c = Array(12).fill(0); data.filter(d => d.year === y).forEach(d => c[d.month - 1]++);
+                const c = Array(12).fill(0); 
+                data.filter(d => d.year === y).forEach(d => c[d.month - 1]++);
                 const col = yearColors[allYearsMaster.indexOf(y) % yearColors.length];
                 return { label: y.toString(), data: c, backgroundColor: col.bg, borderColor: col.border, borderWidth: 2 };
             });
+
+        // 3. VISTA TRIMESTRAL (NUEVO)
+        } else if (temporalView === 'quarter') {
+            labels = ['1º Trim (Ene-Mar)', '2º Trim (Abr-Jun)', '3º Trim (Jul-Sep)', '4º Trim (Oct-Dic)'];
+            datasets = sortedYears.map(y => {
+                const c = Array(4).fill(0); 
+                data.filter(d => d.year === y).forEach(d => {
+                    // Cálculo: (Mes - 1) / 3 nos da el índice 0, 1, 2 o 3
+                    const qIndex = Math.floor((d.month - 1) / 3);
+                    c[qIndex]++;
+                });
+                const col = yearColors[allYearsMaster.indexOf(y) % yearColors.length];
+                return { label: y.toString(), data: c, backgroundColor: col.bg, borderColor: col.border, borderWidth: 2 };
+            });
+
+        // 4. VISTA POR DÍAS SEMANAL
         } else if (temporalView === 'day') {
             labels = dayLabels.map(l => l.substring(0,3));
             datasets = sortedYears.map(y => {
-                const c = Array(7).fill(0); data.filter(d => d.year === y).forEach(d => { let idx = d.date.getDay(); c[idx === 0 ? 6 : idx - 1]++; });
+                const c = Array(7).fill(0); 
+                data.filter(d => d.year === y).forEach(d => { 
+                    let idx = d.date.getDay(); 
+                    c[idx === 0 ? 6 : idx - 1]++; // Ajuste para que Lunes sea 0 y Domingo 6
+                });
                 const col = yearColors[allYearsMaster.indexOf(y) % yearColors.length];
                 return { label: y.toString(), data: c, backgroundColor: col.bg, borderColor: col.border, borderWidth: 2 };
             });
         }
 
+        // --- LÓGICA DE TABLA DE DATOS (Se actualiza automáticamente con la vista) ---
         tableDataCache = [];
         labels.forEach((lbl, index) => {
             let row = { label: lbl, index: index };
             datasets.forEach(ds => { row[ds.label] = ds.data[index]; });
             tableDataCache.push(row);
         });
+        
+        // Si la tabla está abierta, refrescarla
         if (isTableView) renderTimelineTable();
 
+        // --- CREACIÓN DEL GRÁFICO ---
         if (chartTimeline) chartTimeline.destroy();
-        chartTimeline = new Chart(ctxTimeline, { type: 'bar', data: { labels, datasets }, options: commonOptions });
+        chartTimeline = new Chart(ctxTimeline, { 
+            type: 'bar', 
+            data: { labels, datasets }, 
+            options: commonOptions 
+        });
     }
 
     // CATEGORY
