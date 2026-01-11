@@ -493,6 +493,8 @@ body {
     display: flex;
     justify-content: center;
     width: 100%;
+    gap: 15px; /* AGREGAR ESTO: Separa los botones 15px entre sí */
+    flex-wrap: wrap; /* AGREGAR ESTO: Si la pantalla es muy pequeña, uno baja debajo del otro */
 }
 
 .btn-manual-pill {
@@ -630,4 +632,71 @@ body {
     background-color: white;
     transform: translateY(-2px);
     box-shadow: 0 4px 6px rgba(50, 50, 93, 0.11);
+}
+/* =========================================
+   ESTILOS DE MARCA PERSONAL (ZZENKIU)
+   ========================================= */
+
+/* 1. Estilos para la Pantalla de Carga */
+.brand-footer {
+    margin-top: 35px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    opacity: 0.8; /* Un poco transparente para no robar foco */
+    transition: opacity 0.3s;
+}
+
+.brand-footer:hover {
+    opacity: 1;
+}
+
+.brand-label {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 600;
+}
+
+.brand-logo {
+    max-width: 120px; /* Ajusta este tamaño según tu gusto */
+    height: auto;
+    display: block;
+}
+
+/* 2. Estilos para el Menú Lateral (Sidebar) */
+/* Aseguramos que el sidebar use flex para empujar el logo al final */
+.sidebar {
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-footer {
+    margin-top: auto; /* Esto empuja el logo al fondo del menú */
+    padding-top: 20px;
+    border-top: 1px solid var(--border-color);
+    text-align: center;
+    display: flex;
+    justify-content: center;
+}
+
+.sidebar-logo {
+    max-width: 100px; /* Un poco más pequeño en el menú */
+    height: auto;
+    opacity: 0.7;
+    transition: opacity 0.3s;
+}
+
+.sidebar-logo:hover {
+    opacity: 1;
+}
+
+/* Ajuste para móvil: Ocultar o reducir logo si molesta */
+@media (max-width: 768px) {
+    .sidebar-footer {
+        padding-bottom: 80px; /* Espacio extra en móvil si es necesario */
+    }
 }

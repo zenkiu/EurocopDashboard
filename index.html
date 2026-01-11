@@ -77,17 +77,26 @@
                     <small><i class="fa-solid fa-circle-info"></i> Compatible con móviles</small>
                 </div>
 
-                <!-- NUEVO: BOTÓN DE MANUAL PDF (CORREGIDO) -->
-<!-- Dentro de <div class="upload-card"> ... -->
+                <!-- BOTONES QUE ABREN EL VISOR INTEGRADO -->
+                <div class="manual-container">
+                    <!-- Botón Manual -->
+                    <button onclick="openPdfModal('Manual.pdf', 'Manual de Ayuda')" class="btn-manual-pill">
+                        <i class="fa-solid fa-book-open"></i>
+                        <span>Ver Manual</span>
+                    </button>
 
-            <!-- BOTÓN QUE ABRE EL VISOR INTEGRADO -->
-            <div class="manual-container">
-                <button onclick="openPdfModal()" class="btn-manual-pill">
-                    <i class="fa-solid fa-book-open"></i>
-                    <span>Ver Manual de Ayuda</span>
-                </button>
-            </div>
-                
+                    <!-- NUEVO: Botón Actualizaciones -->
+                    <button onclick="openPdfModal('Actualizaciones.pdf', 'Novedades y Actualizaciones')" class="btn-manual-pill">
+                        <i class="fa-solid fa-rotate"></i>
+                        <span>Actualizaciones</span>
+                    </button>
+                </div>
+                <!-- CONTENEDOR DE MARCA (Dentro de upload-card o justo debajo) -->
+                <div class="brand-footer">
+                    <span class="brand-label">Powered by</span>
+                    <!-- Asegúrate de que la ruta coincida con tu carpeta -->
+                    <img src="./ImagenCoorporativa/zzenkiu.png" alt="Zzenkiu" class="brand-logo">
+                </div>
             </div>
         </div>
     </section>
@@ -228,6 +237,10 @@
                     </div>
                 </div>
             </div>
+            <!-- MARCA AL PIE DEL SIDEBAR -->
+            <div class="sidebar-footer">
+                <img src="./ImagenCoorporativa/zzenkiu.png" alt="Zzenkiu" class="sidebar-logo">
+            </div>
         </aside>
 
         <!-- CONTENIDO PRINCIPAL -->
@@ -351,15 +364,17 @@
         </div>
     </div>
     <!-- MODAL VISOR PDF (NUEVO) -->
+<!-- MODAL VISOR PDF -->
     <div id="pdf-modal" class="pdf-modal-overlay">
         <div class="pdf-modal-content">
             <div class="pdf-header">
-                <h3><i class="fa-solid fa-book"></i> Manual de Usuario</h3>
+                <!-- Añadido ID al título para cambiarlo dinámicamente -->
+                <h3 id="pdf-modal-title"><i class="fa-solid fa-book"></i> Documento</h3>
                 <button onclick="closePdfModal()" class="btn-close-pdf"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="pdf-body">
-                <!-- AQUÍ CARGAMOS EL ARCHIVO manual.pdf -->
-                <iframe src="./Manual.pdf" id="pdf-frame" frameborder="0"></iframe>
+                <!-- SRC vacío por defecto, se llena con JS -->
+                <iframe src="" id="pdf-frame" frameborder="0"></iframe>
             </div>
         </div>
     </div>

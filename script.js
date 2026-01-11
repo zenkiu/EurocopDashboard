@@ -716,10 +716,20 @@ function updateSortIcons(activeCol, containerSelector, sortObj) {
 // ============================================================
 // LÓGICA DEL VISOR PDF
 // ============================================================
-function openPdfModal() {
+function openPdfModal(fileName, title) {
+    // 1. Establecer el título del modal
+    const titleEl = document.getElementById('pdf-modal-title');
+    if(titleEl) titleEl.innerHTML = `<i class="fa-solid fa-file-pdf"></i> ${title}`;
+
+    // 2. Cargar el archivo PDF buscando DENTRO de la carpeta ArchivosPdf
+    const frame = document.getElementById('pdf-frame');
+    
+    // AQUÍ ESTÁ EL CAMBIO: Añadimos "ArchivosPdf/" antes del nombre del archivo
+    if(frame) frame.src = "./ArchivosPdf/" + fileName; 
+
+    // 3. Mostrar el modal
     document.getElementById('pdf-modal').classList.add('active');
 }
-
 function closePdfModal() {
     document.getElementById('pdf-modal').classList.remove('active');
 }
