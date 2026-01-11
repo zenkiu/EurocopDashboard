@@ -24,6 +24,9 @@ let currentSort = { col: 0, dir: 'asc' };
 let isTableCatView = false;
 let tableCatDataCache = [];
 let currentSortCat = { col: 'count', dir: 'desc' };
+let isTableHoursView = false;
+let tableHoursDataCache = [];
+let currentSortHours = { col: 'hour', dir: 'asc' };
 
 const dayLabels = ['L-Lunes', 'M-Martes', 'X-Miércoles', 'J-Jueves', 'V-Viernes', 'S-Sábado', 'D-Domingo'];
 const monthsConfig = [
@@ -241,27 +244,50 @@ document.getElementById('btn-visualizar').onclick = () => {
         return;
     }
 
-    finalData = rawData.map(row => {
+finalData = rawData.map(row => {
+        // 1. Procesar FECHA (Esto sí lo mantenemos estricto, sin fecha no hay analytics)
         let d = new Date(row[config.fecha]);
         if (isNaN(d.getTime())) return null;
+
+        // 2. Procesar HORA
         if (config.hora && row[config.hora]) {
             const t = String(row[config.hora]);
-            if (t.includes(':')) { const p = t.split(':'); d.setHours(parseInt(p[0]) || 0, parseInt(p[1]) || 0, 0); }
+            if (t.includes(':')) { 
+                const p = t.split(':'); 
+                d.setHours(parseInt(p[0]) || 0, parseInt(p[1]) || 0, 0); 
+            }
         }
-        const lat = parseFloat(String(row[config.lat]).replace(',', '.'));
-        const lon = parseFloat(String(row[config.lon]).replace(',', '.'));
-        if (isNaN(lat) || isNaN(lon)) return null;
+
+        // 3. Procesar LATITUD Y LONGITUD (MODIFICADO)
+        let lat = parseFloat(String(row[config.lat]).replace(',', '.'));
+        let lon = parseFloat(String(row[config.lon]).replace(',', '.'));
+        
+        // Nueva bandera para saber si tiene ubicación válida
+        let tieneUbicacion = true;
+
+        if (isNaN(lat) || isNaN(lon) || (lat === 0 && lon === 0)) {
+            lat = 0; // Ponemos 0 para que no rompa el código, pero no lo usaremos en el mapa
+            lon = 0;
+            tieneUbicacion = false;
+        }
 
         return {
             exp: row[config.exp] || "N/A",
-            date: d, year: d.getFullYear(), month: d.getMonth() + 1, hour: d.getHours(),
-            lat, lon, cat: row[config.cat] || "General",
-            // Guardamos el dato manual en cada fila para tenerlo disponible
+            date: d, 
+            year: d.getFullYear(), 
+            month: d.getMonth() + 1, 
+            hour: d.getHours(),
+            lat: lat, 
+            lon: lon, 
+            hasGeo: tieneUbicacion, // <--- GUARDAMOS SI TIENE GPS O NO
+            cat: row[config.cat] || "General",
             locManual: config.locManual, 
-            calle: row['CALLE'] || row['calle'] || "", numero: row['NUMERO'] || row['numero'] || "",
-            refnum: row['REFNUM'] || "", refanno: row['REFANNO'] || ""
+            calle: row['CALLE'] || row['calle'] || "", 
+            numero: row['NUMERO'] || row['numero'] || "",
+            refnum: row['REFNUM'] || "", 
+            refanno: row['REFANNO'] || ""
         };
-    }).filter(v => v !== null);
+    }).filter(v => v !== null); // Solo eliminamos si la FECHA estaba mal
 
     document.getElementById('mapping-view').classList.remove('active');
     document.getElementById('dashboard-view').classList.add('active');
@@ -485,11 +511,46 @@ function updateCharts(data, selYears) {
     }
 
     // HOURS
+// HOURS
     const ctxHours = document.getElementById('chart-hours');
     if (ctxHours) {
-        const hC = Array(24).fill(0); data.forEach(d => hC[d.hour]++);
+        // 1. Calcular datos
+        const hC = Array(24).fill(0); 
+        data.forEach(d => hC[d.hour]++);
+        
+        // 2. Preparar datos para la TABLA (Cache)
+        const totalReg = data.length;
+        tableHoursDataCache = hC.map((count, index) => ({
+            hour: index, // Valor numérico para ordenar
+            hourLabel: String(index).padStart(2, '0') + ":00", // Texto "09:00"
+            count: count,
+            percent: totalReg > 0 ? ((count / totalReg) * 100).toFixed(1) : "0.0"
+        }));
+
+        // 3. Si la tabla está activa, renderizarla
+        if (isTableHoursView) renderHoursTable();
+
+        // 4. Dibujar Gráfico
         if (chartHours) chartHours.destroy();
-        chartHours = new Chart(ctxHours, { type: 'line', data: { labels: Array.from({length: 24}, (_,i) => i), datasets: [{ label: 'Actividad', data: hC, borderColor: '#11cdef', fill: true, backgroundColor: 'rgba(17,205,239,0.1)', tension: 0.4 }] }, options: { ...commonOptions, plugins: { legend: { display: false } }, scales: { x: { ticks: { maxTicksLimit: 8 } } } } });
+        chartHours = new Chart(ctxHours, { 
+            type: 'line', 
+            data: { 
+                labels: Array.from({length: 24}, (_,i) => i), 
+                datasets: [{ 
+                    label: 'Actividad', 
+                    data: hC, 
+                    borderColor: '#11cdef', 
+                    fill: true, 
+                    backgroundColor: 'rgba(17,205,239,0.1)', 
+                    tension: 0.4 
+                }] 
+            }, 
+            options: { 
+                ...commonOptions, 
+                plugins: { legend: { display: false } }, 
+                scales: { x: { ticks: { maxTicksLimit: 8 } } } 
+            } 
+        });
     }
 }
 
@@ -515,18 +576,64 @@ function initMap() {
 }
 
 function updateMapData(data) {
+    // Verificación de seguridad: si el mapa no está listo, no hacemos nada
     if (!map || !map.getSource('puntos')) return;
-    const geojson = { type: 'FeatureCollection', features: data.map(d => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [d.lon, d.lat] }, properties: { exp: d.exp, cat: d.cat, year: d.year, fullDate: d.date.toLocaleString('es-ES'), calle: d.calle, numero: d.numero, refnum: d.refnum, refanno: d.refanno } })) };
+
+    // 1. FILTRADO CRÍTICO:
+    // Separamos solo los datos que tienen coordenadas válidas para el mapa.
+    // Los que no tienen (hasGeo: false) se ignoran aquí para evitar errores visuales (puntos en el mar).
+    const datosConGeo = data.filter(d => d.hasGeo);
+
+    // 2. Construcción del GeoJSON solo con datos válidos
+    const geojson = { 
+        type: 'FeatureCollection', 
+        features: datosConGeo.map(d => ({ 
+            type: 'Feature', 
+            geometry: { 
+                type: 'Point', 
+                coordinates: [d.lon, d.lat] 
+            }, 
+            properties: { 
+                exp: d.exp, 
+                cat: d.cat, 
+                year: d.year, 
+                fullDate: d.date.toLocaleString('es-ES'), 
+                calle: d.calle, 
+                numero: d.numero, 
+                refnum: d.refnum, 
+                refanno: d.refanno 
+            } 
+        })) 
+    };
+
+    // 3. Actualizar la fuente del mapa
     map.getSource('puntos').setData(geojson);
+
+    // 4. Lógica de Colores (se mantiene igual)
+    // Usamos finalData para que los colores por año sean consistentes aunque filtremos
     const allY = [...new Set(finalData.map(d => d.year))].sort((a,b) => a-b);
     const colorExpr = ['match', ['get', 'year']];
-    allY.forEach(y => colorExpr.push(y, yearColors[allY.indexOf(y) % yearColors.length].border));
+    
+    allY.forEach(y => {
+        // Asignamos color cíclico según el año
+        colorExpr.push(y, yearColors[allY.indexOf(y) % yearColors.length].border);
+    });
+    // Color por defecto (si fallara la coincidencia)
     colorExpr.push('#5e72e4');
+
     map.setPaintProperty('point-layer', 'circle-color', colorExpr);
-    if (data.length > 0) {
+
+    // 5. Ajustar el Zoom (Fit Bounds)
+    // Solo intentamos hacer zoom si hay al menos un punto con ubicación
+    if (datosConGeo.length > 0) {
         const bounds = new maplibregl.LngLatBounds();
-        data.forEach(d => bounds.extend([d.lon, d.lat]));
-        map.fitBounds(bounds, { padding: 40, maxZoom: 16 });
+        datosConGeo.forEach(d => bounds.extend([d.lon, d.lat]));
+        
+        try {
+            map.fitBounds(bounds, { padding: 40, maxZoom: 16 });
+        } catch (err) {
+            console.warn("Error al ajustar zoom del mapa", err);
+        }
     }
 }
 
@@ -563,45 +670,84 @@ function toggleFullscreen(containerId) {
 // ============================================================
 async function updateLocationKPI(data) {
     const el = document.getElementById('kpi-location');
-    if (!data || data.length === 0) { el.innerText = "Sin Datos"; return; }
+    
+    // Si no hay ningún dato cargado
+    if (!data || data.length === 0) { 
+        el.innerText = "Sin Datos"; 
+        return; 
+    }
 
     // 1. INTENTO: TEXTO MANUAL CONFIGURADO
-    // Miramos el primer registro, ya que todos tienen el mismo valor de configuración
+    // Si el usuario escribió una localidad manualmente al cargar el archivo
     if (data[0].locManual && data[0].locManual !== "") {
         el.innerText = data[0].locManual.toUpperCase();
         return;
     }
 
     // 2. INTENTO: GPS AUTOMÁTICO
-    let totalLat = 0, totalLon = 0;
-    data.forEach(d => { totalLat += d.lat; totalLon += d.lon; });
-    const centerLat = totalLat / data.length;
-    const centerLon = totalLon / data.length;
+    // Filtramos solo los que tienen coordenadas reales para calcular el centro
+    const dataConGeo = data.filter(d => d.hasGeo);
 
+    // Si tenemos datos (filas de Excel), pero NINGUNO tiene coordenadas válidas
+    if (dataConGeo.length === 0) {
+        el.innerText = "Sin Ubicación GPS";
+        return;
+    }
+
+    // Calculamos el promedio de latitud y longitud solo de los datos válidos
+    let totalLat = 0, totalLon = 0;
+    dataConGeo.forEach(d => { 
+        totalLat += d.lat; 
+        totalLon += d.lon; 
+    });
+    
+    const centerLat = totalLat / dataConGeo.length;
+    const centerLon = totalLon / dataConGeo.length;
+
+    // Ponemos las coordenadas por defecto mientras carga el nombre de la ciudad
     const defaultText = `${centerLat.toFixed(3)}, ${centerLon.toFixed(3)}`;
     el.innerText = defaultText;
 
+    // Llamada a API de Geocodificación Inversa (OSM Nominatim)
     try {
         const urlOSM = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${centerLat}&lon=${centerLon}&zoom=10&accept-language=eu,es`;
-        const response = await fetch(urlOSM, { method: 'GET', mode: 'cors', credentials: 'omit', cache: 'no-store', referrerPolicy: 'no-referrer', headers: { 'Accept': 'application/json' } });
+        
+        const response = await fetch(urlOSM, { 
+            method: 'GET', 
+            mode: 'cors', 
+            credentials: 'omit', 
+            cache: 'no-store', 
+            referrerPolicy: 'no-referrer', 
+            headers: { 'Accept': 'application/json' } 
+        });
 
         if(response.ok) {
             const json = await response.json();
             const addr = json.address;
+            // Buscamos el nombre más relevante (Ciudad, Pueblo, Municipio...)
             let placeName = addr.city || addr.town || addr.village || addr.municipality || addr.county;
-            if (placeName) { el.innerText = placeName.toUpperCase(); return; }
+            
+            if (placeName) { 
+                el.innerText = placeName.toUpperCase(); 
+                return; 
+            }
         }
-        throw new Error("OSM falló"); 
+        throw new Error("OSM falló o no dio localidad"); 
     } catch (errorOSM) {
+        // Fallback: Si falla OSM, intentamos con BigDataCloud (Backup)
         try {
             const urlBackup = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${centerLat}&longitude=${centerLon}&localityLanguage=es`;
             const responseBackup = await fetch(urlBackup, { method: 'GET', mode: 'cors', credentials: 'omit' });
+            
             if(responseBackup.ok) {
                 const jsonBackup = await responseBackup.json();
                 let placeName = jsonBackup.locality || jsonBackup.city || jsonBackup.principalSubdivision;
                 if (placeName) el.innerText = placeName.toUpperCase();
             }
-        } catch (errorBackup) { console.error("Fallo GPS", errorBackup); }
+        } catch (errorBackup) { 
+            console.error("Fallo GPS total", errorBackup); 
+            // Si todo falla, se queda con las coordenadas numéricas que pusimos al principio
+        }
     }
 }
 
@@ -713,6 +859,87 @@ function updateSortIcons(activeCol, containerSelector, sortObj) {
         }
     }
 }
+
+// ============================================================
+// LÓGICA TABLA HORAS (NUEVO)
+// ============================================================
+
+function toggleHoursView() {
+    const canvas = document.getElementById('chart-hours');
+    const tableDiv = document.getElementById('table-hours-view');
+    const btnIcon = document.querySelector('#btn-toggle-view-hours i');
+    
+    isTableHoursView = !isTableHoursView;
+    
+    if (isTableHoursView) {
+        canvas.style.display = 'none'; 
+        tableDiv.style.display = 'block';
+        btnIcon.className = 'fa-solid fa-chart-line'; 
+        btnIcon.parentElement.title = "Ver Gráfico";
+        renderHoursTable();
+    } else {
+        tableDiv.style.display = 'none'; 
+        canvas.style.display = 'block';
+        btnIcon.className = 'fa-solid fa-table'; 
+        btnIcon.parentElement.title = "Ver Datos";
+    }
+}
+
+function renderHoursTable() {
+    const container = document.getElementById('table-hours-view');
+    if (!tableHoursDataCache || tableHoursDataCache.length === 0) { 
+        container.innerHTML = '<p style="padding:20px; text-align:center; color:#888;">Sin datos</p>'; 
+        return; 
+    }
+
+    let html = `<table class="data-table"><thead><tr>
+        <th onclick="sortTableHours('hour')">HORA <i class="fa-solid fa-sort"></i></th>
+        <th onclick="sortTableHours('count')">CANTIDAD <i class="fa-solid fa-sort"></i></th>
+        <th onclick="sortTableHours('percent')">% <i class="fa-solid fa-sort"></i></th>
+    </tr></thead><tbody>`;
+
+    tableHoursDataCache.forEach(row => {
+        // Usamos una barra de progreso visual simple en el fondo si quieres, o solo texto
+        html += `<tr>
+            <td><strong>${row.hourLabel}</strong></td>
+            <td style="text-align:right;">${row.count.toLocaleString()}</td>
+            <td style="text-align:right;">${row.percent}%</td>
+        </tr>`;
+    });
+
+    html += `</tbody></table>`;
+    container.innerHTML = html;
+    
+    // Reutilizamos la función de actualizar iconos que ya tenías
+    updateSortIcons(currentSortHours.col, '#table-hours-view', currentSortHours);
+}
+
+function sortTableHours(column) {
+    if (currentSortHours.col === column) {
+        currentSortHours.dir = currentSortHours.dir === 'asc' ? 'desc' : 'asc';
+    } else { 
+        currentSortHours.col = column; 
+        currentSortHours.dir = (column === 'hour') ? 'asc' : 'desc'; 
+    }
+
+    tableHoursDataCache.sort((a, b) => {
+        let valA = a[column];
+        let valB = b[column];
+
+        // Convertir a número si es porcentaje
+        if(column === 'percent') { 
+            valA = parseFloat(valA); 
+            valB = parseFloat(valB); 
+        }
+
+        if (valA < valB) return currentSortHours.dir === 'asc' ? -1 : 1;
+        if (valA > valB) return currentSortHours.dir === 'asc' ? 1 : -1;
+        return 0;
+    });
+
+    renderHoursTable();
+}
+
 // ============================================================
 // LÓGICA DEL VISOR PDF
 // ============================================================

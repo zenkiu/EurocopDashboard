@@ -320,14 +320,25 @@
 
             <!-- MAPA Y HORAS -->
             <div class="bottom-grid">
-                <div class="chart-container" id="container-hours">
+<div class="chart-container" id="container-hours">
                     <div class="chart-header">
                         <h4>Horas</h4>
-                        <button class="btn-maximize" onclick="toggleFullscreen('container-hours')">
-                            <i class="fa-solid fa-maximize"></i>
-                        </button>
+                        <div class="header-actions">
+                            <!-- NUEVO: Botón alternar Tabla/Gráfico para Horas -->
+                            <button class="btn-mini" id="btn-toggle-view-hours" onclick="toggleHoursView()" title="Ver Tabla de Datos">
+                                <i class="fa-solid fa-table"></i>
+                            </button>
+
+                            <button class="btn-maximize" onclick="toggleFullscreen('container-hours')">
+                                <i class="fa-solid fa-maximize"></i>
+                            </button>
+                        </div>
                     </div>
-                    <div class="canvas-wrapper"><canvas id="chart-hours"></canvas></div>
+                    <div class="canvas-wrapper">
+                        <canvas id="chart-hours"></canvas>
+                        <!-- NUEVO: Contenedor para la tabla de horas -->
+                        <div id="table-hours-view" class="table-view" style="display: none;"></div>
+                    </div>
                 </div>
                 
                 <div class="map-container-wrapper" id="container-map">
