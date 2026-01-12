@@ -2,7 +2,6 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <!-- Viewport optimizado para prevenir zoom accidental en inputs -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Eurocop Analytics | Seguridad Pública</title>
     
@@ -24,77 +23,79 @@
 </head>
 <body>
 
-    <!-- OVERLAY PARA MÓVIL (Fondo oscuro al abrir menú) -->
+    <!-- OVERLAY PARA MÓVIL -->
     <div id="mobile-overlay" class="mobile-overlay" onclick="toggleSidebarMobile()"></div>
 
     <!-- NAVBAR SUPERIOR -->
     <nav class="navbar">
-        <!-- Izquierda: Logo y Botón Menú Móvil -->
         <div class="nav-left-group">
-            <!-- Botón Hamburguesa (Solo Móvil) -->
             <button class="mobile-menu-btn" onclick="toggleSidebarMobile()">
                 <i class="fa-solid fa-bars"></i>
             </button>
             
             <div class="logo" onclick="goToMapping()" style="cursor:pointer" title="Volver a Configuración">
                 <span class="logo-icon"><i class="fa-solid fa-shield-halved"></i></span>
-                <span class="logo-text">EUROCOP<span class="hide-mobile"> ANALYTICS</span><span class="dot">.</span></span>
+                <span class="logo-text"><span data-i18n="nav_title">EUROCOP</span><span class="hide-mobile" data-i18n="nav_analytics"> ANALYTICS</span><span class="dot">.</span></span>
             </div>
         </div>
 
-        <!-- Derecha: Registros y Filtros -->
         <div class="nav-right">
-            <div id="display-filename" class="filename-pill">SIN ARCHIVO</div>
+            <!-- SELECTOR DE IDIOMA -->
+            <select id="lang-selector" class="lang-select" onchange="changeLanguage(this.value)">
+                <option value="es">🇪🇸 ES</option>
+                <option value="eu">🏴 EU</option>
+                <option value="ca">🟡 CA</option>
+                <option value="gl">🔵 GL</option>
+            </select>
+
+            <div id="display-filename" class="filename-pill" data-i18n="no_file">SIN ARCHIVO</div>
             
-            <span id="kpi-total-filas" class="badge-records">0 REG</span>
-            <!-- La info detallada se oculta en móviles muy pequeños mediante CSS -->
+            <span id="kpi-total-filas" class="badge-records">0 <span data-i18n="kpi_reg">REG</span></span>
+            
             <div class="nav-filters-info">
-                <span class="hide-mobile"><strong>AÑO:</strong> <span id="header-year" class="info-text">----</span> <span class="sep">|</span></span>
-                <span class="hide-mobile"><strong>MES:</strong> <span id="header-month" class="info-text">----</span> <span class="sep">|</span></span>
-                <span class="hide-mobile"><strong>CAT:</strong> <span id="header-category" class="info-text">----</span></span>
+                <span class="hide-mobile"><strong data-i18n="lbl_year">AÑO:</strong> <span id="header-year" class="info-text">----</span> <span class="sep">|</span></span>
+                <span class="hide-mobile"><strong data-i18n="lbl_month">MES:</strong> <span id="header-month" class="info-text">----</span> <span class="sep">|</span></span>
+                <span class="hide-mobile"><strong data-i18n="lbl_cat">CAT:</strong> <span id="header-category" class="info-text">----</span></span>
             </div>
         </div>
     </nav>
 
     <!-- VISTA 1: CARGA DE ARCHIVOS -->
-<!-- VISTA 1: CARGA DE ARCHIVOS -->
     <section id="upload-view" class="view-container active">
         <div class="upload-center">
             <div class="upload-card">
                 <div class="brand-circle">
                     <i class="fa-solid fa-file-import"></i>
                 </div>
-                <h1>Carga de Datos</h1>
-                <p>Sube tu archivo Excel (.xlsx) o CSV.</p>
+                <h1 data-i18n="upload_title">Carga de Datos</h1>
+                <p data-i18n="upload_desc">Sube tu archivo Excel (.xlsx) o CSV.</p>
                 
                 <div class="drop-zone" id="drop-zone">
                     <i class="fa-solid fa-cloud-arrow-up upload-icon"></i>
-                    <span>ARRASTRAR O TOCAR PARA SUBIR</span>
+                    <span data-i18n="upload_drop">ARRASTRAR O TOCAR PARA SUBIR</span>
                     <input type="file" id="file-input" accept=".csv, .xlsx, .xls" hidden>
                 </div>
                 
                 <div class="csv-info">
-                    <small><i class="fa-solid fa-circle-info"></i> Compatible con móviles</small>
+                    <small><i class="fa-solid fa-circle-info"></i> <span data-i18n="upload_mobile">Compatible con móviles</span></small>
                 </div>
 
-                <!-- BOTONES QUE ABREN EL VISOR INTEGRADO -->
+                <!-- BOTONES PDF -->
                 <div class="manual-container">
-                    <!-- Botón Manual -->
                     <button onclick="openPdfModal('Manual.pdf', 'Manual de Ayuda')" class="btn-manual-pill">
                         <i class="fa-solid fa-book-open"></i>
-                        <span>Ver Manual</span>
+                        <span data-i18n="btn_manual">Ver Manual</span>
                     </button>
 
-                    <!-- NUEVO: Botón Actualizaciones -->
                     <button onclick="openPdfModal('Actualizaciones.pdf', 'Novedades y Actualizaciones')" class="btn-manual-pill">
                         <i class="fa-solid fa-rotate"></i>
-                        <span>Actualizaciones</span>
+                        <span data-i18n="btn_updates">Actualizaciones</span>
                     </button>
                 </div>
-                <!-- CONTENEDOR DE MARCA (Dentro de upload-card o justo debajo) -->
+
+                <!-- MARCA -->
                 <div class="brand-footer">
-                    <span class="brand-label">Powered by</span>
-                    <!-- Asegúrate de que la ruta coincida con tu carpeta -->
+                    <span class="brand-label" data-i18n="brand_powered">Powered by</span>
                     <img src="./ImagenCoorporativa/zzenkiu.png" alt="Zzenkiu" class="brand-logo">
                 </div>
             </div>
@@ -105,23 +106,22 @@
     <section id="mapping-view" class="view-container">
         <div class="config-panel">
             <div class="panel-header">
-                <h2><i class="fa-solid fa-sliders"></i> CONFIGURACIÓN</h2>
-                <p>Vincula las columnas de tu archivo.</p>
+                <h2 data-i18n="config_title"><i class="fa-solid fa-sliders"></i> CONFIGURACIÓN</h2>
+                <p data-i18n="config_desc">Vincula las columnas de tu archivo.</p>
             </div>
             
             <div class="cards-grid mapping-layout">
-                <!-- Las columnas se apilarán en móvil gracias a CSS Grid -->
                 <div class="mapping-col">
                     <div class="card">
-                        <label><strong>CONTADOR / ID</strong></label>
+                        <label><strong data-i18n="col_id">CONTADOR / ID</strong></label>
                         <select id="map-expediente" class="styled-select"></select>
                     </div>
                     <div class="card">
-                        <label><strong>LATITUD (Y)</strong></label>
+                        <label><strong data-i18n="col_lat">LATITUD (Y)</strong></label>
                         <select id="map-lat" class="styled-select"></select>
                     </div>
                     <div class="card">
-                        <label><strong>LONGITUD (X)</strong></label>
+                        <label><strong data-i18n="col_lon">LONGITUD (X)</strong></label>
                         <select id="map-lon" class="styled-select"></select>
                     </div>
                 </div>
@@ -129,207 +129,184 @@
                 <div class="mapping-col">
                     <div class="card full-height">
                         <div style="margin-bottom: 25px;">
-                            <label><strong>FECHA (Obligatorio)</strong></label>
+                            <label><strong data-i18n="col_date">FECHA (Obligatorio)</strong></label>
                             <select id="map-fecha" class="styled-select"></select>
                         </div>
                         <div>
-                            <label><strong>HORA (Opcional)</strong></label>
+                            <label><strong data-i18n="col_time">HORA (Opcional)</strong></label>
                             <select id="map-hora" class="styled-select"></select>
                         </div>
                     </div>
                 </div>
 
-                <!-- COLUMNA 3: CATEGORÍA Y LOCALIDAD -->
                 <div class="mapping-col">
-                    <!-- Tarjeta Categoría -->
                     <div class="card highlighted-card">
                         <div class="highlight-badge">ANÁLISIS</div>
-                        <label><strong>CATEGORÍA / TIPO</strong></label>
-                        <p class="card-desc">Selecciona la columna que define el tipo de incidencia.</p>
+                        <label><strong data-i18n="col_cat">CATEGORÍA / TIPO</strong></label>
+                        <p class="card-desc" data-i18n="col_cat_desc">Selecciona la columna que define el tipo de incidencia.</p>
                         <select id="map-categoria" class="styled-select select-accent"></select>
                     </div>
 
-                    <!-- NUEVA TARJETA: LOCALIDAD (TEXTO LIBRE) -->
                     <div class="card">
-                        <label><strong>LOCALIDAD (Opcional)</strong></label>
-                        <p class="card-desc">Escribe el nombre para forzar la zona. Déjalo vacío para GPS.</p>
-                        <!-- CAMBIO: Ahora es un input de texto, no un select -->
+                        <label><strong data-i18n="col_loc">LOCALIDAD (Opcional)</strong></label>
+                        <p class="card-desc" data-i18n="col_loc_desc">Escribe el nombre para forzar la zona. Déjalo vacío para GPS.</p>
                         <input type="text" id="map-localidad" class="styled-select" placeholder="Ej: DURANGO" autocomplete="off">
                     </div>
                 </div>
             </div>
             
             <div class="action-footer">
-                <button onclick="location.reload()" class="btn-mini">Cancelar</button>
-                <button id="btn-visualizar" class="btn-primary">GENERAR DASHBOARD</button>
+                <button onclick="location.reload()" class="btn-mini" data-i18n="btn_cancel">Cancelar</button>
+                <button id="btn-visualizar" class="btn-primary" data-i18n="btn_generate">GENERAR DASHBOARD</button>
             </div>
         </div>
     </section>
 
-    <!-- VISTA 3: DASHBOARD INTERACTIVO -->
+    <!-- VISTA 3: DASHBOARD -->
     <section id="dashboard-view" class="view-container">
         
-        <!-- SIDEBAR DE FILTROS (Off-canvas en móvil) -->
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header-mobile">
-                <h3>Filtros</h3>
+                <h3 data-i18n="sidebar_filters">Filtros</h3>
                 <button class="btn-close-sidebar" onclick="toggleSidebarMobile()"><i class="fa-solid fa-xmark"></i></button>
             </div>
 
             <div class="sidebar-actions">
                 <button class="btn-export-pdf" onclick="FncConvertirPdf.exportar()">
-                    <i class="fa-solid fa-file-pdf"></i> EXPORTAR A PDF
+                    <i class="fa-solid fa-file-pdf"></i> <span data-i18n="btn_export">EXPORTAR A PDF</span>
                 </button>
             </div>
 
-            <div class="filter-header"><i class="fa-solid fa-filter"></i> FILTROS AVANZADOS</div>
+            <div class="filter-header"><i class="fa-solid fa-filter"></i> <span data-i18n="filter_header">FILTROS AVANZADOS</span></div>
             
-            <!-- Filtro Años -->
             <div class="filter-group">
-                <label>Años</label>
+                <label data-i18n="filter_years">Años</label>
                 <div class="custom-dropdown" id="drop-year">
                     <div class="dropdown-header" onclick="toggleDropdown('list-year')">
-                        <span id="label-year">Seleccionar...</span>
+                        <span id="label-year" data-i18n="sel_select">Seleccionar...</span>
                         <i class="fa-solid fa-chevron-down"></i>
                     </div>
                     <div id="list-year" class="dropdown-content">
                         <div class="dropdown-controls">
-                            <button class="btn-mini" onclick="toggleGroup('items-year', true, event)">Todos</button>
-                            <button class="btn-mini" onclick="toggleGroup('items-year', false, event)">Ninguno</button>
+                            <button class="btn-mini" onclick="toggleGroup('items-year', true, event)" data-i18n="sel_all">Todos</button>
+                            <button class="btn-mini" onclick="toggleGroup('items-year', false, event)" data-i18n="sel_none">Ninguno</button>
                         </div>
                         <div class="dropdown-items" id="items-year"></div>
                     </div>
                 </div>
             </div>
 
-            <!-- Filtro Meses -->
             <div class="filter-group">
-                <label>Meses</label>
+                <label data-i18n="filter_months">Meses</label>
                 <div class="custom-dropdown" id="drop-month">
                     <div class="dropdown-header" onclick="toggleDropdown('list-month')">
-                        <span id="label-month">Seleccionar...</span>
+                        <span id="label-month" data-i18n="sel_select">Seleccionar...</span>
                         <i class="fa-solid fa-chevron-down"></i>
                     </div>
                     <div id="list-month" class="dropdown-content">
                         <div class="dropdown-controls">
-                            <button class="btn-mini" onclick="toggleGroup('items-month', true, event)">Todos</button>
-                            <button class="btn-mini" onclick="toggleGroup('items-month', false, event)">Ninguno</button>
+                            <button class="btn-mini" onclick="toggleGroup('items-month', true, event)" data-i18n="sel_all">Todos</button>
+                            <button class="btn-mini" onclick="toggleGroup('items-month', false, event)" data-i18n="sel_none">Ninguno</button>
                         </div>
                         <div class="dropdown-items" id="items-month"></div>
                     </div>
                 </div>
             </div>
 
-            <!-- Filtro Categorías -->
             <div class="filter-group">
-                <label>Categorías</label>
+                <label data-i18n="filter_cats">Categorías</label>
                 <div class="custom-dropdown" id="drop-category">
                     <div class="dropdown-header" onclick="toggleDropdown('list-category')">
-                        <span id="label-category">Seleccionar...</span>
+                        <span id="label-category" data-i18n="sel_select">Seleccionar...</span>
                         <i class="fa-solid fa-chevron-down"></i>
                     </div>
                     <div id="list-category" class="dropdown-content">
                         <div class="dropdown-controls">
-                            <button class="btn-mini" onclick="toggleGroup('items-category', true, event)">Todos</button>
-                            <button class="btn-mini" onclick="toggleGroup('items-category', false, event)">Ninguno</button>
+                            <button class="btn-mini" onclick="toggleGroup('items-category', true, event)" data-i18n="sel_all">Todos</button>
+                            <button class="btn-mini" onclick="toggleGroup('items-category', false, event)" data-i18n="sel_none">Ninguno</button>
                         </div>
                         <div class="dropdown-items" id="items-category"></div>
                     </div>
                 </div>
             </div>
-            <!-- MARCA AL PIE DEL SIDEBAR -->
+
             <div class="sidebar-footer">
                 <img src="./ImagenCoorporativa/zzenkiu.png" alt="Zzenkiu" class="sidebar-logo">
             </div>
         </aside>
 
-        <!-- CONTENIDO PRINCIPAL -->
         <main class="main-content">
-            <!-- KPIs SUPERIORES -->
             <div class="kpi-grid">
                 <div class="kpi-card">
                     <div class="kpi-icon"><i class="fa-solid fa-folder-open"></i></div>
-                    <div class="kpi-data"><h3>Expedientes</h3><span id="kpi-count">0</span></div>
+                    <div class="kpi-data"><h3 data-i18n="kpi_expedientes">Expedientes</h3><span id="kpi-count">0</span></div>
                 </div>
                 <div class="kpi-card">
                     <div class="kpi-icon" style="background: #2dce89;"><i class="fa-solid fa-location-crosshairs"></i></div>
-                     <div class="kpi-data"><h3>Zona</h3><span id="kpi-location">Esperando...</span></div>
+                     <div class="kpi-data"><h3 data-i18n="kpi_zona">Zona</h3><span id="kpi-location" data-i18n="kpi_waiting">Esperando...</span></div>
                 </div>
                 <div class="kpi-card">
                     <div class="kpi-icon" style="background: #fb6340;"><i class="fa-solid fa-calendar-check"></i></div>
-                    <div class="kpi-data"><h3>Periodo</h3><span>Filtrado</span></div>
+                    <div class="kpi-data"><h3 data-i18n="kpi_periodo">Periodo</h3><span data-i18n="kpi_filtered">Filtrado</span></div>
                 </div>
             </div>
 
-            <!-- GRÁFICOS SUPERIORES -->
             <div class="charts-grid-top">
-            <div class="chart-container" id="container-timeline">
-                <div class="chart-header">
-                    <h4>Evolución Temporal</h4>
-                    <div class="header-actions">
-                        <!-- Selector de Vista (Año/Mes/Día) -->
-                        <select id="select-temporal-view" class="btn-mini" onchange="changeTemporalView(this.value)">
-                            <option value="year">Vista: Años</option>
-                            <option value="month" selected>Vista: Meses</option>
-                            <option value="quarter">Vista: Trimestral</option>
-                            <option value="day">Vista: Días Semanal</option>
-                        </select>
-                        
-                        <!-- NUEVO: Botón alternar Gráfico / Tabla -->
-                        <button class="btn-mini" id="btn-toggle-view" onclick="toggleTimelineView()" title="Ver Tabla de Datos">
-                            <i class="fa-solid fa-table"></i>
-                        </button>
-
-                        <!-- Botón Maximizar -->
-                        <button class="btn-maximize" onclick="toggleFullscreen('container-timeline')">
-                            <i class="fa-solid fa-maximize"></i>
-                        </button>
-                    </div>
-                </div>
-                
-                <div class="canvas-wrapper">
-                    <!-- El Canvas del Gráfico -->
-                    <canvas id="chart-timeline"></canvas>
-                    
-                    <!-- NUEVO: El Contenedor de la Tabla (Oculto por defecto) -->
-                    <div id="table-timeline-view" class="table-view" style="display: none;"></div>
-                </div>
-            </div>
-
-            <div class="chart-container" id="container-category">
-                <div class="chart-header">
-                    <h4>Top Tipos</h4>
-                    <div class="header-actions">
-                        <!-- NUEVO: Botón alternar Tabla/Gráfico -->
-                        <button class="btn-mini" id="btn-toggle-view-cat" onclick="toggleCategoryView()" title="Ver Tabla de Datos">
-                            <i class="fa-solid fa-table"></i>
-                        </button>
-                        
-                        <!-- Botón Maximizar -->
-                        <button class="btn-maximize" onclick="toggleFullscreen('container-category')">
-                            <i class="fa-solid fa-maximize"></i>
-                        </button>
-                    </div>
-                </div>
-                <div class="canvas-wrapper">
-                    <canvas id="chart-category"></canvas>
-                    <!-- NUEVO: Contenedor para la tabla -->
-                    <div id="table-category-view" class="table-view" style="display: none;"></div>
-                </div>
-            </div>
-            </div>
-
-            <!-- MAPA Y HORAS -->
-            <div class="bottom-grid">
-<div class="chart-container" id="container-hours">
+                <div class="chart-container" id="container-timeline">
                     <div class="chart-header">
-                        <h4>Horas</h4>
+                        <h4 data-i18n="chart_timeline">Evolución Temporal</h4>
                         <div class="header-actions">
-                            <!-- NUEVO: Botón alternar Tabla/Gráfico para Horas -->
-                            <button class="btn-mini" id="btn-toggle-view-hours" onclick="toggleHoursView()" title="Ver Tabla de Datos">
+                            <select id="select-temporal-view" class="btn-mini" onchange="changeTemporalView(this.value)">
+                                <option value="year" data-i18n="view_years">Vista: Años</option>
+                                <option value="month" selected data-i18n="view_months">Vista: Meses</option>
+                                <option value="quarter" data-i18n="view_quarters">Vista: Trimestral</option>
+                                <option value="day" data-i18n="view_days">Vista: Días Semanal</option>
+                            </select>
+                            
+                            <button class="btn-mini" id="btn-toggle-view" onclick="toggleTimelineView()" title="Ver Tabla de Datos">
                                 <i class="fa-solid fa-table"></i>
                             </button>
 
+                            <button class="btn-maximize" onclick="toggleFullscreen('container-timeline')">
+                                <i class="fa-solid fa-maximize"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="canvas-wrapper">
+                        <canvas id="chart-timeline"></canvas>
+                        <div id="table-timeline-view" class="table-view" style="display: none;"></div>
+                    </div>
+                </div>
+
+                <div class="chart-container" id="container-category">
+                    <div class="chart-header">
+                        <h4 data-i18n="chart_top">Top Tipos</h4>
+                        <div class="header-actions">
+                            <button class="btn-mini" id="btn-toggle-view-cat" onclick="toggleCategoryView()" title="Ver Tabla de Datos">
+                                <i class="fa-solid fa-table"></i>
+                            </button>
+                            <button class="btn-maximize" onclick="toggleFullscreen('container-category')">
+                                <i class="fa-solid fa-maximize"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="canvas-wrapper">
+                        <canvas id="chart-category"></canvas>
+                        <div id="table-category-view" class="table-view" style="display: none;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bottom-grid">
+                <div class="chart-container" id="container-hours">
+                    <div class="chart-header">
+                        <h4 data-i18n="chart_hours">Horas</h4>
+                        <div class="header-actions">
+                            <!-- Botón Tabla Horas -->
+                            <button class="btn-mini" id="btn-toggle-view-hours" onclick="toggleHoursView()" title="Ver Tabla de Datos">
+                                <i class="fa-solid fa-table"></i>
+                            </button>
                             <button class="btn-maximize" onclick="toggleFullscreen('container-hours')">
                                 <i class="fa-solid fa-maximize"></i>
                             </button>
@@ -337,14 +314,14 @@
                     </div>
                     <div class="canvas-wrapper">
                         <canvas id="chart-hours"></canvas>
-                        <!-- NUEVO: Contenedor para la tabla de horas -->
+                        <!-- Tabla Horas -->
                         <div id="table-hours-view" class="table-view" style="display: none;"></div>
                     </div>
                 </div>
                 
                 <div class="map-container-wrapper" id="container-map">
                     <div class="chart-header">
-                        <h4>Mapa</h4>
+                        <h4 data-i18n="chart_map">Mapa</h4>
                         <div class="header-actions">
                             <button class="btn-mini" id="btn-heatmap" onclick="toggleHeatmap(this)">
                                 <i class="fa-solid fa-fire"></i>
@@ -367,31 +344,27 @@
             </div>
         </main>
     </section>
-    <!-- NUEVO: LOADING OVERLAY (Indicador de carga) -->
+
     <div id="loading-overlay" class="loading-overlay">
         <div class="spinner-box">
             <div class="spinner"></div>
-            <p>Procesando archivo...</p>
-            <small>Esto puede tardar unos segundos si el archivo es grande.</small>
+            <!-- AÑADIDO data-i18n -->
+            <p data-i18n="loading_msg">Procesando archivo...</p>
         </div>
     </div>
-    <!-- MODAL VISOR PDF (NUEVO) -->
-<!-- MODAL VISOR PDF -->
+
     <div id="pdf-modal" class="pdf-modal-overlay">
         <div class="pdf-modal-content">
             <div class="pdf-header">
-                <!-- Añadido ID al título para cambiarlo dinámicamente -->
                 <h3 id="pdf-modal-title"><i class="fa-solid fa-book"></i> Documento</h3>
                 <button onclick="closePdfModal()" class="btn-close-pdf"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="pdf-body">
-                <!-- SRC vacío por defecto, se llena con JS -->
                 <iframe src="" id="pdf-frame" frameborder="0"></iframe>
             </div>
         </div>
     </div>
-</body>
-</html>
+
     <!-- LIBRERÍAS EXTERNAS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script> 
@@ -399,6 +372,7 @@
     <script src="https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js"></script>
     
     <!-- LÓGICA -->
+    <script src="languages.js"></script>
     <script src="script.js"></script>
     <script src="FncConvertirPdf.js"></script>
 

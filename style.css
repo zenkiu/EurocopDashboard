@@ -700,3 +700,19 @@ body {
         padding-bottom: 80px; /* Espacio extra en móvil si es necesario */
     }
 }
+.lang-select {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    outline: none;
+    margin-right: 10px;
+}
+
+.lang-select option {
+    background: var(--primary-dark);
+    color: white;
+}

@@ -1,6 +1,6 @@
 /**
  * EUROCOP ANALYTICS - SCRIPT FINAL 2026
- * Versión: Full Responsive + Localidad Texto Libre + Drag&Drop + Tablas
+ * Versión: Full Responsive + Multi-Idioma + Trimestres + GeoFix
  */
 
 // ============================================================
@@ -15,6 +15,7 @@ let nombreArchivoSubido = "INFORME ANALYTICS";
 let isSatelite = false;
 let isHeatmap = false; 
 let temporalView = 'year'; 
+let currentLang = localStorage.getItem('eurocop_lang') || 'es'; // Idioma por defecto
 
 // Variables para Tablas
 let isTableView = false; 
@@ -24,19 +25,10 @@ let currentSort = { col: 0, dir: 'asc' };
 let isTableCatView = false;
 let tableCatDataCache = [];
 let currentSortCat = { col: 'count', dir: 'desc' };
+
 let isTableHoursView = false;
 let tableHoursDataCache = [];
 let currentSortHours = { col: 'hour', dir: 'asc' };
-
-const dayLabels = ['L-Lunes', 'M-Martes', 'X-Miércoles', 'J-Jueves', 'V-Viernes', 'S-Sábado', 'D-Domingo'];
-const monthsConfig = [
-    { id: 1, name: 'Enero', abbr: 'Ene' }, { id: 2, name: 'Febrero', abbr: 'Feb' },
-    { id: 3, name: 'Marzo', abbr: 'Mar' }, { id: 4, name: 'Abril', abbr: 'Abr' },
-    { id: 5, name: 'Mayo', abbr: 'May' }, { id: 6, name: 'Junio', abbr: 'Jun' },
-    { id: 7, name: 'Julio', abbr: 'Jul' }, { id: 8, name: 'Agosto', abbr: 'Ago' },
-    { id: 9, name: 'Septiembre', abbr: 'Sep' }, { id: 10, name: 'Octubre', abbr: 'Oct' },
-    { id: 11, name: 'Noviembre', abbr: 'Nov' }, { id: 12, name: 'Diciembre', abbr: 'Dic' }
-];
 
 const yearColors = [
     { bg: 'rgba(94, 114, 228, 0.7)', border: '#5e72e4' },   
@@ -46,6 +38,13 @@ const yearColors = [
     { bg: 'rgba(245, 54, 92, 0.7)', border: '#f5365c' },    
     { bg: 'rgba(137, 101, 224, 0.7)', border: '#8965e0' },  
     { bg: 'rgba(155, 14, 14, 0.7)', border: '#b71825ff' }    
+];
+
+const monthsConfig = [
+    { id: 1, abbr: 'Ene' }, { id: 2, abbr: 'Feb' }, { id: 3, abbr: 'Mar' },
+    { id: 4, abbr: 'Abr' }, { id: 5, abbr: 'May' }, { id: 6, abbr: 'Jun' },
+    { id: 7, abbr: 'Jul' }, { id: 8, abbr: 'Ago' }, { id: 9, abbr: 'Sep' },
+    { id: 10, abbr: 'Oct' }, { id: 11, abbr: 'Nov' }, { id: 12, abbr: 'Dic' }
 ];
 
 // ============================================================
@@ -67,9 +66,14 @@ window.addEventListener('resize', () => {
 });
 
 // ============================================================
-// 3. CARGA DE ARCHIVOS (DRAG & DROP)
+// 3. CARGA DE ARCHIVOS
 // ============================================================
 document.addEventListener('DOMContentLoaded', () => {
+    // Inicializar idioma
+    const langSelect = document.getElementById('lang-selector');
+    if(langSelect) langSelect.value = currentLang;
+    applyLanguage(currentLang);
+
     const dropZone = document.getElementById('drop-zone');
     const fileInput = document.getElementById('file-input');
 
@@ -93,12 +97,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function processFile(file) {
     if (!file) return;
-
-    // 1. Mostrar el indicador de carga
     document.getElementById('loading-overlay').classList.add('active');
 
-    // Usamos setTimeout para permitir que el navegador renderice el loader
-    // antes de bloquearse procesando el Excel.
     setTimeout(() => {
         try {
             nombreArchivoSubido = file.name.replace(/\.[^/.]+$/, "").toUpperCase();
@@ -107,17 +107,13 @@ function processFile(file) {
 
             if (file.name.endsWith('.csv')) {
                 Papa.parse(file, {
-                    header: true,
-                    skipEmptyLines: true,
-                    encoding: "UTF-8",
+                    header: true, skipEmptyLines: true, encoding: "UTF-8",
                     complete: (res) => {
                         showMapping(res.data);
-                        // Ocultar loader tras procesar CSV
                         document.getElementById('loading-overlay').classList.remove('active');
                     },
                     error: (err) => {
-                        console.error(err);
-                        alert("Error al leer CSV");
+                        console.error(err); alert("Error al leer CSV");
                         document.getElementById('loading-overlay').classList.remove('active');
                     }
                 });
@@ -130,10 +126,8 @@ function processFile(file) {
                         const data = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: "" });
                         showMapping(data);
                     } catch (error) {
-                        console.error(error);
-                        alert("El archivo Excel parece dañado o no es válido.");
+                        console.error(error); alert("El archivo Excel parece dañado.");
                     } finally {
-                        // Ocultar loader SIEMPRE al finalizar, haya error o no
                         document.getElementById('loading-overlay').classList.remove('active');
                     }
                 };
@@ -143,7 +137,7 @@ function processFile(file) {
             console.error(e);
             document.getElementById('loading-overlay').classList.remove('active');
         }
-    }, 100); // 100ms de retraso para asegurar que el loader aparezca visualmente
+    }, 100);
 }
 
 function goToMapping() {
@@ -155,7 +149,7 @@ function goToMapping() {
 }
 
 // ============================================================
-// 4. MAPEO (MODIFICADO: LOCALIDAD ES TEXTO LIBRE)
+// 4. MAPEO
 // ============================================================
 function showMapping(data) {
     rawData = data;
@@ -166,7 +160,6 @@ function showMapping(data) {
     mappingIds.forEach(id => {
         const sel = document.getElementById(id);
         if (!sel) return;
-        
         const newSel = sel.cloneNode(false);
         sel.parentNode.replaceChild(newSel, sel);
         newSel.addEventListener('change', refreshMappingStatus);
@@ -180,14 +173,9 @@ function showMapping(data) {
             newSel.appendChild(opt);
         });
 
-        // Auto-detección MEJORADA
         headers.forEach(h => {
             const s = h.toLowerCase();
-            
-            // AQUÍ ESTÁ EL CAMBIO SOLICITADO PARA CONTADOR/ID
-            // Agregamos 'refnum' como condición prioritaria o parte del OR
             if (id.includes('exp') && (s === 'refnum' || s.includes('exp') || s.includes('id'))) newSel.value = h;
-
             if (id.includes('fecha') && (s.includes('fec') || s.includes('date'))) newSel.value = h;
             if (id.includes('hora') && (s.includes('hor') || s.includes('time'))) newSel.value = h;
             if (id.includes('lat') && (s.includes('lat') || s === 'y')) newSel.value = h;
@@ -205,7 +193,6 @@ function showMapping(data) {
 }
 
 function refreshMappingStatus() {
-    // Solo validamos los selects
     const mappingIds = ['map-expediente', 'map-fecha', 'map-hora', 'map-lat', 'map-lon', 'map-categoria'];
     const currentSelections = mappingIds.map(id => {
         const el = document.getElementById(id);
@@ -225,7 +212,7 @@ function refreshMappingStatus() {
 }
 
 // ============================================================
-// 5. PROCESAMIENTO (CON LOCALIDAD MANUAL)
+// 5. PROCESAMIENTO
 // ============================================================
 document.getElementById('btn-visualizar').onclick = () => {
     const config = {
@@ -235,7 +222,6 @@ document.getElementById('btn-visualizar').onclick = () => {
         lat: document.getElementById('map-lat').value,
         lon: document.getElementById('map-lon').value,
         cat: document.getElementById('map-categoria').value,
-        // CAPTURAMOS EL TEXTO MANUAL
         locManual: document.getElementById('map-localidad').value.trim() 
     };
 
@@ -244,50 +230,34 @@ document.getElementById('btn-visualizar').onclick = () => {
         return;
     }
 
-finalData = rawData.map(row => {
-        // 1. Procesar FECHA (Esto sí lo mantenemos estricto, sin fecha no hay analytics)
+    finalData = rawData.map(row => {
         let d = new Date(row[config.fecha]);
         if (isNaN(d.getTime())) return null;
 
-        // 2. Procesar HORA
         if (config.hora && row[config.hora]) {
             const t = String(row[config.hora]);
-            if (t.includes(':')) { 
-                const p = t.split(':'); 
-                d.setHours(parseInt(p[0]) || 0, parseInt(p[1]) || 0, 0); 
-            }
+            if (t.includes(':')) { const p = t.split(':'); d.setHours(parseInt(p[0]) || 0, parseInt(p[1]) || 0, 0); }
         }
-
-        // 3. Procesar LATITUD Y LONGITUD (MODIFICADO)
+        
+        // GEO LOGIC: Si falla lat/lon, guardamos 0 y hasGeo=false
         let lat = parseFloat(String(row[config.lat]).replace(',', '.'));
         let lon = parseFloat(String(row[config.lon]).replace(',', '.'));
-        
-        // Nueva bandera para saber si tiene ubicación válida
         let tieneUbicacion = true;
 
         if (isNaN(lat) || isNaN(lon) || (lat === 0 && lon === 0)) {
-            lat = 0; // Ponemos 0 para que no rompa el código, pero no lo usaremos en el mapa
-            lon = 0;
-            tieneUbicacion = false;
+            lat = 0; lon = 0; tieneUbicacion = false;
         }
 
         return {
             exp: row[config.exp] || "N/A",
-            date: d, 
-            year: d.getFullYear(), 
-            month: d.getMonth() + 1, 
-            hour: d.getHours(),
-            lat: lat, 
-            lon: lon, 
-            hasGeo: tieneUbicacion, // <--- GUARDAMOS SI TIENE GPS O NO
+            date: d, year: d.getFullYear(), month: d.getMonth() + 1, hour: d.getHours(),
+            lat, lon, hasGeo: tieneUbicacion,
             cat: row[config.cat] || "General",
             locManual: config.locManual, 
-            calle: row['CALLE'] || row['calle'] || "", 
-            numero: row['NUMERO'] || row['numero'] || "",
-            refnum: row['REFNUM'] || "", 
-            refanno: row['REFANNO'] || ""
+            calle: row['CALLE'] || row['calle'] || "", numero: row['NUMERO'] || row['numero'] || "",
+            refnum: row['REFNUM'] || "", refanno: row['REFANNO'] || ""
         };
-    }).filter(v => v !== null); // Solo eliminamos si la FECHA estaba mal
+    }).filter(v => v !== null);
 
     document.getElementById('mapping-view').classList.remove('active');
     document.getElementById('dashboard-view').classList.add('active');
@@ -302,17 +272,29 @@ finalData = rawData.map(row => {
 function setupFilters() {
     const years = [...new Set(finalData.map(d => d.year))].sort((a,b) => b-a);
     const cats = [...new Set(finalData.map(d => d.cat))].sort();
+    
+    // Usamos monthsConfig pero necesitamos que el texto se actualice por idioma
     renderCheckboxes('items-year', years, years[0]); 
-    renderCheckboxes('items-month', monthsConfig, 'all');
+    renderCheckboxes('items-month', monthsConfig, 'all'); 
     renderCheckboxes('items-category', cats, 'all');
 }
 
 function renderCheckboxes(containerId, items, defaultValue) {
     const container = document.getElementById(containerId);
     container.innerHTML = '';
+    const t = translations[currentLang]; // Textos traducidos
+
     items.forEach(item => {
-        const val = item.id || item;
-        const label = item.name || item;
+        let val, label;
+        if(typeof item === 'object') {
+            val = item.id;
+            // Si es mes, usamos la traducción
+            if(containerId === 'items-month') label = t.months_abbr[item.id - 1]; 
+            else label = item.name || item.id;
+        } else {
+            val = item; label = item;
+        }
+
         const div = document.createElement('div');
         div.className = 'checkbox-item';
         const isChecked = (defaultValue === 'all' || val == defaultValue) ? 'checked' : '';
@@ -325,7 +307,6 @@ function toggleDropdown(id) {
     const el = document.getElementById(id);
     const isActive = el.classList.contains('active');
     document.querySelectorAll('.dropdown-content').forEach(d => d.classList.remove('active'));
-    
     if (!isActive) {
         el.classList.add('active');
         const rect = el.getBoundingClientRect();
@@ -359,12 +340,14 @@ function toggleGroup(containerId, state, event) {
 // 7. ACTUALIZAR UI
 // ============================================================
 function updateUI() {
+    const t = translations[currentLang];
+    
     const getValues = (containerId) => Array.from(document.querySelectorAll(`#${containerId} input:checked`)).map(i => i.value);
     const getLabels = (containerId) => {
         const all = document.querySelectorAll(`#${containerId} input`);
         const checked = Array.from(document.querySelectorAll(`#${containerId} input:checked`));
-        if (checked.length === 0) return "NINGUNO";
-        if (checked.length === all.length) return "TODOS";
+        if (checked.length === 0) return t.sel_none.toUpperCase();
+        if (checked.length === all.length) return t.sel_all.toUpperCase();
         return checked.map(i => i.nextElementSibling.innerText).join(", ");
     };
 
@@ -372,174 +355,167 @@ function updateUI() {
     const selMonths = getValues('items-month').map(Number);
     const selCats = getValues('items-category');
 
-    const txtYears = getLabels('items-year');
-    if(document.getElementById('label-year')) document.getElementById('label-year').innerText = txtYears;
-    if(document.getElementById('header-year')) document.getElementById('header-year').innerText = txtYears;
+    // Actualizar etiquetas Filtros
+    if(document.getElementById('label-year')) document.getElementById('label-year').innerText = getLabels('items-year');
+    if(document.getElementById('header-year')) document.getElementById('header-year').innerText = getLabels('items-year');
+    if(document.getElementById('label-month')) document.getElementById('label-month').innerText = getLabels('items-month');
+    if(document.getElementById('header-month')) document.getElementById('header-month').innerText = getLabels('items-month');
+    if(document.getElementById('label-category')) document.getElementById('label-category').innerText = getLabels('items-category');
+    if(document.getElementById('header-category')) document.getElementById('header-category').innerText = getLabels('items-category');
 
-    const txtMonths = getLabels('items-month');
-    if(document.getElementById('label-month')) document.getElementById('label-month').innerText = txtMonths;
-    if(document.getElementById('header-month')) document.getElementById('header-month').innerText = txtMonths;
-
-    const txtCats = getLabels('items-category');
-    if(document.getElementById('label-category')) document.getElementById('label-category').innerText = txtCats;
-    if(document.getElementById('header-category')) document.getElementById('header-category').innerText = txtCats;
-
-    const filtered = finalData.filter(d => 
-        selYears.includes(d.year) && 
-        selMonths.includes(d.month) && 
-        selCats.includes(d.cat)
-    );
+    const filtered = finalData.filter(d => selYears.includes(d.year) && selMonths.includes(d.month) && selCats.includes(d.cat));
 
     document.getElementById('kpi-count').innerText = filtered.length.toLocaleString();
-    const badge = document.getElementById('kpi-total-filas');
-    if(badge) badge.innerText = `${filtered.length} REG`;
+    if(document.getElementById('kpi-total-filas')) 
+        document.getElementById('kpi-total-filas').innerHTML = `${filtered.length} <span data-i18n="kpi_reg">${t.kpi_reg}</span>`;
 
     updateMapData(filtered);
     updateCharts(filtered, selYears);
-    if (typeof updateLocationKPI === "function") updateLocationKPI(filtered);
+    updateLocationKPI(filtered);
 }
 
 // ============================================================
-// 8. GRÁFICOS
+// 8. GRÁFICOS (TRADUCIDOS + TRIMESTRES + HORAS TABLA)
 // ============================================================
 function changeTemporalView(v) { temporalView = v; updateUI(); }
 
 function updateCharts(data, selYears) {
     const allYearsMaster = [...new Set(finalData.map(d => d.year))].sort((a,b) => a-b);
-    
+    const t = translations[currentLang]; 
+
     const commonOptions = {
-        responsive: true,
-        maintainAspectRatio: false,
+        responsive: true, maintainAspectRatio: false,
         plugins: {
-            legend: { 
-                position: window.innerWidth < 768 ? 'bottom' : 'top',
-                labels: { boxWidth: 12, font: { size: 10 } }
-            }
+            legend: { position: window.innerWidth < 768 ? 'bottom' : 'top', labels: { boxWidth: 12, font: { size: 10 } } }
         }
     };
 
-    // TIMELINE
-// TIMELINE
+    // --- TIMELINE ---
     const ctxTimeline = document.getElementById('chart-timeline');
     if (ctxTimeline) {
         const sortedYears = [...selYears].sort((a,b) => a-b);
         let labels = [], datasets = [];
         
-        // 1. VISTA POR AÑOS
         if (temporalView === 'year') {
             labels = sortedYears.map(y => y.toString());
-            datasets = [{ 
-                label: 'Registros', 
-                data: sortedYears.map(y => data.filter(d => d.year === y).length), 
-                backgroundColor: sortedYears.map(y => yearColors[allYearsMaster.indexOf(y) % yearColors.length].bg), 
-                borderColor: sortedYears.map(y => yearColors[allYearsMaster.indexOf(y) % yearColors.length].border), 
-                borderWidth: 2 
-            }];
-
-        // 2. VISTA POR MESES
+            datasets = [{ label: 'Registros', data: sortedYears.map(y => data.filter(d => d.year === y).length), backgroundColor: sortedYears.map(y => yearColors[allYearsMaster.indexOf(y) % yearColors.length].bg), borderColor: sortedYears.map(y => yearColors[allYearsMaster.indexOf(y) % yearColors.length].border), borderWidth: 2 }];
         } else if (temporalView === 'month') {
-            labels = monthsConfig.map(m => m.abbr);
+            labels = t.months_abbr;
             datasets = sortedYears.map(y => {
-                const c = Array(12).fill(0); 
-                data.filter(d => d.year === y).forEach(d => c[d.month - 1]++);
+                const c = Array(12).fill(0); data.filter(d => d.year === y).forEach(d => c[d.month - 1]++);
                 const col = yearColors[allYearsMaster.indexOf(y) % yearColors.length];
                 return { label: y.toString(), data: c, backgroundColor: col.bg, borderColor: col.border, borderWidth: 2 };
             });
-
-        // 3. VISTA TRIMESTRAL (NUEVO)
         } else if (temporalView === 'quarter') {
-            labels = ['1º Trim (Ene-Mar)', '2º Trim (Abr-Jun)', '3º Trim (Jul-Sep)', '4º Trim (Oct-Dic)'];
+            labels = t.quarters;
             datasets = sortedYears.map(y => {
                 const c = Array(4).fill(0); 
                 data.filter(d => d.year === y).forEach(d => {
-                    // Cálculo: (Mes - 1) / 3 nos da el índice 0, 1, 2 o 3
                     const qIndex = Math.floor((d.month - 1) / 3);
                     c[qIndex]++;
                 });
                 const col = yearColors[allYearsMaster.indexOf(y) % yearColors.length];
                 return { label: y.toString(), data: c, backgroundColor: col.bg, borderColor: col.border, borderWidth: 2 };
             });
-
-        // 4. VISTA POR DÍAS SEMANAL
         } else if (temporalView === 'day') {
-            labels = dayLabels.map(l => l.substring(0,3));
+            labels = t.days_abbr.map(l => l.substring(0,3));
             datasets = sortedYears.map(y => {
                 const c = Array(7).fill(0); 
-                data.filter(d => d.year === y).forEach(d => { 
-                    let idx = d.date.getDay(); 
-                    c[idx === 0 ? 6 : idx - 1]++; // Ajuste para que Lunes sea 0 y Domingo 6
-                });
+                data.filter(d => d.year === y).forEach(d => { let idx = d.date.getDay(); c[idx === 0 ? 6 : idx - 1]++; });
                 const col = yearColors[allYearsMaster.indexOf(y) % yearColors.length];
                 return { label: y.toString(), data: c, backgroundColor: col.bg, borderColor: col.border, borderWidth: 2 };
             });
         }
 
-        // --- LÓGICA DE TABLA DE DATOS (Se actualiza automáticamente con la vista) ---
         tableDataCache = [];
         labels.forEach((lbl, index) => {
             let row = { label: lbl, index: index };
             datasets.forEach(ds => { row[ds.label] = ds.data[index]; });
             tableDataCache.push(row);
         });
-        
-        // Si la tabla está abierta, refrescarla
         if (isTableView) renderTimelineTable();
 
-        // --- CREACIÓN DEL GRÁFICO ---
         if (chartTimeline) chartTimeline.destroy();
-        chartTimeline = new Chart(ctxTimeline, { 
-            type: 'bar', 
-            data: { labels, datasets }, 
-            options: commonOptions 
-        });
+        chartTimeline = new Chart(ctxTimeline, { type: 'bar', data: { labels, datasets }, options: commonOptions });
     }
 
-    // CATEGORY
+    // --- CATEGORY ---
+// --- CATEGORY ---
     const ctxCat = document.getElementById('chart-category');
     if (ctxCat) {
+        // 1. Detectar si estamos en pantalla completa
+        const container = document.getElementById('container-category');
+        const isFullscreen = container.classList.contains('fullscreen');
+
+        // Procesamiento de datos
         const catData = {}; 
         data.forEach(d => catData[d.cat] = (catData[d.cat] || 0) + 1);
-        
         const sorted = Object.entries(catData).sort((a,b) => b[1]-a[1]);
         const top5 = sorted.slice(0, 5);
         const total = sorted.reduce((sum, item) => sum + item[1], 0);
 
+        // Definir etiquetas LARGAS y CORTAS
+        const fullLabels = top5.map(s => s[0]);
+        const shortLabels = top5.map(s => s[0].length > 20 ? s[0].substring(0, 20) + '...' : s[0]);
+
+        // 2. DECISIÓN: ¿Qué etiquetas y tamaño de letra usar?
+        // Si es fullscreen usamos las largas, si no, las cortas.
+        const activeLabels = isFullscreen ? fullLabels : shortLabels;
+        const fontSize = isFullscreen ? 16 : 11; // Letra más grande en fullscreen
+        const boxSize = isFullscreen ? 20 : 12;  // Cuadradito de color más grande
+
+        // Cache para la tabla
         tableCatDataCache = sorted.map(item => ({
-            cat: item[0],
-            count: item[1],
-            percent: ((item[1] / total) * 100).toFixed(1)
+            cat: item[0], count: item[1], percent: ((item[1] / total) * 100).toFixed(1)
         }));
         if (isTableCatView) renderCategoryTable();
 
         if (chartCategory) chartCategory.destroy();
+        
         chartCategory = new Chart(ctxCat, { 
             type: 'doughnut', 
             data: { 
-                labels: top5.map(s => s[0]), 
+                labels: activeLabels, // Usamos la variable dinámica
                 datasets: [{ 
                     data: top5.map(s => s[1]), 
-                    backgroundColor: yearColors.map(c => c.bg),
-                    borderColor: '#ffffff',
-                    borderWidth: 2
+                    backgroundColor: yearColors.map(c => c.bg), 
+                    borderColor: '#ffffff', 
+                    borderWidth: 2 
                 }] 
             }, 
             options: { 
                 ...commonOptions, 
+                maintainAspectRatio: false, 
                 cutout: '60%',
-                layout: { padding: 10 },
+                
                 scales: { x: { display: false }, y: { display: false } },
+                
+                layout: {
+                    padding: {
+                        top: 10,
+                        bottom: 20,
+                        left: 10,
+                        right: 10
+                    }
+                },
+
                 plugins: { 
                     legend: { 
+                        // En móvil siempre abajo, en PC: derecha (normal) o izquierda/derecha (fullscreen)
                         position: window.innerWidth < 768 ? 'bottom' : 'right',
-                        labels: { boxWidth: 15, padding: 15, font: { size: 11 } }
+                        labels: { 
+                            boxWidth: boxSize,     // Tamaño dinámico caja color
+                            padding: 15, 
+                            font: { size: fontSize } // Tamaño dinámico letra
+                        }
                     },
                     tooltip: {
                         callbacks: {
                             label: function(context) {
-                                let label = context.label || '';
+                                let label = fullLabels[context.dataIndex] || '';
                                 let value = context.parsed;
-                                let total = context.chart._metasets[context.datasetIndex].total;
-                                let percentage = ((value / total) * 100).toFixed(1) + "%";
+                                let totalVal = context.chart._metasets[context.datasetIndex].total;
+                                let percentage = ((value / totalVal) * 100).toFixed(1) + "%";
                                 return ` ${label}: ${value} (${percentage})`;
                             }
                         }
@@ -549,46 +525,24 @@ function updateCharts(data, selYears) {
         });
     }
 
-    // HOURS
-// HOURS
+    // --- HOURS ---
     const ctxHours = document.getElementById('chart-hours');
     if (ctxHours) {
-        // 1. Calcular datos
-        const hC = Array(24).fill(0); 
-        data.forEach(d => hC[d.hour]++);
+        const hC = Array(24).fill(0); data.forEach(d => hC[d.hour]++);
         
-        // 2. Preparar datos para la TABLA (Cache)
+        // Datos para tabla
         const totalReg = data.length;
         tableHoursDataCache = hC.map((count, index) => ({
-            hour: index, // Valor numérico para ordenar
-            hourLabel: String(index).padStart(2, '0') + ":00", // Texto "09:00"
-            count: count,
-            percent: totalReg > 0 ? ((count / totalReg) * 100).toFixed(1) : "0.0"
+            hour: index, hourLabel: String(index).padStart(2, '0') + ":00",
+            count: count, percent: totalReg > 0 ? ((count / totalReg) * 100).toFixed(1) : "0.0"
         }));
-
-        // 3. Si la tabla está activa, renderizarla
         if (isTableHoursView) renderHoursTable();
 
-        // 4. Dibujar Gráfico
         if (chartHours) chartHours.destroy();
         chartHours = new Chart(ctxHours, { 
             type: 'line', 
-            data: { 
-                labels: Array.from({length: 24}, (_,i) => i), 
-                datasets: [{ 
-                    label: 'Actividad', 
-                    data: hC, 
-                    borderColor: '#11cdef', 
-                    fill: true, 
-                    backgroundColor: 'rgba(17,205,239,0.1)', 
-                    tension: 0.4 
-                }] 
-            }, 
-            options: { 
-                ...commonOptions, 
-                plugins: { legend: { display: false } }, 
-                scales: { x: { ticks: { maxTicksLimit: 8 } } } 
-            } 
+            data: { labels: Array.from({length: 24}, (_,i) => i), datasets: [{ label: 'Actividad', data: hC, borderColor: '#11cdef', fill: true, backgroundColor: 'rgba(17,205,239,0.1)', tension: 0.4 }] }, 
+            options: { ...commonOptions, plugins: { legend: { display: false } }, scales: { x: { ticks: { maxTicksLimit: 8 } } } } 
         });
     }
 }
@@ -615,64 +569,22 @@ function initMap() {
 }
 
 function updateMapData(data) {
-    // Verificación de seguridad: si el mapa no está listo, no hacemos nada
     if (!map || !map.getSource('puntos')) return;
+    const datosConGeo = data.filter(d => d.hasGeo); // Solo pintamos lo que tiene GPS
 
-    // 1. FILTRADO CRÍTICO:
-    // Separamos solo los datos que tienen coordenadas válidas para el mapa.
-    // Los que no tienen (hasGeo: false) se ignoran aquí para evitar errores visuales (puntos en el mar).
-    const datosConGeo = data.filter(d => d.hasGeo);
-
-    // 2. Construcción del GeoJSON solo con datos válidos
-    const geojson = { 
-        type: 'FeatureCollection', 
-        features: datosConGeo.map(d => ({ 
-            type: 'Feature', 
-            geometry: { 
-                type: 'Point', 
-                coordinates: [d.lon, d.lat] 
-            }, 
-            properties: { 
-                exp: d.exp, 
-                cat: d.cat, 
-                year: d.year, 
-                fullDate: d.date.toLocaleString('es-ES'), 
-                calle: d.calle, 
-                numero: d.numero, 
-                refnum: d.refnum, 
-                refanno: d.refanno 
-            } 
-        })) 
-    };
-
-    // 3. Actualizar la fuente del mapa
+    const geojson = { type: 'FeatureCollection', features: datosConGeo.map(d => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [d.lon, d.lat] }, properties: { exp: d.exp, cat: d.cat, year: d.year, fullDate: d.date.toLocaleString('es-ES'), calle: d.calle, numero: d.numero, refnum: d.refnum, refanno: d.refanno } })) };
     map.getSource('puntos').setData(geojson);
-
-    // 4. Lógica de Colores (se mantiene igual)
-    // Usamos finalData para que los colores por año sean consistentes aunque filtremos
+    
     const allY = [...new Set(finalData.map(d => d.year))].sort((a,b) => a-b);
     const colorExpr = ['match', ['get', 'year']];
-    
-    allY.forEach(y => {
-        // Asignamos color cíclico según el año
-        colorExpr.push(y, yearColors[allY.indexOf(y) % yearColors.length].border);
-    });
-    // Color por defecto (si fallara la coincidencia)
+    allY.forEach(y => colorExpr.push(y, yearColors[allY.indexOf(y) % yearColors.length].border));
     colorExpr.push('#5e72e4');
-
     map.setPaintProperty('point-layer', 'circle-color', colorExpr);
-
-    // 5. Ajustar el Zoom (Fit Bounds)
-    // Solo intentamos hacer zoom si hay al menos un punto con ubicación
+    
     if (datosConGeo.length > 0) {
         const bounds = new maplibregl.LngLatBounds();
         datosConGeo.forEach(d => bounds.extend([d.lon, d.lat]));
-        
-        try {
-            map.fitBounds(bounds, { padding: 40, maxZoom: 16 });
-        } catch (err) {
-            console.warn("Error al ajustar zoom del mapa", err);
-        }
+        try { map.fitBounds(bounds, { padding: 40, maxZoom: 16 }); } catch (e) {}
     }
 }
 
@@ -683,151 +595,172 @@ function toggle3D() { const p = map.getPitch(); map.easeTo({ pitch: p > 0 ? 0 : 
 function toggleFullscreen(containerId) {
     const container = document.getElementById(containerId);
     if (!container) return;
+    
     const isFullscreen = container.classList.toggle('fullscreen');
     const btnIcon = container.querySelector('.btn-maximize i');
+    
+    // Cambiar icono
     if (isFullscreen) {
-        if (btnIcon) { btnIcon.classList.remove('fa-maximize', 'fa-expand'); btnIcon.classList.add('fa-xmark'); }
-        document.body.style.overflow = 'hidden';
+        if (btnIcon) { 
+            btnIcon.classList.remove('fa-maximize', 'fa-expand'); 
+            btnIcon.classList.add('fa-xmark'); 
+        }
+        document.body.style.overflow = 'hidden'; // Bloquear scroll del body
     } else {
         if (btnIcon) {
             btnIcon.classList.remove('fa-xmark');
-            if (containerId === 'container-map') btnIcon.classList.add('fa-expand');
+            if (containerId === 'container-map') btnIcon.classList.add('fa-expand'); 
             else btnIcon.classList.add('fa-maximize');
         }
         document.body.style.overflow = '';
     }
+
+    // TRUCO: Forzamos updateUI tras una pequeña espera para que detecte el cambio de tamaño
+    // Esto hará que el gráfico se vuelva a pintar con letras grandes o pequeñas según corresponda
     setTimeout(() => {
-        if (chartTimeline) chartTimeline.resize();
-        if (chartCategory) chartCategory.resize();
-        if (chartHours) chartHours.resize();
-        if (map) map.resize();
+        if (map) map.resize(); // El mapa solo necesita resize
+        updateUI(); // Los gráficos necesitan redibujarse para cambiar etiquetas
     }, 300);
 }
 
 // ============================================================
-// 10. GEOLOCALIZACIÓN: MANUAL > GPS
+// 10. GEOLOCALIZACIÓN
 // ============================================================
 async function updateLocationKPI(data) {
     const el = document.getElementById('kpi-location');
-    
-    // Si no hay ningún dato cargado
-    if (!data || data.length === 0) { 
-        el.innerText = "Sin Datos"; 
-        return; 
-    }
+    const t = translations[currentLang];
 
-    // 1. INTENTO: TEXTO MANUAL CONFIGURADO
-    // Si el usuario escribió una localidad manualmente al cargar el archivo
-    if (data[0].locManual && data[0].locManual !== "") {
-        el.innerText = data[0].locManual.toUpperCase();
-        return;
-    }
+    if (!data || data.length === 0) { el.innerText = "Sin Datos"; return; }
+    if (data[0].locManual && data[0].locManual !== "") { el.innerText = data[0].locManual.toUpperCase(); return; }
 
-    // 2. INTENTO: GPS AUTOMÁTICO
-    // Filtramos solo los que tienen coordenadas reales para calcular el centro
     const dataConGeo = data.filter(d => d.hasGeo);
+    if (dataConGeo.length === 0) { el.innerText = "Sin Ubicación GPS"; return; }
 
-    // Si tenemos datos (filas de Excel), pero NINGUNO tiene coordenadas válidas
-    if (dataConGeo.length === 0) {
-        el.innerText = "Sin Ubicación GPS";
-        return;
-    }
-
-    // Calculamos el promedio de latitud y longitud solo de los datos válidos
     let totalLat = 0, totalLon = 0;
-    dataConGeo.forEach(d => { 
-        totalLat += d.lat; 
-        totalLon += d.lon; 
-    });
-    
+    dataConGeo.forEach(d => { totalLat += d.lat; totalLon += d.lon; });
     const centerLat = totalLat / dataConGeo.length;
     const centerLon = totalLon / dataConGeo.length;
 
-    // Ponemos las coordenadas por defecto mientras carga el nombre de la ciudad
-    const defaultText = `${centerLat.toFixed(3)}, ${centerLon.toFixed(3)}`;
-    el.innerText = defaultText;
+    el.innerText = `${centerLat.toFixed(3)}, ${centerLon.toFixed(3)}`;
 
-    // Llamada a API de Geocodificación Inversa (OSM Nominatim)
     try {
         const urlOSM = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${centerLat}&lon=${centerLon}&zoom=10&accept-language=eu,es`;
-        
-        const response = await fetch(urlOSM, { 
-            method: 'GET', 
-            mode: 'cors', 
-            credentials: 'omit', 
-            cache: 'no-store', 
-            referrerPolicy: 'no-referrer', 
-            headers: { 'Accept': 'application/json' } 
-        });
-
+        const response = await fetch(urlOSM, { method: 'GET', mode: 'cors', headers: { 'Accept': 'application/json' } });
         if(response.ok) {
             const json = await response.json();
             const addr = json.address;
-            // Buscamos el nombre más relevante (Ciudad, Pueblo, Municipio...)
             let placeName = addr.city || addr.town || addr.village || addr.municipality || addr.county;
-            
-            if (placeName) { 
-                el.innerText = placeName.toUpperCase(); 
-                return; 
-            }
+            if (placeName) { el.innerText = placeName.toUpperCase(); return; }
         }
-        throw new Error("OSM falló o no dio localidad"); 
-    } catch (errorOSM) {
-        // Fallback: Si falla OSM, intentamos con BigDataCloud (Backup)
+        throw new Error("OSM falló"); 
+    } catch (e) {
         try {
-            const urlBackup = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${centerLat}&longitude=${centerLon}&localityLanguage=es`;
-            const responseBackup = await fetch(urlBackup, { method: 'GET', mode: 'cors', credentials: 'omit' });
-            
-            if(responseBackup.ok) {
-                const jsonBackup = await responseBackup.json();
-                let placeName = jsonBackup.locality || jsonBackup.city || jsonBackup.principalSubdivision;
-                if (placeName) el.innerText = placeName.toUpperCase();
+            const urlB = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${centerLat}&longitude=${centerLon}&localityLanguage=es`;
+            const resB = await fetch(urlB);
+            if(resB.ok) {
+                const jB = await resB.json();
+                let p = jB.locality || jB.city || jB.principalSubdivision;
+                if (p) el.innerText = p.toUpperCase();
             }
-        } catch (errorBackup) { 
-            console.error("Fallo GPS total", errorBackup); 
-            // Si todo falla, se queda con las coordenadas numéricas que pusimos al principio
-        }
+        } catch (er) {}
     }
 }
 
 // ============================================================
-// 11. FUNCIONES TABLAS DE DATOS
+// 11. TABLAS DE DATOS Y VISOR (CORREGIDO DEFINITIVO)
 // ============================================================
+
+// 1. EVOLUCIÓN TEMPORAL
 function toggleTimelineView() {
-    const canvas = document.getElementById('chart-timeline');
-    const tableDiv = document.getElementById('table-timeline-view');
-    const btnIcon = document.querySelector('#btn-toggle-view i');
     isTableView = !isTableView;
-    if (isTableView) {
-        canvas.style.display = 'none'; tableDiv.style.display = 'block';
-        btnIcon.className = 'fa-solid fa-chart-column'; btnIcon.parentElement.title = "Ver Gráfico";
+    const btn = document.querySelector('#btn-toggle-view i');
+    const canvas = document.getElementById('chart-timeline');
+    const table = document.getElementById('table-timeline-view');
+
+    // Alternar visibilidad
+    canvas.style.display = isTableView ? 'none' : 'block';
+    table.style.display = isTableView ? 'block' : 'none';
+    
+    // Cambiar icono y título
+    btn.className = isTableView ? 'fa-solid fa-chart-column' : 'fa-solid fa-table';
+    btn.parentElement.title = isTableView ? "Ver Gráfico" : "Ver Datos";
+
+    if(isTableView) {
         renderTimelineTable();
     } else {
-        tableDiv.style.display = 'none'; canvas.style.display = 'block';
-        btnIcon.className = 'fa-solid fa-table'; btnIcon.parentElement.title = "Ver Datos";
+        // SOLUCIÓN: En lugar de resize(), llamamos a updateUI()
+        // Esto destruye el gráfico y lo crea de nuevo ajustado perfectamente al hueco
+        setTimeout(() => { updateUI(); }, 50);
     }
 }
 
+// 2. TOP TIPOS (CATEGORÍA)
+function toggleCategoryView() {
+    isTableCatView = !isTableCatView;
+    const btn = document.querySelector('#btn-toggle-view-cat i');
+    const canvas = document.getElementById('chart-category');
+    const table = document.getElementById('table-category-view');
+
+    canvas.style.display = isTableCatView ? 'none' : 'block';
+    table.style.display = isTableCatView ? 'block' : 'none';
+    
+    btn.className = isTableCatView ? 'fa-solid fa-chart-pie' : 'fa-solid fa-table';
+    btn.parentElement.title = isTableCatView ? "Ver Gráfico" : "Ver Datos";
+
+    if(isTableCatView) {
+        renderCategoryTable();
+    } else {
+        // SOLUCIÓN: Redibujar completo para recalcular centro y márgenes
+        setTimeout(() => { updateUI(); }, 50);
+    }
+}
+
+// 3. HORAS
+function toggleHoursView() {
+    isTableHoursView = !isTableHoursView;
+    const btn = document.querySelector('#btn-toggle-view-hours i');
+    const canvas = document.getElementById('chart-hours');
+    const table = document.getElementById('table-hours-view');
+
+    canvas.style.display = isTableHoursView ? 'none' : 'block';
+    table.style.display = isTableHoursView ? 'block' : 'none';
+    
+    btn.className = isTableHoursView ? 'fa-solid fa-chart-line' : 'fa-solid fa-table';
+    btn.parentElement.title = isTableHoursView ? "Ver Gráfico" : "Ver Datos";
+
+    if(isTableHoursView) {
+        renderHoursTable();
+    } else {
+        // SOLUCIÓN: Redibujar completo
+        setTimeout(() => { updateUI(); }, 50);
+    }
+}
+
+// --- FUNCIONES DE RENDERIZADO DE TABLAS (Sin cambios) ---
+
 function renderTimelineTable() {
-    const container = document.getElementById('table-timeline-view');
-    if (!tableDataCache || tableDataCache.length === 0) { container.innerHTML = '<p style="padding:20px; text-align:center; color:#888;">Sin datos</p>'; return; }
+    const c = document.getElementById('table-timeline-view');
+    if (!tableDataCache || tableDataCache.length === 0) { c.innerHTML = '<p style="padding:20px; text-align:center; color:#888;">Sin datos</p>'; return; }
+    
     const keys = Object.keys(tableDataCache[0]).filter(k => k !== 'label' && k !== 'index');
     let html = `<table class="data-table"><thead><tr><th onclick="sortTable('index')">PERIODO <i class="fa-solid fa-sort"></i></th>`;
     keys.forEach(k => { html += `<th onclick="sortTable('${k}')">${k} <i class="fa-solid fa-sort"></i></th>`; });
     html += `</tr></thead><tbody>`;
+    
     tableDataCache.forEach(row => {
         html += `<tr><td><strong>${row.label}</strong></td>`;
         keys.forEach(k => { html += `<td>${row[k].toLocaleString()}</td>`; });
         html += `</tr>`;
     });
     html += `</tbody></table>`;
-    container.innerHTML = html;
+    c.innerHTML = html;
     updateSortIcons(currentSort.col, '#table-timeline-view', currentSort);
 }
 
 function sortTable(column) {
     if (currentSort.col === column) currentSort.dir = currentSort.dir === 'asc' ? 'desc' : 'asc';
     else { currentSort.col = column; currentSort.dir = column === 'index' ? 'asc' : 'desc'; }
+    
     tableDataCache.sort((a, b) => {
         let valA = a[column], valB = b[column];
         if (valA < valB) return currentSort.dir === 'asc' ? -1 : 1;
@@ -837,179 +770,84 @@ function sortTable(column) {
     renderTimelineTable();
 }
 
-function toggleCategoryView() {
-    const canvas = document.getElementById('chart-category');
-    const tableDiv = document.getElementById('table-category-view');
-    const btnIcon = document.querySelector('#btn-toggle-view-cat i');
-    isTableCatView = !isTableCatView;
-    if (isTableCatView) {
-        canvas.style.display = 'none'; tableDiv.style.display = 'block';
-        btnIcon.className = 'fa-solid fa-chart-pie'; btnIcon.parentElement.title = "Ver Gráfico";
-        renderCategoryTable();
-    } else {
-        tableDiv.style.display = 'none'; canvas.style.display = 'block';
-        btnIcon.className = 'fa-solid fa-table'; btnIcon.parentElement.title = "Ver Datos";
-    }
-}
-
 function renderCategoryTable() {
-    const container = document.getElementById('table-category-view');
-    if (!tableCatDataCache || tableCatDataCache.length === 0) { container.innerHTML = '<p style="padding:20px; text-align:center; color:#888;">Sin datos</p>'; return; }
-    let html = `<table class="data-table"><thead><tr>
-        <th onclick="sortTableCategory('cat')">CATEGORÍA <i class="fa-solid fa-sort"></i></th>
-        <th onclick="sortTableCategory('count')">CANTIDAD <i class="fa-solid fa-sort"></i></th>
-        <th onclick="sortTableCategory('percent')">% <i class="fa-solid fa-sort"></i></th>
-    </tr></thead><tbody>`;
-    tableCatDataCache.forEach(row => {
-        html += `<tr><td><strong>${row.cat}</strong></td><td style="text-align:right;">${row.count.toLocaleString()}</td><td style="text-align:right;">${row.percent}%</td></tr>`;
-    });
-    html += `</tbody></table>`;
-    container.innerHTML = html;
+    const c = document.getElementById('table-category-view');
+    if (!tableCatDataCache.length) { c.innerHTML = '<p style="padding:20px; text-align:center; color:#888;">Sin datos</p>'; return; }
+    
+    let html = `<table class="data-table"><thead><tr><th onclick="sortTableCategory('cat')">CAT <i class="fa-solid fa-sort"></i></th><th onclick="sortTableCategory('count')">CANT <i class="fa-solid fa-sort"></i></th><th onclick="sortTableCategory('percent')">% <i class="fa-solid fa-sort"></i></th></tr></thead><tbody>`;
+    tableCatDataCache.forEach(r => html += `<tr><td>${r.cat}</td><td style="text-align:right;">${r.count}</td><td style="text-align:right;">${r.percent}%</td></tr>`);
+    c.innerHTML = html + `</tbody></table>`;
     updateSortIcons(currentSortCat.col, '#table-category-view', currentSortCat);
 }
 
-function sortTableCategory(column) {
-    if (currentSortCat.col === column) currentSortCat.dir = currentSortCat.dir === 'asc' ? 'desc' : 'asc';
-    else { currentSortCat.col = column; currentSortCat.dir = column === 'cat' ? 'asc' : 'desc'; }
-    tableCatDataCache.sort((a, b) => {
-        let valA = a[column], valB = b[column];
-        if(column === 'percent') { valA = parseFloat(valA); valB = parseFloat(valB); }
-        if (valA < valB) return currentSortCat.dir === 'asc' ? -1 : 1;
-        if (valA > valB) return currentSortCat.dir === 'asc' ? 1 : -1;
-        return 0;
+function sortTableCategory(col) {
+    if (currentSortCat.col === col) currentSortCat.dir = currentSortCat.dir === 'asc' ? 'desc' : 'asc'; 
+    else { currentSortCat.col = col; currentSortCat.dir = 'desc'; }
+    
+    tableCatDataCache.sort((a,b) => { 
+        let vA = a[col], vB = b[col]; 
+        if(col==='percent'){vA=parseFloat(vA);vB=parseFloat(vB);} 
+        return vA < vB ? (currentSortCat.dir === 'asc' ? -1 : 1) : 1; 
     });
     renderCategoryTable();
 }
 
-function updateSortIcons(activeCol, containerSelector, sortObj) {
-    const container = document.querySelector(containerSelector);
-    if(!container) return;
-    const headers = container.querySelectorAll('.data-table th');
-    headers.forEach(th => {
-        th.classList.remove('sorted-asc', 'sorted-desc');
-        const icon = th.querySelector('i');
-        if(icon) icon.className = 'fa-solid fa-sort';
-    });
-    for (let th of headers) {
-        if (th.getAttribute('onclick') && th.getAttribute('onclick').includes(`'${activeCol}'`)) {
-            th.classList.add(sortObj.dir === 'asc' ? 'sorted-asc' : 'sorted-desc');
-            const icon = th.querySelector('i');
-            if(icon) icon.className = sortObj.dir === 'asc' ? 'fa-solid fa-sort-up' : 'fa-solid fa-sort-down';
-        }
-    }
-}
-
-// ============================================================
-// LÓGICA TABLA HORAS (NUEVO)
-// ============================================================
-
-function toggleHoursView() {
-    const canvas = document.getElementById('chart-hours');
-    const tableDiv = document.getElementById('table-hours-view');
-    const btnIcon = document.querySelector('#btn-toggle-view-hours i');
-    
-    isTableHoursView = !isTableHoursView;
-    
-    if (isTableHoursView) {
-        canvas.style.display = 'none'; 
-        tableDiv.style.display = 'block';
-        btnIcon.className = 'fa-solid fa-chart-line'; 
-        btnIcon.parentElement.title = "Ver Gráfico";
-        renderHoursTable();
-    } else {
-        tableDiv.style.display = 'none'; 
-        canvas.style.display = 'block';
-        btnIcon.className = 'fa-solid fa-table'; 
-        btnIcon.parentElement.title = "Ver Datos";
-    }
-}
-
 function renderHoursTable() {
-    const container = document.getElementById('table-hours-view');
-    if (!tableHoursDataCache || tableHoursDataCache.length === 0) { 
-        container.innerHTML = '<p style="padding:20px; text-align:center; color:#888;">Sin datos</p>'; 
-        return; 
-    }
-
-    let html = `<table class="data-table"><thead><tr>
-        <th onclick="sortTableHours('hour')">HORA <i class="fa-solid fa-sort"></i></th>
-        <th onclick="sortTableHours('count')">CANTIDAD <i class="fa-solid fa-sort"></i></th>
-        <th onclick="sortTableHours('percent')">% <i class="fa-solid fa-sort"></i></th>
-    </tr></thead><tbody>`;
-
-    tableHoursDataCache.forEach(row => {
-        // Usamos una barra de progreso visual simple en el fondo si quieres, o solo texto
-        html += `<tr>
-            <td><strong>${row.hourLabel}</strong></td>
-            <td style="text-align:right;">${row.count.toLocaleString()}</td>
-            <td style="text-align:right;">${row.percent}%</td>
-        </tr>`;
-    });
-
-    html += `</tbody></table>`;
-    container.innerHTML = html;
+    const c = document.getElementById('table-hours-view');
+    if (!tableHoursDataCache.length) { c.innerHTML = '<p style="padding:20px; text-align:center; color:#888;">Sin datos</p>'; return; }
     
-    // Reutilizamos la función de actualizar iconos que ya tenías
+    let html = `<table class="data-table"><thead><tr><th onclick="sortTableHours('hour')">HORA <i class="fa-solid fa-sort"></i></th><th onclick="sortTableHours('count')">CANT <i class="fa-solid fa-sort"></i></th><th onclick="sortTableHours('percent')">% <i class="fa-solid fa-sort"></i></th></tr></thead><tbody>`;
+    tableHoursDataCache.forEach(r => html += `<tr><td>${r.hourLabel}</td><td style="text-align:right;">${r.count}</td><td style="text-align:right;">${r.percent}%</td></tr>`);
+    c.innerHTML = html + `</tbody></table>`;
     updateSortIcons(currentSortHours.col, '#table-hours-view', currentSortHours);
 }
 
-function sortTableHours(column) {
-    if (currentSortHours.col === column) {
-        currentSortHours.dir = currentSortHours.dir === 'asc' ? 'desc' : 'asc';
-    } else { 
-        currentSortHours.col = column; 
-        currentSortHours.dir = (column === 'hour') ? 'asc' : 'desc'; 
-    }
-
-    tableHoursDataCache.sort((a, b) => {
-        let valA = a[column];
-        let valB = b[column];
-
-        // Convertir a número si es porcentaje
-        if(column === 'percent') { 
-            valA = parseFloat(valA); 
-            valB = parseFloat(valB); 
-        }
-
-        if (valA < valB) return currentSortHours.dir === 'asc' ? -1 : 1;
-        if (valA > valB) return currentSortHours.dir === 'asc' ? 1 : -1;
-        return 0;
+function sortTableHours(col) {
+    if (currentSortHours.col === col) currentSortHours.dir = currentSortHours.dir === 'asc' ? 'desc' : 'asc'; 
+    else { currentSortHours.col = col; currentSortHours.dir = 'asc'; }
+    
+    tableHoursDataCache.sort((a,b) => { 
+        let vA = a[col], vB = b[col]; 
+        if(col==='percent'){vA=parseFloat(vA);vB=parseFloat(vB);} 
+        return vA < vB ? (currentSortHours.dir === 'asc' ? -1 : 1) : 1; 
     });
-
     renderHoursTable();
 }
 
+function updateSortIcons(activeCol, containerSelector, sortObj) {
+    document.querySelectorAll(containerSelector + ' th i').forEach(i => i.className = 'fa-solid fa-sort');
+    const ths = document.querySelectorAll(containerSelector + ' th');
+    for (let th of ths) {
+        if (th.getAttribute('onclick') && th.getAttribute('onclick').includes(`'${activeCol}'`)) {
+            th.querySelector('i').className = sortObj.dir === 'asc' ? 'fa-solid fa-sort-up' : 'fa-solid fa-sort-down';
+        }
+    }
+}
+
 // ============================================================
-// LÓGICA DEL VISOR PDF
+// 12. MULTI-IDIOMA Y PDF
 // ============================================================
+function changeLanguage(lang) {
+    currentLang = lang;
+    localStorage.setItem('eurocop_lang', lang);
+    applyLanguage(lang);
+}
+function applyLanguage(lang) {
+    const t = translations[lang];
+    if (!t) return;
+    document.querySelectorAll('[data-i18n]').forEach(el => { const k = el.getAttribute('data-i18n'); if (t[k]) el.textContent = t[k]; });
+    const locInput = document.getElementById('map-localidad');
+    if(locInput && t.col_loc_placeholder) locInput.placeholder = t.col_loc_placeholder;
+    document.querySelectorAll('.dropdown-controls button:nth-child(1)').forEach(b => b.textContent = t.sel_all);
+    document.querySelectorAll('.dropdown-controls button:nth-child(2)').forEach(b => b.textContent = t.sel_none);
+    if(finalData.length > 0) updateUI();
+}
+
 function openPdfModal(fileName, title) {
-    // 1. Establecer el título del modal
-    const titleEl = document.getElementById('pdf-modal-title');
-    if(titleEl) titleEl.innerHTML = `<i class="fa-solid fa-file-pdf"></i> ${title}`;
-
-    // 2. Cargar el archivo PDF buscando DENTRO de la carpeta ArchivosPdf
-    const frame = document.getElementById('pdf-frame');
-    
-    // AQUÍ ESTÁ EL CAMBIO: Añadimos "ArchivosPdf/" antes del nombre del archivo
-    if(frame) frame.src = "./ArchivosPdf/" + fileName; 
-
-    // 3. Mostrar el modal
+    document.getElementById('pdf-modal-title').innerHTML = `<i class="fa-solid fa-file-pdf"></i> ${title}`;
+    document.getElementById('pdf-frame').src = "./ArchivosPdf/" + fileName;
     document.getElementById('pdf-modal').classList.add('active');
 }
-function closePdfModal() {
-    document.getElementById('pdf-modal').classList.remove('active');
-}
-
-// Cerrar si se hace clic fuera de la caja blanca (en el fondo oscuro)
-document.getElementById('pdf-modal').addEventListener('click', function(e) {
-    if (e.target === this) {
-        closePdfModal();
-    }
-});
-
-// Cerrar con la tecla ESC
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape' && document.getElementById('pdf-modal').classList.contains('active')) {
-        closePdfModal();
-    }
-});
+function closePdfModal() { document.getElementById('pdf-modal').classList.remove('active'); }
+document.getElementById('pdf-modal').addEventListener('click', function(e) { if (e.target === this) closePdfModal(); });
+document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closePdfModal(); });
