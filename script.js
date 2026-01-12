@@ -214,6 +214,10 @@ function refreshMappingStatus() {
 // ============================================================
 // 5. PROCESAMIENTO
 // ============================================================
+// ============================================================
+// MODIFICACIÓN EN SCRIPT.JS - PERMITIR SIN GPS
+// ============================================================
+
 document.getElementById('btn-visualizar').onclick = () => {
     const config = {
         exp: document.getElementById('map-expediente').value,
@@ -225,8 +229,9 @@ document.getElementById('btn-visualizar').onclick = () => {
         locManual: document.getElementById('map-localidad').value.trim() 
     };
 
-    if (!config.fecha || !config.lat || !config.lon) {
-        alert("Por favor, selecciona al menos Fecha, Latitud y Longitud.");
+    // --- CAMBIO 1: Solo la FECHA es obligatoria ahora ---
+    if (!config.fecha) {
+        alert("Por favor, selecciona al menos la columna de FECHA.");
         return;
     }
 
@@ -239,19 +244,29 @@ document.getElementById('btn-visualizar').onclick = () => {
             if (t.includes(':')) { const p = t.split(':'); d.setHours(parseInt(p[0]) || 0, parseInt(p[1]) || 0, 0); }
         }
         
-        // GEO LOGIC: Si falla lat/lon, guardamos 0 y hasGeo=false
-        let lat = parseFloat(String(row[config.lat]).replace(',', '.'));
-        let lon = parseFloat(String(row[config.lon]).replace(',', '.'));
-        let tieneUbicacion = true;
+        // --- CAMBIO 2: Lógica defensiva para Geo ---
+        let lat = 0;
+        let lon = 0;
+        let tieneUbicacion = false;
 
-        if (isNaN(lat) || isNaN(lon) || (lat === 0 && lon === 0)) {
-            lat = 0; lon = 0; tieneUbicacion = false;
+        // Solo intentamos procesar coordenadas si el usuario seleccionó las columnas
+        if (config.lat && config.lon) {
+            // Limpiamos y parseamos
+            lat = parseFloat(String(row[config.lat]).replace(',', '.'));
+            lon = parseFloat(String(row[config.lon]).replace(',', '.'));
+
+            // Verificamos si son números válidos y no son 0,0 (a menos que sea real)
+            if (!isNaN(lat) && !isNaN(lon) && (lat !== 0 || lon !== 0)) {
+                tieneUbicacion = true;
+            } else {
+                lat = 0; lon = 0; // Reset si falló el parseo
+            }
         }
 
         return {
             exp: row[config.exp] || "N/A",
             date: d, year: d.getFullYear(), month: d.getMonth() + 1, hour: d.getHours(),
-            lat, lon, hasGeo: tieneUbicacion,
+            lat, lon, hasGeo: tieneUbicacion, // Esto controlará si sale en el mapa o no
             cat: row[config.cat] || "General",
             locManual: config.locManual, 
             calle: row['CALLE'] || row['calle'] || "", numero: row['NUMERO'] || row['numero'] || "",
