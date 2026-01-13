@@ -451,7 +451,22 @@ function updateCharts(data, selYears) {
         if (isTableView) renderTimelineTable();
 
         if (chartTimeline) chartTimeline.destroy();
-        chartTimeline = new Chart(ctxTimeline, { type: 'bar', data: { labels, datasets }, options: commonOptions });
+        chartTimeline = new Chart(ctxTimeline, { 
+            type: 'bar', 
+            data: { labels, datasets }, 
+            options: { 
+                ...commonOptions,
+                // AÑADIDO: Configuración del eje Y para enteros
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0 // <--- ESTO FUERZA ENTEROS
+                        }
+                    }
+                }
+            } 
+        });
     }
 
     // --- CATEGORY ---
@@ -553,11 +568,26 @@ function updateCharts(data, selYears) {
         }));
         if (isTableHoursView) renderHoursTable();
 
+// ... código anterior de chartHours ...
+
         if (chartHours) chartHours.destroy();
         chartHours = new Chart(ctxHours, { 
             type: 'line', 
             data: { labels: Array.from({length: 24}, (_,i) => i), datasets: [{ label: 'Actividad', data: hC, borderColor: '#11cdef', fill: true, backgroundColor: 'rgba(17,205,239,0.1)', tension: 0.4 }] }, 
-            options: { ...commonOptions, plugins: { legend: { display: false } }, scales: { x: { ticks: { maxTicksLimit: 8 } } } } 
+            options: { 
+                ...commonOptions, 
+                plugins: { legend: { display: false } }, 
+                scales: { 
+                    x: { ticks: { maxTicksLimit: 8 } },
+                    // AÑADIDO: Configuración del eje Y para enteros
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0 // <--- ESTO FUERZA ENTEROS
+                        }
+                    }
+                } 
+            } 
         });
     }
 }
