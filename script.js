@@ -965,9 +965,19 @@ function applyLanguage(lang) {
     if(finalData.length > 0) updateUI();
 }
 
+// ============================================================
+// MODIFICACIÓN: CACHE BUSTING AUTOMÁTICO
+// ============================================================
 function openPdfModal(fileName, title) {
     document.getElementById('pdf-modal-title').innerHTML = `<i class="fa-solid fa-file-pdf"></i> ${title}`;
-    document.getElementById('pdf-frame').src = "./ArchivosPdf/" + fileName;
+    
+    // Creamos un sello de tiempo único (ej: 1709123456789)
+    const cacheBuster = new Date().getTime();
+    
+    // Lo añadimos al final de la URL con "?v="
+    // El navegador creerá que es un archivo nuevo cada vez que lo abras
+    document.getElementById('pdf-frame').src = "./ArchivosPdf/" + fileName + "?v=" + cacheBuster;
+    
     document.getElementById('pdf-modal').classList.add('active');
 }
 function closePdfModal() { document.getElementById('pdf-modal').classList.remove('active'); }
