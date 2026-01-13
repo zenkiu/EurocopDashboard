@@ -235,42 +235,81 @@ document.getElementById('btn-visualizar').onclick = () => {
         return;
     }
 
-    finalData = rawData.map(row => {
-        let d = new Date(row[config.fecha]);
+finalData = rawData.map(row => {
+        // --- 1. PROCESAMIENTO INTELIGENTE DE FECHA (DD/MM/YYYY) ---
+        let valFecha = row[config.fecha];
+        let d;
+
+        // Caso A: Si la librería ya detectó que es una fecha (Excel nativo)
+        if (valFecha instanceof Date) {
+            d = new Date(valFecha);
+        }
+        // Caso B: Si es texto con barras (ej: "12/01/2026") -> Forzamos Día/Mes/Año
+        else if (typeof valFecha === 'string' && valFecha.includes('/')) {
+            const parts = valFecha.split('/');
+            // Si tenemos 3 partes (DD, MM, YYYY)
+            if (parts.length >= 3) {
+                const day = parseInt(parts[0], 10);
+                const month = parseInt(parts[1], 10) - 1; // Restamos 1 porque Enero es 0 en JS
+                const year = parseInt(parts[2], 10); // parseInt limpia si hay hora detrás
+                d = new Date(year, month, day);
+            } else {
+                d = new Date(valFecha); // Fallback si el formato es raro
+            }
+        } 
+        // Caso C: Cualquier otro formato estándar
+        else {
+            d = new Date(valFecha);
+        }
+
+        // Si la fecha no es válida, descartamos la fila
         if (isNaN(d.getTime())) return null;
 
+        // --- 2. PROCESAMIENTO DE HORA ---
+        // Si el usuario seleccionó columna de hora, actualizamos la fecha
         if (config.hora && row[config.hora]) {
-            const t = String(row[config.hora]);
-            if (t.includes(':')) { const p = t.split(':'); d.setHours(parseInt(p[0]) || 0, parseInt(p[1]) || 0, 0); }
+            const t = String(row[config.hora]).trim();
+            if (t.includes(':')) { 
+                const p = t.split(':'); 
+                // Asignamos Hora y Minutos a la fecha 'd'
+                d.setHours(parseInt(p[0]) || 0, parseInt(p[1]) || 0, 0); 
+            }
         }
         
-        // --- CAMBIO 2: Lógica defensiva para Geo ---
+        // --- 3. PROCESAMIENTO DE GEOLOCALIZACIÓN (LAT/LON) ---
         let lat = 0;
         let lon = 0;
         let tieneUbicacion = false;
 
-        // Solo intentamos procesar coordenadas si el usuario seleccionó las columnas
         if (config.lat && config.lon) {
-            // Limpiamos y parseamos
+            // Reemplazar comas por puntos para decimales
             lat = parseFloat(String(row[config.lat]).replace(',', '.'));
             lon = parseFloat(String(row[config.lon]).replace(',', '.'));
 
-            // Verificamos si son números válidos y no son 0,0 (a menos que sea real)
+            // Validar que sean números reales y distintos de 0,0 (a menos que sea intencional)
             if (!isNaN(lat) && !isNaN(lon) && (lat !== 0 || lon !== 0)) {
                 tieneUbicacion = true;
             } else {
-                lat = 0; lon = 0; // Reset si falló el parseo
+                lat = 0; lon = 0; 
             }
         }
 
+        // --- 4. RETORNO DEL OBJETO FINAL ---
         return {
             exp: row[config.exp] || "N/A",
-            date: d, year: d.getFullYear(), month: d.getMonth() + 1, hour: d.getHours(),
-            lat, lon, hasGeo: tieneUbicacion, // Esto controlará si sale en el mapa o no
+            date: d, 
+            year: d.getFullYear(), 
+            month: d.getMonth() + 1, 
+            hour: d.getHours(),
+            lat, 
+            lon, 
+            hasGeo: tieneUbicacion,
             cat: row[config.cat] || "General",
             locManual: config.locManual, 
-            calle: row['CALLE'] || row['calle'] || "", numero: row['NUMERO'] || row['numero'] || "",
-            refnum: row['REFNUM'] || "", refanno: row['REFANNO'] || ""
+            calle: row['CALLE'] || row['calle'] || "", 
+            numero: row['NUMERO'] || row['numero'] || "",
+            refnum: row['REFNUM'] || "", 
+            refanno: row['REFANNO'] || ""
         };
     }).filter(v => v !== null);
 
@@ -357,36 +396,74 @@ function toggleGroup(containerId, state, event) {
 function updateUI() {
     const t = translations[currentLang];
     
+    // --- 1. FUNCIONES AUXILIARES INTERNAS ---
     const getValues = (containerId) => Array.from(document.querySelectorAll(`#${containerId} input:checked`)).map(i => i.value);
+    
     const getLabels = (containerId) => {
         const all = document.querySelectorAll(`#${containerId} input`);
         const checked = Array.from(document.querySelectorAll(`#${containerId} input:checked`));
+        
         if (checked.length === 0) return t.sel_none.toUpperCase();
         if (checked.length === all.length) return t.sel_all.toUpperCase();
+        
+        // Unir con comas los seleccionados
         return checked.map(i => i.nextElementSibling.innerText).join(", ");
     };
 
+    // --- 2. LEER SELECCIÓN DE FILTROS ---
     const selYears = getValues('items-year').map(Number);
     const selMonths = getValues('items-month').map(Number);
     const selCats = getValues('items-category');
 
-    // Actualizar etiquetas Filtros
+    // --- 3. ACTUALIZAR ETIQUETAS VISUALES (DROPDOWNS Y HEADER) ---
+    // Años
     if(document.getElementById('label-year')) document.getElementById('label-year').innerText = getLabels('items-year');
     if(document.getElementById('header-year')) document.getElementById('header-year').innerText = getLabels('items-year');
+    
+    // Meses
     if(document.getElementById('label-month')) document.getElementById('label-month').innerText = getLabels('items-month');
     if(document.getElementById('header-month')) document.getElementById('header-month').innerText = getLabels('items-month');
+    
+    // Categorías
     if(document.getElementById('label-category')) document.getElementById('label-category').innerText = getLabels('items-category');
     if(document.getElementById('header-category')) document.getElementById('header-category').innerText = getLabels('items-category');
 
-    const filtered = finalData.filter(d => selYears.includes(d.year) && selMonths.includes(d.month) && selCats.includes(d.cat));
+    // --- 4. FILTRAR LOS DATOS (EL MOTOR PRINCIPAL) ---
+    const filtered = finalData.filter(d => 
+        selYears.includes(d.year) && 
+        selMonths.includes(d.month) && 
+        selCats.includes(d.cat)
+    );
 
+    // --- 5. ACTUALIZAR KPIs BÁSICOS ---
+    // Contador Grande (Expedientes)
     document.getElementById('kpi-count').innerText = filtered.length.toLocaleString();
+    
+    // Contador Pequeño (Arriba a la derecha)
     if(document.getElementById('kpi-total-filas')) 
         document.getElementById('kpi-total-filas').innerHTML = `${filtered.length} <span data-i18n="kpi_reg">${t.kpi_reg}</span>`;
 
+    // --- 6. ACTUALIZAR COMPONENTES COMPLEJOS ---
     updateMapData(filtered);
     updateCharts(filtered, selYears);
     updateLocationKPI(filtered);
+
+    // --- 7. NUEVO: ACTUALIZAR TARJETA DE ARCHIVO (NOMBRE Y TÍTULO) ---
+    
+    // A) Cambiar "EPEA" por "TITULO" (o "IZENBURUA" si es euskera)
+    const labelTitulo = document.getElementById('card-label-titulo');
+    if (labelTitulo) {
+        // Lógica simple para ES/EU, puedes añadir más si quieres
+        labelTitulo.innerText = currentLang === 'eu' ? "IZENBURUA" : "TITULO";
+    }
+
+    // B) Poner el nombre del archivo cargado
+    const textFilename = document.getElementById('card-text-filename');
+    if (textFilename) {
+        // Usamos la variable global 'nombreArchivoSubido'
+        // Si no hay archivo aún, mostramos un guion o texto por defecto
+        textFilename.innerText = nombreArchivoSubido || "SIN ARCHIVO";
+    }
 }
 
 // ============================================================

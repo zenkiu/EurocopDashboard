@@ -48,7 +48,7 @@
                 <option value="gl">🔵 GL</option>
             </select>
 
-            <div id="display-filename" class="filename-pill" data-i18n="no_file">SIN ARCHIVO</div>
+            <!-- <div id="display-filename" class="filename-pill" data-i18n="no_file">SIN ARCHIVO</div> -->
             
             <span id="kpi-total-filas" class="badge-records">0 <span data-i18n="kpi_reg">REG</span></span>
             
@@ -247,7 +247,12 @@
                 </div>
                 <div class="kpi-card">
                     <div class="kpi-icon" style="background: #fb6340;"><i class="fa-solid fa-calendar-check"></i></div>
-                    <div class="kpi-data"><h3 data-i18n="kpi_periodo">Periodo</h3><span data-i18n="kpi_filtered">Filtrado</span></div>
+                    <div class="kpi-data">
+                        <!-- 1. ID para el título -->
+                        <h3 id="card-label-titulo">TITULO</h3> 
+                        <!-- 2. ID para el nombre del archivo -->
+                        <span id="card-text-filename">SIN ARCHIVO</span>
+                    </div>
                 </div>
             </div>
 
