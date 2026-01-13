@@ -194,18 +194,36 @@ function showMapping(data) {
 
 function refreshMappingStatus() {
     const mappingIds = ['map-expediente', 'map-fecha', 'map-hora', 'map-lat', 'map-lon', 'map-categoria'];
+    
+    // 1. Obtenemos qué columnas ya han sido seleccionadas en otros desplegables
     const currentSelections = mappingIds.map(id => {
         const el = document.getElementById(id);
         return el ? el.value : "";
     }).filter(val => val !== "");
 
+    // 2. Recorremos cada desplegable para actualizar sus opciones
     mappingIds.forEach(id => {
         const sel = document.getElementById(id);
         if(!sel) return;
+        
         Array.from(sel.options).forEach(opt => {
+            // Saltamos la opción por defecto ("Seleccionar...")
             if (opt.value === "" || opt.disabled) return;
+            
             const isUsedElsewhere = currentSelections.includes(opt.value) && sel.value !== opt.value;
-            opt.textContent = (isUsedElsewhere ? "✕ " : (sel.value === opt.value ? "✓ " : "• ")) + opt.value.replace(/^[✓•✕]\s/, "");
+            
+            // --- CAMBIO: DETECTAR SI ES "__EMPTY" Y MOSTRAR "VACIO" ---
+            let textoVisual = opt.value;
+            if (textoVisual.includes('__EMPTY')) {
+                // Reemplazamos __EMPTY por BLANCO (Mantiene el número si es BLANCO_1, BLANCO_2...)
+                textoVisual = textoVisual.replace('__EMPTY', 'BLANCO'); 
+            }
+            // -----------------------------------------------------------
+
+            // Construimos el texto con el símbolo delante (✓, •, ✕) + el nombre corregido
+            const symbol = isUsedElsewhere ? "✕ " : (sel.value === opt.value ? "✓ " : "• ");
+            opt.textContent = symbol + textoVisual;
+            
             opt.style.color = isUsedElsewhere ? "#cbd5e0" : "#5e72e4";
         });
     });
@@ -216,6 +234,10 @@ function refreshMappingStatus() {
 // ============================================================
 // ============================================================
 // MODIFICACIÓN EN SCRIPT.JS - PERMITIR SIN GPS
+// ============================================================
+
+// ============================================================
+// MODIFICACIÓN: DETECCIÓN DE ERRORES DE FECHA
 // ============================================================
 
 document.getElementById('btn-visualizar').onclick = () => {
@@ -229,96 +251,108 @@ document.getElementById('btn-visualizar').onclick = () => {
         locManual: document.getElementById('map-localidad').value.trim() 
     };
 
-    // --- CAMBIO 1: Solo la FECHA es obligatoria ahora ---
     if (!config.fecha) {
         alert("Por favor, selecciona al menos la columna de FECHA.");
         return;
     }
 
-finalData = rawData.map(row => {
-        // --- 1. PROCESAMIENTO INTELIGENTE DE FECHA (DD/MM/YYYY) ---
+    // Array para guardar los errores
+    let registrosSinFecha = []; 
+
+    finalData = rawData.map(row => {
+        // --- 1. PROCESAMIENTO DE FECHA ---
         let valFecha = row[config.fecha];
         let d;
 
-        // Caso A: Si la librería ya detectó que es una fecha (Excel nativo)
         if (valFecha instanceof Date) {
             d = new Date(valFecha);
         }
-        // Caso B: Si es texto con barras (ej: "12/01/2026") -> Forzamos Día/Mes/Año
         else if (typeof valFecha === 'string' && valFecha.includes('/')) {
             const parts = valFecha.split('/');
-            // Si tenemos 3 partes (DD, MM, YYYY)
             if (parts.length >= 3) {
                 const day = parseInt(parts[0], 10);
-                const month = parseInt(parts[1], 10) - 1; // Restamos 1 porque Enero es 0 en JS
-                const year = parseInt(parts[2], 10); // parseInt limpia si hay hora detrás
+                const month = parseInt(parts[1], 10) - 1; 
+                const year = parseInt(parts[2], 10);
                 d = new Date(year, month, day);
             } else {
-                d = new Date(valFecha); // Fallback si el formato es raro
+                d = new Date(valFecha); 
             }
-        } 
-        // Caso C: Cualquier otro formato estándar
-        else {
+        } else {
             d = new Date(valFecha);
         }
 
-        // Si la fecha no es válida, descartamos la fila
-        if (isNaN(d.getTime())) return null;
+        // --- DETECCIÓN DE ERROR ---
+        if (isNaN(d.getTime())) {
+            // Intentamos buscar las columnas REFANNO y REFNUM/REFEXP para el mensaje
+            // Buscamos sin importar mayúsculas/minúsculas
+            const keys = Object.keys(row);
+            const keyAnno = keys.find(k => k.toUpperCase().includes('REFANNO')) || keys.find(k => k.toUpperCase().includes('ANNO'));
+            const keyNum  = keys.find(k => k.toUpperCase().includes('REFNUM')) || keys.find(k => k.toUpperCase().includes('REFEXP')) || keys.find(k => k.toUpperCase().includes('NUMERO'));
+
+            let valAnno = keyAnno ? row[keyAnno] : "??";
+            let valNum  = keyNum ? row[keyNum] : "??";
+
+            // Formato solicitado: REF + ANNO + - + NUM
+            registrosSinFecha.push(`REF${valAnno}-${valNum}`);
+            
+            return null; // Descartamos la fila
+        }
 
         // --- 2. PROCESAMIENTO DE HORA ---
-        // Si el usuario seleccionó columna de hora, actualizamos la fecha
         if (config.hora && row[config.hora]) {
             const t = String(row[config.hora]).trim();
             if (t.includes(':')) { 
                 const p = t.split(':'); 
-                // Asignamos Hora y Minutos a la fecha 'd'
                 d.setHours(parseInt(p[0]) || 0, parseInt(p[1]) || 0, 0); 
             }
         }
         
-        // --- 3. PROCESAMIENTO DE GEOLOCALIZACIÓN (LAT/LON) ---
-        let lat = 0;
-        let lon = 0;
-        let tieneUbicacion = false;
-
+        // --- 3. GEO ---
+        let lat = 0, lon = 0, tieneUbicacion = false;
         if (config.lat && config.lon) {
-            // Reemplazar comas por puntos para decimales
             lat = parseFloat(String(row[config.lat]).replace(',', '.'));
             lon = parseFloat(String(row[config.lon]).replace(',', '.'));
-
-            // Validar que sean números reales y distintos de 0,0 (a menos que sea intencional)
-            if (!isNaN(lat) && !isNaN(lon) && (lat !== 0 || lon !== 0)) {
-                tieneUbicacion = true;
-            } else {
-                lat = 0; lon = 0; 
-            }
+            if (!isNaN(lat) && !isNaN(lon) && (lat !== 0 || lon !== 0)) tieneUbicacion = true;
+            else { lat = 0; lon = 0; }
         }
 
-        // --- 4. RETORNO DEL OBJETO FINAL ---
         return {
             exp: row[config.exp] || "N/A",
-            date: d, 
-            year: d.getFullYear(), 
-            month: d.getMonth() + 1, 
-            hour: d.getHours(),
-            lat, 
-            lon, 
-            hasGeo: tieneUbicacion,
+            date: d, year: d.getFullYear(), month: d.getMonth() + 1, hour: d.getHours(),
+            lat, lon, hasGeo: tieneUbicacion,
             cat: row[config.cat] || "General",
             locManual: config.locManual, 
-            calle: row['CALLE'] || row['calle'] || "", 
-            numero: row['NUMERO'] || row['numero'] || "",
-            refnum: row['REFNUM'] || "", 
-            refanno: row['REFANNO'] || ""
+            calle: row['CALLE'] || row['calle'] || "", numero: row['NUMERO'] || row['numero'] || "",
+            refnum: row['REFNUM'] || "", refanno: row['REFANNO'] || ""
         };
     }).filter(v => v !== null);
 
+    // --- LÓGICA FINAL ---
     document.getElementById('mapping-view').classList.remove('active');
     document.getElementById('dashboard-view').classList.add('active');
     setupFilters();
     initMap();
     setTimeout(updateUI, 500);
+
+    // --- MOSTRAR AVISO SI HAY ERRORES ---
+    if (registrosSinFecha.length > 0) {
+        showRejectedModal(registrosSinFecha);
+    }
 };
+
+// --- FUNCIONES NUEVAS PARA EL MODAL ---
+function showRejectedModal(lista) {
+    const container = document.getElementById('rejected-list');
+    if(container) {
+        // Creamos una lista HTML
+        container.innerHTML = lista.map(item => `<div><i class="fa-solid fa-xmark" style="color:#f5365c"></i> ${item}</div>`).join('');
+    }
+    document.getElementById('rejected-modal').classList.add('active');
+}
+
+function closeRejectedModal() {
+    document.getElementById('rejected-modal').classList.remove('active');
+}
 
 // ============================================================
 // 6. FILTROS

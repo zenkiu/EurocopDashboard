@@ -357,7 +357,45 @@
             <p data-i18n="loading_msg">Procesando archivo...</p>
         </div>
     </div>
-
+    <!-- MODAL DE REGISTROS DESCARTADOS (SIN FECHA) -->
+    <!-- MODAL DE REGISTROS DESCARTADOS (SIN FECHA) - VERSIÓN MEJORADA VISIBILIDAD -->
+    <div id="rejected-modal" class="pdf-modal-overlay">
+        <div class="pdf-modal-content" style="max-width: 600px; height: auto; max-height: 80vh; background-color: #34495e;"> 
+            <!-- Header Rojo -->
+            <div class="pdf-header" style="background: #f5365c; color: white;"> 
+                <h3><i class="fa-solid fa-triangle-exclamation"></i> Expedientes no integrados</h3>
+                <button onclick="closeRejectedModal()" class="btn-close-pdf" style="color: white;"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            
+            <div class="pdf-body" style="padding: 25px;">
+                <!-- TEXTO DE AVISO (Color Blanco y un poco más grande) -->
+                <p style="margin-bottom: 20px; color: #ffffff; font-size: 15px; line-height: 1.4;">
+                    Los siguientes expedientes <strong style="color: #ff8fa3;">no tienen fecha válida</strong> y no se han incluido en el recuento:
+                </p>
+                
+                <!-- LISTA (Letra más grande y negrita) -->
+                <div id="rejected-list" style="
+                    background: #ffffff; 
+                    border: 2px solid #f5365c; /* Borde rojo para destacar */
+                    border-radius: 8px; 
+                    padding: 15px; 
+                    max-height: 350px; 
+                    overflow-y: auto; 
+                    font-family: 'Courier New', monospace; 
+                    font-size: 16px;    /* AUMENTADO: Antes 13px */
+                    line-height: 1.6;   /* AUMENTADO: Espacio entre líneas */
+                    color: #333;        /* Texto negro sobre fondo blanco */
+                    font-weight: bold;  /* Negrita */
+                    box-shadow: inset 0 0 10px rgba(0,0,0,0.1);">
+                    <!-- Aquí se inyectará la lista -->
+                </div>
+                
+                <div style="text-align: right; margin-top: 20px;">
+                    <button onclick="closeRejectedModal()" class="btn-primary" style="background:#5e72e4; border:none; padding: 12px 25px; font-size: 14px;">ENTENDIDO</button>
+                </div>
+            </div>
+        </div>
+    </div>
     <div id="pdf-modal" class="pdf-modal-overlay">
         <div class="pdf-modal-content">
             <div class="pdf-header">
