@@ -160,34 +160,95 @@ function showMapping(data) {
     mappingIds.forEach(id => {
         const sel = document.getElementById(id);
         if (!sel) return;
+        
+        // Clonamos para eliminar listeners antiguos y limpiar opciones
         const newSel = sel.cloneNode(false);
         sel.parentNode.replaceChild(newSel, sel);
         newSel.addEventListener('change', refreshMappingStatus);
 
+        // Añadir opción por defecto
         if (id === 'map-hora') newSel.innerHTML = '<option value="">-- Sin hora (00:00) --</option>';
         else newSel.innerHTML = '<option value="" disabled selected>Seleccionar...</option>';
 
+        // 1. Llenar el desplegable con todas las columnas
         headers.forEach(h => {
             const opt = document.createElement('option');
-            opt.value = h; opt.textContent = h;
+            opt.value = h; 
+            opt.textContent = h;
             newSel.appendChild(opt);
         });
 
-        headers.forEach(h => {
-            const s = h.toLowerCase();
-            if (id.includes('exp') && (s === 'refnum' || s.includes('exp') || s.includes('id'))) newSel.value = h;
-            if (id.includes('fecha') && (s.includes('fec') || s.includes('date'))) newSel.value = h;
-            if (id.includes('hora') && (s.includes('hor') || s.includes('time'))) newSel.value = h;
-            if (id.includes('lat') && (s.includes('lat') || s === 'y')) newSel.value = h;
-            if (id.includes('lon') && (s.includes('lon') || s === 'x')) newSel.value = h;
-            if (id.includes('cat') && (s.includes('cat') || s.includes('tipo'))) newSel.value = h;
-        });
+        // 2. AUTO-SELECCIÓN INTELIGENTE (SISTEMA DE PRIORIDADES)
+        let match = null;
+
+        if (id === 'map-expediente') {
+            // Prioridad 1: REFNUM (El rey)
+            match = headers.find(h => h.toUpperCase().includes('REFNUM'));
+            
+            // Prioridad 2: EXPEDIENTE (Si no hay refnum)
+            if (!match) match = headers.find(h => h.toUpperCase().includes('EXPEDIENTE'));
+            
+            // Prioridad 3: NUMERO o ID (Solo coincidencias exactas para evitar "ACCIDENTE")
+            if (!match) match = headers.find(h => {
+                const s = h.toUpperCase();
+                return s === 'NUMERO' || s === 'ID'; 
+            });
+        }
+
+        else if (id === 'map-fecha') {
+            // Prioridad 1: FECHA o DATE
+            match = headers.find(h => {
+                const s = h.toUpperCase();
+                return s.includes('FECHA') || s.includes('DATE') || s.includes('FEC_');
+            });
+        }
+
+        else if (id === 'map-hora') {
+            // Prioridad 1: HORA o TIME
+            match = headers.find(h => {
+                const s = h.toUpperCase();
+                return s.includes('HORA') || s.includes('TIME');
+            });
+        }
+
+        else if (id === 'map-lat') {
+            // Prioridad 1: Y o LATITUD
+            match = headers.find(h => {
+                const s = h.toUpperCase();
+                return s === 'Y' || s.includes('LAT'); // "LAT" coge Latitud
+            });
+        }
+
+        else if (id === 'map-lon') {
+            // Prioridad 1: X o LONGITUD
+            match = headers.find(h => {
+                const s = h.toUpperCase();
+                return s === 'X' || s.includes('LON') || s.includes('LNG');
+            });
+        }
+
+        else if (id === 'map-categoria') {
+            // Prioridad 1: TIPO, CATEGORIA o CAUSA
+            match = headers.find(h => {
+                const s = h.toUpperCase();
+                return s.includes('TIPO') || s.includes('CAT') || s.includes('CAUSA');
+            });
+        }
+
+        // Si encontramos una coincidencia, la seleccionamos
+        if (match) {
+            newSel.value = match;
+        }
     });
 
+    // Limpiar campo de localidad manual
     const locInput = document.getElementById('map-localidad');
     if(locInput) locInput.value = "";
 
+    // Actualizar estados visuales (ticks y colores)
     refreshMappingStatus();
+
+    // Cambiar de vista
     document.getElementById('upload-view').style.display = 'none';
     document.getElementById('mapping-view').classList.add('active');
 }
@@ -748,6 +809,8 @@ function toggleSatelite(btn) { isSatelite = !isSatelite; map.setLayoutProperty('
 function toggleHeatmap(btn) { isHeatmap = !isHeatmap; map.setLayoutProperty('heat-layer', 'visibility', isHeatmap ? 'visible' : 'none'); map.setLayoutProperty('point-layer', 'visibility', isHeatmap ? 'none' : 'visible'); btn.innerHTML = isHeatmap ? '<i class="fa-solid fa-location-dot"></i>' : '<i class="fa-solid fa-fire"></i>'; }
 function toggle3D() { const p = map.getPitch(); map.easeTo({ pitch: p > 0 ? 0 : 60, bearing: p > 0 ? 0 : -20, duration: 1000 }); }
 
+/* --- script.js --- */
+
 function toggleFullscreen(containerId) {
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -761,7 +824,7 @@ function toggleFullscreen(containerId) {
             btnIcon.classList.remove('fa-maximize', 'fa-expand'); 
             btnIcon.classList.add('fa-xmark'); 
         }
-        document.body.style.overflow = 'hidden'; // Bloquear scroll del body
+        document.body.style.overflow = 'hidden'; 
     } else {
         if (btnIcon) {
             btnIcon.classList.remove('fa-xmark');
@@ -771,11 +834,26 @@ function toggleFullscreen(containerId) {
         document.body.style.overflow = '';
     }
 
-    // TRUCO: Forzamos updateUI tras una pequeña espera para que detecte el cambio de tamaño
-    // Esto hará que el gráfico se vuelva a pintar con letras grandes o pequeñas según corresponda
+    // --- CORRECCIÓN AQUÍ ---
     setTimeout(() => {
-        if (map) map.resize(); // El mapa solo necesita resize
-        updateUI(); // Los gráficos necesitan redibujarse para cambiar etiquetas
+        if (map) map.resize(); 
+        updateUI(); 
+
+        // FUERZA VISUAL: Aseguramos que si estaba en modo tabla, se vea la tabla
+        // (A veces updateUI resetea la vista si no se controla bien)
+        if (containerId === 'container-category' && isTableCatView) {
+            document.getElementById('chart-category').style.display = 'none';
+            document.getElementById('table-category-view').style.display = 'block';
+        }
+        if (containerId === 'container-hours' && isTableHoursView) {
+            document.getElementById('chart-hours').style.display = 'none';
+            document.getElementById('table-hours-view').style.display = 'block';
+        }
+        if (containerId === 'container-timeline' && isTableView) {
+             document.getElementById('chart-timeline').style.display = 'none';
+             document.getElementById('table-timeline-view').style.display = 'block';
+        }
+
     }, 300);
 }
 

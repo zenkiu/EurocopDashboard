@@ -54,7 +54,7 @@ body {
 
 /* Botón Hamburguesa (Oculto en escritorio) */
 .mobile-menu-btn {
-    display: none; /* Por defecto invisible en PC */
+    display: none; 
     background: transparent;
     border: none;
     color: white;
@@ -102,6 +102,23 @@ body {
 .info-text { color: var(--accent-cyan); font-weight: 700; }
 .sep { color: #444; margin: 0 2px; }
 
+/* Selector de Idioma */
+.lang-select {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    outline: none;
+    margin-right: 10px;
+}
+.lang-select option {
+    background: var(--primary-dark);
+    color: white;
+}
+
 /* =========================================
    3. ESTRUCTURA PRINCIPAL (LAYOUT)
    ========================================= */
@@ -119,18 +136,33 @@ body {
     padding: 20px; 
     display: flex; flex-direction: column; gap: 20px; 
     overflow-y: auto; flex-shrink: 0;
-    position: relative; /* Fijo en su sitio en PC */
-    transform: none; /* Sin animaciones raras en PC */
+    position: relative; 
     z-index: 900;
 }
 
-.sidebar-header-mobile { display: none; } /* Oculto en PC */
+.sidebar-header-mobile { display: none; } 
 .mobile-overlay { display: none; }
 
 .filter-header {
     font-size: 0.75rem; font-weight: 800; color: var(--text-muted);
     text-transform: uppercase; padding-bottom: 10px; border-bottom: 1px solid #f0f0f0;
 }
+
+.sidebar-footer {
+    margin-top: auto; 
+    padding-top: 20px;
+    border-top: 1px solid var(--border-color);
+    text-align: center;
+    display: flex;
+    justify-content: center;
+}
+.sidebar-logo {
+    max-width: 100px;
+    height: auto;
+    opacity: 0.7;
+    transition: opacity 0.3s;
+}
+.sidebar-logo:hover { opacity: 1; }
 
 /* --- MAIN CONTENT --- */
 .main-content { 
@@ -166,7 +198,7 @@ body {
 
 .dropdown-content {
     display: none; 
-    position: absolute; /* Flotante en escritorio */
+    position: absolute; 
     top: 105%; left: 0; width: 100%;
     background: white; border: 1px solid var(--border-color);
     border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.15);
@@ -209,7 +241,7 @@ body {
 .kpi-data h3 { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px;}
 .kpi-data span { font-size: 1.4rem; font-weight: 800; }
 
-/* Gráficos */
+/* Gráficos y Contenedores */
 .charts-grid-top { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; flex: 1; min-height: 300px; }
 .bottom-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; flex: 1.2; min-height: 350px; }
 
@@ -218,19 +250,31 @@ body {
     box-shadow: 0 2px 10px rgba(0,0,0,0.02);
     display: flex; flex-direction: column; overflow: hidden; position: relative;
 }
-.chart-header { display: flex; justify-content: space-between; margin-bottom: 10px; }
+.chart-header { display: flex; justify-content: space-between; margin-bottom: 10px; flex-shrink: 0; }
 .chart-header h4 { font-size: 0.8rem; font-weight: 800; color: var(--text-dark); text-transform: uppercase; }
 .header-actions { display: flex; gap: 5px; }
 .btn-maximize { background: transparent; border: none; cursor: pointer; color: #8898aa; }
 
-.canvas-wrapper { flex-grow: 1; position: relative; width: 100%; height: 100%; }
+.canvas-wrapper { flex-grow: 1; position: relative; width: 100%; height: 100%; min-height: 0; }
 #main-map { position: absolute; top: 0; bottom: 0; width: 100%; border-radius: 8px; }
 
 /* Vistas Carga y Mapping */
 .upload-center { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; }
 .upload-card { background: white; padding: 40px; border-radius: 20px; text-align: center; width: 450px; }
-.drop-zone { border: 2px dashed #cbd5e0; padding: 40px; margin: 20px 0; border-radius: 15px; cursor: pointer; }
 
+.drop-zone { border: 2px dashed #cbd5e0; padding: 40px; margin: 20px 0; border-radius: 15px; cursor: pointer; transition: all 0.2s; }
+.drop-zone.dragover { background-color: #eef2ff; border-color: var(--accent-blue); transform: scale(1.02); color: var(--accent-blue); }
+
+.brand-footer {
+    margin-top: 35px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+    opacity: 0.8; transition: opacity 0.3s;
+}
+.brand-footer:hover { opacity: 1; }
+.brand-label { font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
+.brand-logo { max-width: 120px; height: auto; display: block; }
+
+/* Configuración */
 #mapping-view { align-items: center; justify-content: center; background: var(--bg-light); padding: 40px 0; overflow-y: auto;}
 .config-panel { background: white; width: 95%; max-width: 1100px; border-radius: 16px; margin-bottom: 40px; overflow: hidden;}
 .panel-header { background: var(--primary-dark); color: white; padding: 25px; }
@@ -243,19 +287,80 @@ body {
 .action-footer { padding: 20px 30px; background: #f4f6f9; display: flex; justify-content: flex-end; gap: 15px; border-top: 1px solid var(--border-color); }
 .btn-primary { background: var(--accent-blue); color: white; border: none; padding: 12px 30px; border-radius: 8px; font-weight: 700; cursor: pointer; }
 
-/* Fullscreen */
 /* =========================================
-   ESTILOS DE PANTALLA COMPLETA (FIX)
+   5. TABLA DE DATOS (ESTILOS CORREGIDOS)
    ========================================= */
 
-/* Clase que se activa al maximizar */
+.table-view {
+    width: 100%;
+    height: 100%;
+    overflow-y: auto;     
+    overflow-x: hidden;
+    background: white;
+    border-radius: 0 0 12px 12px;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.75rem; 
+    font-family: 'Inter', sans-serif;
+    color: var(--text-dark);
+    table-layout: fixed; 
+}
+
+/* --- COLUMNAS AJUSTADAS PARA TEXTOS LARGOS --- */
+.data-table th:first-child, 
+.data-table td:first-child {
+    text-align: left;
+    width: 65%; /* MÁS ESPACIO PARA EL NOMBRE */
+    padding-right: 15px;
+}
+
+.data-table th:nth-child(2), .data-table td:nth-child(2),
+.data-table th:nth-child(3), .data-table td:nth-child(3) {
+    text-align: right;
+    width: 17.5%; 
+    white-space: nowrap;
+}
+
+.data-table th {
+    background-color: #f8f9fe;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-size: 0.65rem;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    padding: 10px 8px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.data-table td {
+    padding: 12px 8px; /* MÁS AIRE VERTICAL */
+    border-bottom: 1px solid var(--border-color);
+    vertical-align: middle;
+    word-wrap: break-word; /* IMPORTANTE: Romper palabras largas */
+    line-height: 1.4;      /* IMPORTANTE: Altura de línea para lectura */
+}
+
+.data-table tbody tr:hover { background-color: #f6f9fc; }
+.data-table th i { margin-left: 3px; opacity: 0.4; }
+
+
+/* =========================================
+   6. PANTALLA COMPLETA (CORRECCIÓN BUG BLANCO)
+   ========================================= */
+
 .fullscreen {
     position: fixed !important; 
     top: 0 !important; 
     left: 0 !important;
     width: 100vw !important; 
     height: 100vh !important; 
-    height: 100dvh !important; /* Altura real en móviles */
+    height: 100dvh !important; 
     z-index: 9999 !important; 
     background: #ffffff !important; 
     padding: 20px !important; 
@@ -265,14 +370,13 @@ body {
     box-shadow: none !important;
 }
 
-/* Cuando está en fullscreen, el header se ajusta */
 .fullscreen .chart-header {
     margin-bottom: 20px;
     padding-bottom: 10px;
     border-bottom: 1px solid #eee;
+    flex-shrink: 0;
 }
 
-/* El botón de cerrar se vuelve más obvio en fullscreen */
 .fullscreen .btn-maximize {
     background: #fceceb;
     color: var(--pdf-red);
@@ -282,59 +386,115 @@ body {
     font-size: 1.1rem;
 }
 
-/* En móvil, aseguramos que el canvas ocupe todo el espacio disponible */
+/* --- CORRECCIÓN CRÍTICA PARA QUE NO SALGA BLANCO --- */
 .fullscreen .canvas-wrapper {
     flex-grow: 1;
-    height: auto !important; /* Importante para que Chart.js se expanda */
+    display: flex;        
+    flex-direction: column;
+    height: 100% !important; /* Forzar altura total */
+    min-height: 0;           /* Permitir scroll interno */
+    overflow: hidden;
 }
 
-/* --- REVISIÓN MEDIA QUERY MÓVIL --- */
-/* Asegúrate de BORRAR la línea ".btn-maximize { display: none; }" 
-   dentro de @media (max-width: 768px) si aún la tienes. */
+/* Asegurar que el hijo (tabla o canvas) ocupe todo */
+.fullscreen .canvas-wrapper canvas,
+.fullscreen .canvas-wrapper .table-view {
+    height: 100% !important;
+    width: 100% !important;
+    flex-grow: 1;
+}
+
+/* Aumentar legibilidad en fullscreen */
+.fullscreen .data-table td {
+    font-size: 0.95rem; /* Texto más grande */
+    padding: 15px 10px;
+}
+.fullscreen .data-table th {
+    font-size: 0.85rem;
+    padding: 15px 10px;
+}
+
 /* =========================================
-   5. RESPONSIVE (MÓVIL Y TABLET)
+   7. MODALES Y OVERLAYS
    ========================================= */
 
-/* Tablets (< 1024px) */
+/* Loading Overlay */
+.loading-overlay {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background: rgba(255, 255, 255, 0.95); z-index: 3000;
+    display: none; flex-direction: column; align-items: center; justify-content: center;
+}
+.loading-overlay.active { display: flex; }
+.spinner {
+    width: 50px; height: 50px; border: 5px solid #e9ecef; border-top: 5px solid var(--accent-blue);
+    border-radius: 50%; margin: 0 auto 20px; animation: spin 1s linear infinite;
+}
+.spinner-box p { font-weight: 800; color: var(--text-dark); margin-bottom: 5px; font-size: 1.1rem; }
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+/* Manual Buttons */
+.manual-container { margin-top: 25px; display: flex; justify-content: center; width: 100%; gap: 15px; flex-wrap: wrap; }
+.btn-manual-pill {
+    display: inline-flex; align-items: center; gap: 10px; padding: 10px 24px;
+    background-color: #f8f9fe; color: var(--accent-blue); border: 1px solid #e9ecef;
+    border-radius: 50px; font-size: 0.85rem; font-weight: 600; cursor: pointer;
+    transition: all 0.3s ease; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+.btn-manual-pill:hover { background-color: white; transform: translateY(-2px); box-shadow: 0 4px 6px rgba(50, 50, 93, 0.11); }
+
+/* PDF Modal */
+.pdf-modal-overlay {
+    display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.8); z-index: 5000;
+    align-items: center; justify-content: center; backdrop-filter: blur(5px);
+}
+.pdf-modal-overlay.active { display: flex; }
+.pdf-modal-content {
+    background: white; width: 90%; height: 90%; max-width: 1200px;
+    border-radius: 12px; display: flex; flex-direction: column;
+    box-shadow: 0 15px 50px rgba(0,0,0,0.5); overflow: hidden; animation: slideUp 0.3s ease-out;
+}
+.pdf-header { background: #f8f9fe; padding: 15px 20px; border-bottom: 1px solid #e9ecef; display: flex; justify-content: space-between; align-items: center; }
+.pdf-header h3 { margin: 0; font-size: 1rem; color: var(--primary-dark); }
+.btn-close-pdf { background: transparent; border: none; font-size: 1.2rem; color: var(--text-muted); cursor: pointer; padding: 5px; }
+.btn-close-pdf:hover { color: var(--pdf-red); }
+.pdf-body { flex-grow: 1; background: #525659; position: relative; }
+#pdf-frame { width: 100%; height: 100%; display: block; }
+@keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+/* =========================================
+   8. RESPONSIVE (MÓVIL Y TABLET)
+   ========================================= */
+
 @media (max-width: 1024px) {
     .charts-grid-top { grid-template-columns: 1fr 1fr; } 
     .bottom-grid { grid-template-columns: 1fr 1fr; }
     .mapping-layout { grid-template-columns: 1fr 1fr; }
 }
 
-/* Móviles (< 768px) */
 @media (max-width: 768px) {
-    
-    /* Navbar Ajustado */
     .mobile-menu-btn { display: block; }
     .hide-mobile { display: none; }
     .nav-filters-info { display: none; }
     .nav-right { gap: 8px; }
     .badge-records { padding: 4px 8px; font-size: 0.6rem; }
 
-    /* Sidebar Off-Canvas */
     .sidebar {
-        position: fixed; top: 0; left: 0;
-        height: 100vh; height: 100dvh;
-        width: 85%; max-width: 300px;
-        transform: translateX(-100%);
-        box-shadow: 5px 0 15px rgba(0,0,0,0.1);
-        transition: transform 0.3s ease;
-        z-index: 1200;
+        position: fixed; top: 0; left: 0; height: 100dvh; width: 85%; max-width: 300px;
+        transform: translateX(-100%); box-shadow: 5px 0 15px rgba(0,0,0,0.1);
+        transition: transform 0.3s ease; z-index: 1200;
     }
     .sidebar.active { transform: translateX(0); }
     .sidebar-header-mobile { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
     .btn-close-sidebar { background: none; border: none; font-size: 1.2rem; cursor: pointer; }
+    .sidebar-footer { padding-bottom: 80px; }
 
-    /* Overlay Oscuro */
     .mobile-overlay {
         position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-        background: rgba(0,0,0,0.5); z-index: 1100;
-        display: none;
+        background: rgba(0,0,0,0.5); z-index: 1100; display: none;
     }
     .mobile-overlay.active { display: block; }
 
-    /* Layout Vertical */
     .view-container { height: calc(100dvh - var(--nav-height)); }
     .main-content { padding: 10px; gap: 15px; }
     
@@ -348,371 +508,8 @@ body {
     .chart-container, .map-container-wrapper { height: 300px; min-height: 300px; }
     #container-map { height: 350px; }
 
-    /* Ajustes Dropdowns en Móvil */
     .dropdown-content { position: relative; top: 0; box-shadow: none; border: none; background: #f8f9fe; margin-top: 5px; }
     
-    /* Configuración y Upload */
     .mapping-layout { grid-template-columns: 1fr; padding: 15px; }
     .upload-card { width: 100%; padding: 20px; }
-}
-/* =========================================
-   ESTILOS NUEVOS: TABLA DE DATOS
-   ========================================= */
-
-/* Contenedor de la tabla (para scroll si es muy larga) */
-/* =========================================
-   ESTILOS OPTIMIZADOS: TABLA DE DATOS
-   ========================================= */
-
-/* Contenedor con scroll */
-.table-view {
-    width: 100%;
-    height: 100%;
-    overflow-y: auto;     /* Scroll vertical si es necesario */
-    overflow-x: hidden;   /* Evitar scroll horizontal feo */
-    background: white;
-    border-radius: 0 0 12px 12px;
-}
-
-/* Estructura base de la tabla */
-.data-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.75rem; /* Texto un poco más pequeño para que quepa mejor */
-    font-family: 'Inter', sans-serif;
-    color: var(--text-dark);
-    table-layout: fixed; /* CLAVE: Esto ayuda a respetar los anchos */
-}
-
-/* Celdas generales */
-.data-table th, .data-table td {
-    padding: 8px 8px; /* Reducimos el padding lateral (antes era 15px) */
-    border-bottom: 1px solid var(--border-color);
-    vertical-align: middle;
-    word-wrap: break-word; /* Permite que el texto largo baje de línea */
-}
-
-/* --- CONFIGURACIÓN DE COLUMNAS ESPECÍFICAS --- */
-
-/* Columna 1: CATEGORÍA (Texto largo) */
-.data-table th:first-child, 
-.data-table td:first-child {
-    text-align: left;
-    width: 60%; /* Le damos el 60% del espacio */
-}
-
-/* Columna 2 y 3: CANTIDAD y % (Números) */
-.data-table th:nth-child(2), .data-table td:nth-child(2),
-.data-table th:nth-child(3), .data-table td:nth-child(3) {
-    text-align: right;
-    width: 20%; /* El espacio restante para los números */
-    white-space: nowrap; /* Evita que los números se partan */
-}
-
-/* Encabezados Sticky (Se quedan fijos al bajar) */
-.data-table th {
-    background-color: #f8f9fe;
-    font-weight: 800;
-    text-transform: uppercase;
-    color: var(--text-muted);
-    font-size: 0.65rem;
-    position: sticky;
-    top: 0;
-    z-index: 10; /* Asegura que quede por encima del contenido */
-    cursor: pointer;
-    user-select: none;
-}
-
-/* Hover en filas */
-.data-table tbody tr:hover {
-    background-color: #f6f9fc;
-}
-
-/* Iconos de ordenación */
-.data-table th i {
-    margin-left: 3px;
-    opacity: 0.4;
-}
-/* Efecto al arrastrar archivo encima */
-.drop-zone.dragover {
-    background-color: #eef2ff; /* Fondo azul claro */
-    border-color: var(--accent-blue); /* Borde azul intenso */
-    transform: scale(1.02); /* Efecto de crecimiento */
-    color: var(--accent-blue);
-}
-/* =========================================
-   LOADING OVERLAY (NUEVO)
-   ========================================= */
-.loading-overlay {
-    position: fixed;
-    top: 0; left: 0; width: 100vw; height: 100vh;
-    background: rgba(255, 255, 255, 0.95);
-    z-index: 3000; /* Por encima de todo */
-    display: none; /* Oculto por defecto */
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-}
-
-.loading-overlay.active {
-    display: flex;
-}
-
-.spinner-box {
-    text-align: center;
-}
-
-.spinner {
-    width: 50px; height: 50px;
-    border: 5px solid #e9ecef;
-    border-top: 5px solid var(--accent-blue);
-    border-radius: 50%;
-    margin: 0 auto 20px;
-    animation: spin 1s linear infinite;
-}
-
-.spinner-box p {
-    font-weight: 800; color: var(--text-dark);
-    margin-bottom: 5px; font-size: 1.1rem;
-}
-
-.spinner-box small {
-    color: var(--text-muted); font-size: 0.8rem;
-}
-
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-/* =========================================
-   BOTÓN MANUAL DE AYUDA (PANTALLA CARGA)
-   ========================================= */
-
-.manual-container {
-    margin-top: 25px;
-    display: flex;
-    justify-content: center;
-    width: 100%;
-    gap: 15px; /* AGREGAR ESTO: Separa los botones 15px entre sí */
-    flex-wrap: wrap; /* AGREGAR ESTO: Si la pantalla es muy pequeña, uno baja debajo del otro */
-}
-
-.btn-manual-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 24px;
-    background-color: #f8f9fe; /* Fondo muy claro */
-    color: var(--accent-blue); /* Color azul del tema */
-    border: 1px solid #e9ecef;
-    border-radius: 50px; /* Bordes totalmente redondeados */
-    text-decoration: none;
-    font-size: 0.85rem;
-    font-weight: 600;
-    transition: all 0.3s ease;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-}
-
-.btn-manual-pill i {
-    font-size: 1rem;
-}
-
-.btn-manual-pill:hover {
-    background-color: white;
-    border-color: var(--accent-blue);
-    color: var(--accent-blue);
-    transform: translateY(-2px); /* Efecto de elevación */
-    box-shadow: 0 4px 6px rgba(50, 50, 93, 0.11), 0 1px 3px rgba(0, 0, 0, 0.08);
-}
-
-.btn-manual-pill:active {
-    transform: translateY(0);
-}
-/* =========================================
-   VISOR PDF INTEGRADO (MODAL)
-   ========================================= */
-
-/* Fondo oscuro (Overlay) */
-.pdf-modal-overlay {
-    display: none; /* Oculto por defecto */
-    position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0, 0, 0, 0.8);
-    z-index: 5000; /* Muy por encima de todo */
-    align-items: center;
-    justify-content: center;
-    backdrop-filter: blur(5px); /* Efecto borroso elegante */
-}
-
-.pdf-modal-overlay.active {
-    display: flex;
-}
-
-/* Caja del contenido */
-.pdf-modal-content {
-    background: white;
-    width: 90%;
-    height: 90%;
-    max-width: 1200px;
-    border-radius: 12px;
-    display: flex;
-    flex-direction: column;
-    box-shadow: 0 15px 50px rgba(0,0,0,0.5);
-    overflow: hidden;
-    animation: slideUp 0.3s ease-out;
-}
-
-/* Cabecera del modal */
-.pdf-header {
-    background: #f8f9fe;
-    padding: 15px 20px;
-    border-bottom: 1px solid #e9ecef;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.pdf-header h3 {
-    margin: 0;
-    font-size: 1rem;
-    color: var(--primary-dark);
-}
-
-.btn-close-pdf {
-    background: transparent;
-    border: none;
-    font-size: 1.2rem;
-    color: var(--text-muted);
-    cursor: pointer;
-    padding: 5px;
-    transition: color 0.2s;
-}
-
-.btn-close-pdf:hover {
-    color: var(--pdf-red);
-}
-
-/* Cuerpo del PDF (Iframe) */
-.pdf-body {
-    flex-grow: 1;
-    background: #525659; /* Color de fondo típico de visores PDF */
-    position: relative;
-}
-
-#pdf-frame {
-    width: 100%;
-    height: 100%;
-    display: block;
-}
-
-/* Animación de entrada */
-@keyframes slideUp {
-    from { transform: translateY(20px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
-}
-
-/* Estilo del botón píldora (reutilizado del paso anterior pero ajustado para <button>) */
-.btn-manual-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 24px;
-    background-color: #f8f9fe;
-    color: var(--accent-blue);
-    border: 1px solid #e9ecef;
-    border-radius: 50px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-}
-
-.btn-manual-pill:hover {
-    background-color: white;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 6px rgba(50, 50, 93, 0.11);
-}
-/* =========================================
-   ESTILOS DE MARCA PERSONAL (ZZENKIU)
-   ========================================= */
-
-/* 1. Estilos para la Pantalla de Carga */
-.brand-footer {
-    margin-top: 35px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    opacity: 0.8; /* Un poco transparente para no robar foco */
-    transition: opacity 0.3s;
-}
-
-.brand-footer:hover {
-    opacity: 1;
-}
-
-.brand-label {
-    font-size: 0.65rem;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    font-weight: 600;
-}
-
-.brand-logo {
-    max-width: 120px; /* Ajusta este tamaño según tu gusto */
-    height: auto;
-    display: block;
-}
-
-/* 2. Estilos para el Menú Lateral (Sidebar) */
-/* Aseguramos que el sidebar use flex para empujar el logo al final */
-.sidebar {
-    display: flex;
-    flex-direction: column;
-}
-
-.sidebar-footer {
-    margin-top: auto; /* Esto empuja el logo al fondo del menú */
-    padding-top: 20px;
-    border-top: 1px solid var(--border-color);
-    text-align: center;
-    display: flex;
-    justify-content: center;
-}
-
-.sidebar-logo {
-    max-width: 100px; /* Un poco más pequeño en el menú */
-    height: auto;
-    opacity: 0.7;
-    transition: opacity 0.3s;
-}
-
-.sidebar-logo:hover {
-    opacity: 1;
-}
-
-/* Ajuste para móvil: Ocultar o reducir logo si molesta */
-@media (max-width: 768px) {
-    .sidebar-footer {
-        padding-bottom: 80px; /* Espacio extra en móvil si es necesario */
-    }
-}
-.lang-select {
-    background: rgba(255, 255, 255, 0.1);
-    color: white;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    padding: 5px 10px;
-    border-radius: 6px;
-    font-size: 0.8rem;
-    cursor: pointer;
-    outline: none;
-    margin-right: 10px;
-}
-
-.lang-select option {
-    background: var(--primary-dark);
-    color: white;
 }
