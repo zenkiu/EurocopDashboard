@@ -513,3 +513,16 @@ body {
     .mapping-layout { grid-template-columns: 1fr; padding: 15px; }
     .upload-card { width: 100%; padding: 20px; }
 }
+/* --- AÑADIR EN style.css --- */
+
+.version-badge {
+    margin-top: 8px; /* Separación del logo */
+    font-size: 0.6rem;
+    color: var(--text-muted);
+    background: #f6f9fc;
+    padding: 2px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+    font-family: monospace; /* Fuente tipo código */
+    opacity: 0.7;
+}
