@@ -14,8 +14,11 @@
     <!-- ESTILOS MAPA: MapLibre GL JS -->
     <link href="https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.css" rel="stylesheet" />
     
-    <!-- CONTROL DE VERSIONES -->
-    <link rel="stylesheet" href="style.css?v=1.1">
+    <!-- CONTROL DE VERSIONES Y CARGA CSS -->
+    <script src="version.js"></script>
+    <script>
+        document.write('<link rel="stylesheet" href="style.css?v=' + EUROCOP_VERSION + '">');
+    </script>
 
     <!-- LIBRERÍAS PARA EXPORTACIÓN PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -81,6 +84,7 @@
                 </div>
 
                 <!-- BOTONES PDF -->
+                <!-- BOTONES PDF -->
                 <div class="manual-container">
                     <button onclick="openPdfModal('Manual.pdf', 'Manual de Ayuda')" class="btn-manual-pill">
                         <i class="fa-solid fa-book-open"></i>
@@ -91,13 +95,20 @@
                         <i class="fa-solid fa-rotate"></i>
                         <span data-i18n="btn_updates">Actualizaciones</span>
                     </button>
+
+                    <!-- NUEVO BOTÓN: DESCARGA DE MEMORIAS -->
+                    <a href="./EurocopMemorias/EurocopMemorias.zip" download class="btn-manual-pill" style="text-decoration: none;">
+                        <i class="fa-solid fa-file-zipper"></i>
+                        <span data-i18n="btn_memorias">Memorias</span>
+                    </a>
                 </div>
 
-                <!-- MARCA -->
+            <!-- MARCA -->
                 <div class="brand-footer">
                     <span class="brand-label" data-i18n="brand_powered">Powered by</span>
                     <img src="./ImagenCoorporativa/zzenkiu.png" alt="Zzenkiu" class="brand-logo">
-                    <div class="version-badge">v1.1</div> 
+                    <!-- ETIQUETA VACÍA (Se llena con JS) -->
+                    <div id="app-version-badge" class="version-badge"></div> 
                 </div>
             </div>
         </div>
@@ -262,6 +273,7 @@
                     <div class="chart-header">
                         <h4 data-i18n="chart_timeline">Evolución Temporal</h4>
                         <div class="header-actions">
+                            <!-- 1. Selector de periodo (Años, Meses, etc.) -->
                             <select id="select-temporal-view" class="btn-mini" onchange="changeTemporalView(this.value)">
                                 <option value="year" data-i18n="view_years">Vista: Años</option>
                                 <option value="month" selected data-i18n="view_months">Vista: Meses</option>
@@ -269,10 +281,17 @@
                                 <option value="day" data-i18n="view_days">Vista: Días Semanal</option>
                             </select>
                             
+                            <!-- 2. NUEVO BOTÓN: Alternar entre Barras y Líneas -->
+                            <button class="btn-mini" id="btn-toggle-chart-type" onclick="toggleTimelineType()" title="Cambiar a Líneas">
+                                <i class="fa-solid fa-chart-line"></i>
+                            </button>
+
+                            <!-- 3. Botón Ver Tabla de Datos -->
                             <button class="btn-mini" id="btn-toggle-view" onclick="toggleTimelineView()" title="Ver Tabla de Datos">
                                 <i class="fa-solid fa-table"></i>
                             </button>
 
+                            <!-- 4. Botón Pantalla Completa -->
                             <button class="btn-maximize" onclick="toggleFullscreen('container-timeline')">
                                 <i class="fa-solid fa-maximize"></i>
                             </button>
@@ -280,7 +299,9 @@
                     </div>
                     
                     <div class="canvas-wrapper">
+                        <!-- Lienzo del Gráfico -->
                         <canvas id="chart-timeline"></canvas>
+                        <!-- Contenedor de la Tabla (Oculto por defecto) -->
                         <div id="table-timeline-view" class="table-view" style="display: none;"></div>
                     </div>
                 </div>
@@ -409,16 +430,23 @@
         </div>
     </div>
 
+    <!-- NOTIFICACIÓN FLOTANTE (TOAST) -->
+    <div id="toast-notification" class="toast-notification">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <span id="toast-message">Mensaje de aviso</span>
+    </div>
+
     <!-- LIBRERÍAS EXTERNAS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script> 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js"></script>
     
-    <!-- LÓGICA script CONTROL VERSIONES-->
+<!-- LÓGICA Y SCRIPTS version-->
     <script src="languages.js"></script>
-    <script src="script.js?v=1.1"></script>
     <script src="FncConvertirPdf.js"></script>
-
+    <script>
+        document.write('<script src="script.js?v=' + EUROCOP_VERSION + '"><\/script>');
+    </script>
 </body>
 </html>

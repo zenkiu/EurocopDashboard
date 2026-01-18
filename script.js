@@ -1,6 +1,6 @@
 /**
  * EUROCOP ANALYTICS - SCRIPT FINAL 2026
- * Versión: Full Responsive + Multi-Idioma + Trimestres + GeoFix
+ * Versión: Full Integrated (Stats + LineChart + TableFix + Geo + Lang)
  */
 
 // ============================================================
@@ -13,14 +13,15 @@ let chartTimeline, chartCategory, chartHours;
 let nombreArchivoSubido = "INFORME ANALYTICS";
 
 let isSatelite = false;
+let chartTimelineType = 'bar'; // Variable para alternar gráfico
 let isHeatmap = false; 
 let temporalView = 'year'; 
-let currentLang = localStorage.getItem('eurocop_lang') || 'es'; // Idioma por defecto
+let currentLang = localStorage.getItem('eurocop_lang') || 'es';
 
 // Variables para Tablas
 let isTableView = false; 
 let tableDataCache = []; 
-let currentSort = { col: 0, dir: 'asc' };
+let currentSort = { col: 'index', dir: 'desc' };
 
 let isTableCatView = false;
 let tableCatDataCache = [];
@@ -69,7 +70,11 @@ window.addEventListener('resize', () => {
 // 3. CARGA DE ARCHIVOS
 // ============================================================
 document.addEventListener('DOMContentLoaded', () => {
-    // Inicializar idioma
+    // --- NUEVO BLOQUE: PINTAR VERSIÓN ---
+    const versionBadge = document.getElementById('app-version-badge');
+    if (versionBadge && typeof EUROCOP_VERSION !== 'undefined') {
+        versionBadge.textContent = 'v' + EUROCOP_VERSION;
+    }
     const langSelect = document.getElementById('lang-selector');
     if(langSelect) langSelect.value = currentLang;
     applyLanguage(currentLang);
@@ -95,8 +100,33 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+// Función para mostrar el aviso temporal
+function showToast(message, duration = 6000) {
+    const toast = document.getElementById('toast-notification');
+    const msgSpan = document.getElementById('toast-message');
+    
+    if (toast && msgSpan) {
+        msgSpan.innerText = message;
+        toast.classList.add('active');
+        
+        // Ocultar automáticamente después del tiempo definido
+        setTimeout(() => {
+            toast.classList.remove('active');
+        }, duration);
+    }
+}
+
 function processFile(file) {
     if (!file) return;
+
+    // --- NUEVO: COMPROBACIÓN DE TAMAÑO (4MB) ---
+    const FILE_SIZE_LIMIT = 4 * 1024 * 1024; // 4 MB en bytes
+    
+    if (file.size > FILE_SIZE_LIMIT) {
+        showToast("⚠️ Archivo grande detectado. Para un mejor rendimiento, se recomienda filtrar previamente por años en Eurocop.");
+    }
+    // --------------------------------------------
+
     document.getElementById('loading-overlay').classList.add('active');
 
     setTimeout(() => {
@@ -106,6 +136,7 @@ function processFile(file) {
             if (displayEl) displayEl.textContent = nombreArchivoSubido;
 
             if (file.name.endsWith('.csv')) {
+                // ... (código existente del CSV) ...
                 Papa.parse(file, {
                     header: true, skipEmptyLines: true, encoding: "UTF-8",
                     complete: (res) => {
@@ -118,6 +149,7 @@ function processFile(file) {
                     }
                 });
             } else {
+                // ... (código existente del Excel) ...
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     try {
@@ -137,7 +169,7 @@ function processFile(file) {
             console.error(e);
             document.getElementById('loading-overlay').classList.remove('active');
         }
-    }, 100);
+    }, 500); // Aumentamos un poco el timeout inicial para que dé tiempo a ver el Toast empezar a bajar
 }
 
 function goToMapping() {
@@ -154,23 +186,33 @@ function goToMapping() {
 function showMapping(data) {
     rawData = data;
     const headers = Object.keys(data[0]);
-    
     const mappingIds = ['map-expediente', 'map-fecha', 'map-hora', 'map-lat', 'map-lon', 'map-categoria'];
     
     mappingIds.forEach(id => {
         const sel = document.getElementById(id);
         if (!sel) return;
         
-        // Clonamos para eliminar listeners antiguos y limpiar opciones
         const newSel = sel.cloneNode(false);
         sel.parentNode.replaceChild(newSel, sel);
         newSel.addEventListener('change', refreshMappingStatus);
 
-        // Añadir opción por defecto
-        if (id === 'map-hora') newSel.innerHTML = '<option value="">-- Sin hora (00:00) --</option>';
-        else newSel.innerHTML = '<option value="" disabled selected>Seleccionar...</option>';
+        if (id === 'map-hora') {
+            newSel.innerHTML = '<option value="">-- Sin hora (00:00) --</option>';
+        } 
+        else if (id === 'map-categoria') {
+            // --- OPCIÓN ESPECIAL PARA ARCHIVOS ESTADÍSTICOS ---
+            newSel.innerHTML = '<option value="" disabled selected>Seleccionar...</option>';
+            const optSpecial = document.createElement('option');
+            optSpecial.value = "***MULTI_COLUMN***";
+            optSpecial.textContent = "📊 [ USAR COLUMNAS COMO CATEGORIAS ]";
+            optSpecial.style.fontWeight = "bold";
+            optSpecial.style.color = "#fb6340";
+            newSel.appendChild(optSpecial);
+        }
+        else {
+            newSel.innerHTML = '<option value="" disabled selected>Seleccionar...</option>';
+        }
 
-        // 1. Llenar el desplegable con todas las columnas
         headers.forEach(h => {
             const opt = document.createElement('option');
             opt.value = h; 
@@ -178,113 +220,56 @@ function showMapping(data) {
             newSel.appendChild(opt);
         });
 
-        // 2. AUTO-SELECCIÓN INTELIGENTE (SISTEMA DE PRIORIDADES)
+        // AUTO-SELECCIÓN
         let match = null;
-
         if (id === 'map-expediente') {
-            // Prioridad 1: REFNUM (El rey)
-            match = headers.find(h => h.toUpperCase().includes('REFNUM'));
-            
-            // Prioridad 2: EXPEDIENTE (Si no hay refnum)
-            if (!match) match = headers.find(h => h.toUpperCase().includes('EXPEDIENTE'));
-            
-            // Prioridad 3: NUMERO o ID (Solo coincidencias exactas para evitar "ACCIDENTE")
-            if (!match) match = headers.find(h => {
-                const s = h.toUpperCase();
-                return s === 'NUMERO' || s === 'ID'; 
-            });
+            match = headers.find(h => h.toUpperCase().includes('REFNUM')) || 
+                    headers.find(h => h.toUpperCase().includes('EXPEDIENTE')) ||
+                    headers.find(h => h.toUpperCase() === 'NUMERO' || h.toUpperCase() === 'ID');
         }
-
         else if (id === 'map-fecha') {
-            // Prioridad 1: FECHA o DATE
-            match = headers.find(h => {
-                const s = h.toUpperCase();
-                return s.includes('FECHA') || s.includes('DATE') || s.includes('FEC_');
-            });
+            match = headers.find(h => h.toUpperCase().includes('FECHA') || h.toUpperCase().includes('DATE'));
         }
-
         else if (id === 'map-hora') {
-            // Prioridad 1: HORA o TIME
-            match = headers.find(h => {
-                const s = h.toUpperCase();
-                return s.includes('HORA') || s.includes('TIME');
-            });
+            match = headers.find(h => h.toUpperCase().includes('HORA') || h.toUpperCase().includes('TIME'));
         }
-
         else if (id === 'map-lat') {
-            // Prioridad 1: Y o LATITUD
-            match = headers.find(h => {
-                const s = h.toUpperCase();
-                return s === 'Y' || s.includes('LAT'); // "LAT" coge Latitud
-            });
+            match = headers.find(h => h.toUpperCase() === 'Y' || h.toUpperCase().includes('LAT'));
         }
-
         else if (id === 'map-lon') {
-            // Prioridad 1: X o LONGITUD
-            match = headers.find(h => {
-                const s = h.toUpperCase();
-                return s === 'X' || s.includes('LON') || s.includes('LNG');
-            });
+            match = headers.find(h => h.toUpperCase() === 'X' || h.toUpperCase().includes('LON') || h.toUpperCase().includes('LNG'));
         }
-
         else if (id === 'map-categoria') {
-            // Prioridad 1: TIPO, CATEGORIA o CAUSA
-            match = headers.find(h => {
-                const s = h.toUpperCase();
-                return s.includes('TIPO') || s.includes('CAT') || s.includes('CAUSA');
-            });
+            match = headers.find(h => h.toUpperCase().includes('TIPO') || h.toUpperCase().includes('CAT') || h.toUpperCase().includes('CAUSA'));
         }
 
-        // Si encontramos una coincidencia, la seleccionamos
-        if (match) {
-            newSel.value = match;
-        }
+        if (match) newSel.value = match;
     });
 
-    // Limpiar campo de localidad manual
     const locInput = document.getElementById('map-localidad');
     if(locInput) locInput.value = "";
-
-    // Actualizar estados visuales (ticks y colores)
+    
     refreshMappingStatus();
-
-    // Cambiar de vista
     document.getElementById('upload-view').style.display = 'none';
     document.getElementById('mapping-view').classList.add('active');
 }
 
 function refreshMappingStatus() {
     const mappingIds = ['map-expediente', 'map-fecha', 'map-hora', 'map-lat', 'map-lon', 'map-categoria'];
-    
-    // 1. Obtenemos qué columnas ya han sido seleccionadas en otros desplegables
     const currentSelections = mappingIds.map(id => {
         const el = document.getElementById(id);
         return el ? el.value : "";
     }).filter(val => val !== "");
 
-    // 2. Recorremos cada desplegable para actualizar sus opciones
     mappingIds.forEach(id => {
         const sel = document.getElementById(id);
         if(!sel) return;
-        
         Array.from(sel.options).forEach(opt => {
-            // Saltamos la opción por defecto ("Seleccionar...")
-            if (opt.value === "" || opt.disabled) return;
-            
+            if (opt.value === "" || opt.disabled || opt.value === "***MULTI_COLUMN***") return;
             const isUsedElsewhere = currentSelections.includes(opt.value) && sel.value !== opt.value;
-            
-            // --- CAMBIO: DETECTAR SI ES "__EMPTY" Y MOSTRAR "VACIO" ---
-            let textoVisual = opt.value;
-            if (textoVisual.includes('__EMPTY')) {
-                // Reemplazamos __EMPTY por BLANCO (Mantiene el número si es BLANCO_1, BLANCO_2...)
-                textoVisual = textoVisual.replace('__EMPTY', 'BLANCO'); 
-            }
-            // -----------------------------------------------------------
-
-            // Construimos el texto con el símbolo delante (✓, •, ✕) + el nombre corregido
+            let textoVisual = opt.value.replace('__EMPTY', 'BLANCO'); 
             const symbol = isUsedElsewhere ? "✕ " : (sel.value === opt.value ? "✓ " : "• ");
             opt.textContent = symbol + textoVisual;
-            
             opt.style.color = isUsedElsewhere ? "#cbd5e0" : "#5e72e4";
         });
     });
@@ -293,14 +278,6 @@ function refreshMappingStatus() {
 // ============================================================
 // 5. PROCESAMIENTO
 // ============================================================
-// ============================================================
-// MODIFICACIÓN EN SCRIPT.JS - PERMITIR SIN GPS
-// ============================================================
-
-// ============================================================
-// MODIFICACIÓN: DETECCIÓN DE ERRORES DE FECHA
-// ============================================================
-
 document.getElementById('btn-visualizar').onclick = () => {
     const config = {
         exp: document.getElementById('map-expediente').value,
@@ -317,103 +294,117 @@ document.getElementById('btn-visualizar').onclick = () => {
         return;
     }
 
-    // Array para guardar los errores
-    let registrosSinFecha = []; 
+    let registrosSinFecha = [];
+    finalData = [];
 
-    finalData = rawData.map(row => {
-        // --- 1. PROCESAMIENTO DE FECHA ---
-        let valFecha = row[config.fecha];
-        let d;
+    // --- LÓGICA 1: PROCESAMIENTO ESTADÍSTICO (COLUMNAS COMO CATEGORÍAS) ---
+    if (config.cat === "***MULTI_COLUMN***") {
+        rawData.forEach(row => {
+            let valFecha = row[config.fecha];
+            let d;
+            if (valFecha instanceof Date) d = new Date(valFecha);
+            else if (typeof valFecha === 'string' && valFecha.includes('/')) {
+                const parts = valFecha.split('/');
+                if (parts.length >= 3) d = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+                else d = new Date(valFecha);
+            } else d = new Date(valFecha);
 
-        if (valFecha instanceof Date) {
-            d = new Date(valFecha);
-        }
-        else if (typeof valFecha === 'string' && valFecha.includes('/')) {
-            const parts = valFecha.split('/');
-            if (parts.length >= 3) {
-                const day = parseInt(parts[0], 10);
-                const month = parseInt(parts[1], 10) - 1; 
-                const year = parseInt(parts[2], 10);
-                d = new Date(year, month, day);
-            } else {
-                d = new Date(valFecha); 
+            if (isNaN(d.getTime())) return; 
+
+            Object.keys(row).forEach(colName => {
+                if (colName === config.fecha || colName === config.hora || colName === config.lat || colName === config.lon || colName === config.exp) return;
+                const val = row[colName];
+                const cantidad = parseInt(val);
+                if (!isNaN(cantidad) && cantidad > 0) {
+                    for (let i = 0; i < cantidad; i++) {
+                        finalData.push({
+                            exp: "AUTO-GEN", 
+                            date: d, year: d.getFullYear(), month: d.getMonth() + 1, hour: 12,
+                            lat: 0, lon: 0, hasGeo: false,
+                            cat: colName.trim().toUpperCase(),
+                            locManual: config.locManual,
+                            calle: "", numero: "", refnum: "", refanno: ""
+                        });
+                    }
+                }
+            });
+        });
+    } 
+    // --- LÓGICA 2: PROCESAMIENTO ESTÁNDAR (LISTADO) ---
+    else {
+        finalData = rawData.map(row => {
+            let valFecha = row[config.fecha];
+            let d;
+            if (valFecha instanceof Date) d = new Date(valFecha);
+            else if (typeof valFecha === 'string' && valFecha.includes('/')) {
+                const parts = valFecha.split('/');
+                if (parts.length >= 3) {
+                    d = new Date(parseInt(parts[2], 10), parseInt(parts[1], 10) - 1, parseInt(parts[0], 10));
+                } else d = new Date(valFecha);
+            } else d = new Date(valFecha);
+
+            if (isNaN(d.getTime())) {
+                const keys = Object.keys(row);
+                const keyAnno = keys.find(k => k.toUpperCase().includes('REFANNO')) || keys.find(k => k.toUpperCase().includes('ANNO'));
+                const keyNum  = keys.find(k => k.toUpperCase().includes('REFNUM')) || keys.find(k => k.toUpperCase().includes('REFEXP')) || keys.find(k => k.toUpperCase().includes('NUMERO'));
+                let valAnno = keyAnno ? row[keyAnno] : "??";
+                let valNum  = keyNum ? row[keyNum] : "??";
+                registrosSinFecha.push(`REF${valAnno}-${valNum}`);
+                return null;
             }
-        } else {
-            d = new Date(valFecha);
-        }
 
-        // --- DETECCIÓN DE ERROR ---
-        if (isNaN(d.getTime())) {
-            // Intentamos buscar las columnas REFANNO y REFNUM/REFEXP para el mensaje
-            // Buscamos sin importar mayúsculas/minúsculas
-            const keys = Object.keys(row);
-            const keyAnno = keys.find(k => k.toUpperCase().includes('REFANNO')) || keys.find(k => k.toUpperCase().includes('ANNO'));
-            const keyNum  = keys.find(k => k.toUpperCase().includes('REFNUM')) || keys.find(k => k.toUpperCase().includes('REFEXP')) || keys.find(k => k.toUpperCase().includes('NUMERO'));
-
-            let valAnno = keyAnno ? row[keyAnno] : "??";
-            let valNum  = keyNum ? row[keyNum] : "??";
-
-            // Formato solicitado: REF + ANNO + - + NUM
-            registrosSinFecha.push(`REF${valAnno}-${valNum}`);
+            if (config.hora && row[config.hora]) {
+                const t = String(row[config.hora]).trim();
+                if (t.includes(':')) { 
+                    const p = t.split(':'); 
+                    d.setHours(parseInt(p[0]) || 0, parseInt(p[1]) || 0, 0); 
+                }
+            }
             
-            return null; // Descartamos la fila
-        }
-
-        // --- 2. PROCESAMIENTO DE HORA ---
-        if (config.hora && row[config.hora]) {
-            const t = String(row[config.hora]).trim();
-            if (t.includes(':')) { 
-                const p = t.split(':'); 
-                d.setHours(parseInt(p[0]) || 0, parseInt(p[1]) || 0, 0); 
+            let lat = 0, lon = 0, tieneUbicacion = false;
+            if (config.lat && config.lon) {
+                lat = parseFloat(String(row[config.lat]).replace(',', '.'));
+                lon = parseFloat(String(row[config.lon]).replace(',', '.'));
+                if (!isNaN(lat) && !isNaN(lon) && (lat !== 0 || lon !== 0)) tieneUbicacion = true;
             }
-        }
-        
-        // --- 3. GEO ---
-        let lat = 0, lon = 0, tieneUbicacion = false;
-        if (config.lat && config.lon) {
-            lat = parseFloat(String(row[config.lat]).replace(',', '.'));
-            lon = parseFloat(String(row[config.lon]).replace(',', '.'));
-            if (!isNaN(lat) && !isNaN(lon) && (lat !== 0 || lon !== 0)) tieneUbicacion = true;
-            else { lat = 0; lon = 0; }
-        }
 
-        return {
-            exp: row[config.exp] || "N/A",
-            date: d, year: d.getFullYear(), month: d.getMonth() + 1, hour: d.getHours(),
-            lat, lon, hasGeo: tieneUbicacion,
-            cat: row[config.cat] || "General",
-            locManual: config.locManual, 
-            calle: row['CALLE'] || row['calle'] || "", numero: row['NUMERO'] || row['numero'] || "",
-            refnum: row['REFNUM'] || "", refanno: row['REFANNO'] || ""
-        };
-    }).filter(v => v !== null);
+            return {
+                exp: row[config.exp] || "N/A",
+                date: d, year: d.getFullYear(), month: d.getMonth() + 1, hour: d.getHours(),
+                lat, lon, hasGeo: tieneUbicacion,
+                cat: row[config.cat] || "General",
+                locManual: config.locManual, 
+                calle: row['CALLE'] || row['calle'] || "", numero: row['NUMERO'] || row['numero'] || "",
+                refnum: row['REFNUM'] || "", refanno: row['REFANNO'] || ""
+            };
+        }).filter(v => v !== null);
+    }
 
-    // --- LÓGICA FINAL ---
+    if (finalData.length === 0 && registrosSinFecha.length === 0) {
+        alert("No se han generado datos. Revisa el archivo.");
+        return;
+    }
+
     document.getElementById('mapping-view').classList.remove('active');
     document.getElementById('dashboard-view').classList.add('active');
     setupFilters();
     initMap();
     setTimeout(updateUI, 500);
 
-    // --- MOSTRAR AVISO SI HAY ERRORES ---
     if (registrosSinFecha.length > 0) {
+        registrosSinFecha.sort((a, b) => b.localeCompare(a, undefined, { numeric: true, sensitivity: 'base' }));
         showRejectedModal(registrosSinFecha);
     }
 };
 
-// --- FUNCIONES NUEVAS PARA EL MODAL ---
 function showRejectedModal(lista) {
     const container = document.getElementById('rejected-list');
     if(container) {
-        // Creamos una lista HTML
         container.innerHTML = lista.map(item => `<div><i class="fa-solid fa-xmark" style="color:#f5365c"></i> ${item}</div>`).join('');
     }
     document.getElementById('rejected-modal').classList.add('active');
 }
-
-function closeRejectedModal() {
-    document.getElementById('rejected-modal').classList.remove('active');
-}
+function closeRejectedModal() { document.getElementById('rejected-modal').classList.remove('active'); }
 
 // ============================================================
 // 6. FILTROS
@@ -422,7 +413,6 @@ function setupFilters() {
     const years = [...new Set(finalData.map(d => d.year))].sort((a,b) => b-a);
     const cats = [...new Set(finalData.map(d => d.cat))].sort();
     
-    // Usamos monthsConfig pero necesitamos que el texto se actualice por idioma
     renderCheckboxes('items-year', years, years[0]); 
     renderCheckboxes('items-month', monthsConfig, 'all'); 
     renderCheckboxes('items-category', cats, 'all');
@@ -431,13 +421,12 @@ function setupFilters() {
 function renderCheckboxes(containerId, items, defaultValue) {
     const container = document.getElementById(containerId);
     container.innerHTML = '';
-    const t = translations[currentLang]; // Textos traducidos
+    const t = translations[currentLang]; 
 
     items.forEach(item => {
         let val, label;
         if(typeof item === 'object') {
             val = item.id;
-            // Si es mes, usamos la traducción
             if(containerId === 'items-month') label = t.months_abbr[item.id - 1]; 
             else label = item.name || item.id;
         } else {
@@ -446,9 +435,17 @@ function renderCheckboxes(containerId, items, defaultValue) {
 
         const div = document.createElement('div');
         div.className = 'checkbox-item';
+        // CAMBIO AQUÍ: en lugar de updateUI(), llamamos a triggerUpdateWithLoader()
         const isChecked = (defaultValue === 'all' || val == defaultValue) ? 'checked' : '';
-        div.innerHTML = `<input type="checkbox" value="${val}" ${isChecked} onchange="updateUI()"> <span>${label}</span>`;
+        div.innerHTML = `<input type="checkbox" value="${val}" ${isChecked} onchange="triggerUpdateWithLoader()"> <span>${label}</span>`;
         container.appendChild(div);
+    });
+}
+
+// Función auxiliar pequeña para los checkboxes
+function triggerUpdateWithLoader() {
+    runWithLoader(() => {
+        updateUI();
     });
 }
 
@@ -478,93 +475,93 @@ window.onclick = (e) => {
 
 function toggleGroup(containerId, state, event) {
     if (event) event.stopPropagation();
-    const container = document.getElementById(containerId);
-    if (container) {
-        container.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = state);
-        updateUI();
-    }
+    
+    // Usamos el envoltorio de carga
+    runWithLoader(() => {
+        const container = document.getElementById(containerId);
+        if (container) {
+            container.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = state);
+            updateUI(); // La operación pesada
+        }
+    });
 }
 
 // ============================================================
 // 7. ACTUALIZAR UI
 // ============================================================
 function updateUI() {
+    // SINCRONIZAR DESPLEGABLE
+    const temporalSelect = document.getElementById('select-temporal-view');
+    if (temporalSelect) temporalSelect.value = temporalView; 
+
     const t = translations[currentLang];
     
-    // --- 1. FUNCIONES AUXILIARES INTERNAS ---
     const getValues = (containerId) => Array.from(document.querySelectorAll(`#${containerId} input:checked`)).map(i => i.value);
-    
     const getLabels = (containerId) => {
         const all = document.querySelectorAll(`#${containerId} input`);
         const checked = Array.from(document.querySelectorAll(`#${containerId} input:checked`));
-        
         if (checked.length === 0) return t.sel_none.toUpperCase();
         if (checked.length === all.length) return t.sel_all.toUpperCase();
-        
-        // Unir con comas los seleccionados
         return checked.map(i => i.nextElementSibling.innerText).join(", ");
     };
 
-    // --- 2. LEER SELECCIÓN DE FILTROS ---
     const selYears = getValues('items-year').map(Number);
     const selMonths = getValues('items-month').map(Number);
     const selCats = getValues('items-category');
 
-    // --- 3. ACTUALIZAR ETIQUETAS VISUALES (DROPDOWNS Y HEADER) ---
-    // Años
     if(document.getElementById('label-year')) document.getElementById('label-year').innerText = getLabels('items-year');
     if(document.getElementById('header-year')) document.getElementById('header-year').innerText = getLabels('items-year');
-    
-    // Meses
     if(document.getElementById('label-month')) document.getElementById('label-month').innerText = getLabels('items-month');
     if(document.getElementById('header-month')) document.getElementById('header-month').innerText = getLabels('items-month');
-    
-    // Categorías
     if(document.getElementById('label-category')) document.getElementById('label-category').innerText = getLabels('items-category');
     if(document.getElementById('header-category')) document.getElementById('header-category').innerText = getLabels('items-category');
 
-    // --- 4. FILTRAR LOS DATOS (EL MOTOR PRINCIPAL) ---
     const filtered = finalData.filter(d => 
         selYears.includes(d.year) && 
         selMonths.includes(d.month) && 
         selCats.includes(d.cat)
     );
 
-    // --- 5. ACTUALIZAR KPIs BÁSICOS ---
-    // Contador Grande (Expedientes)
     document.getElementById('kpi-count').innerText = filtered.length.toLocaleString();
-    
-    // Contador Pequeño (Arriba a la derecha)
     if(document.getElementById('kpi-total-filas')) 
         document.getElementById('kpi-total-filas').innerHTML = `${filtered.length} <span data-i18n="kpi_reg">${t.kpi_reg}</span>`;
 
-    // --- 6. ACTUALIZAR COMPONENTES COMPLEJOS ---
     updateMapData(filtered);
     updateCharts(filtered, selYears);
     updateLocationKPI(filtered);
 
-    // --- 7. NUEVO: ACTUALIZAR TARJETA DE ARCHIVO (NOMBRE Y TÍTULO) ---
-    
-    // A) Cambiar "EPEA" por "TITULO" (o "IZENBURUA" si es euskera)
     const labelTitulo = document.getElementById('card-label-titulo');
-    if (labelTitulo) {
-        // Lógica simple para ES/EU, puedes añadir más si quieres
-        labelTitulo.innerText = currentLang === 'eu' ? "IZENBURUA" : "TITULO";
-    }
-
-    // B) Poner el nombre del archivo cargado
+    if (labelTitulo) labelTitulo.innerText = currentLang === 'eu' ? "IZENBURUA" : "TITULO";
     const textFilename = document.getElementById('card-text-filename');
-    if (textFilename) {
-        // Usamos la variable global 'nombreArchivoSubido'
-        // Si no hay archivo aún, mostramos un guion o texto por defecto
-        textFilename.innerText = nombreArchivoSubido || "SIN ARCHIVO";
-    }
+    if (textFilename) textFilename.innerText = nombreArchivoSubido || "SIN ARCHIVO";
 }
 
 // ============================================================
-// 8. GRÁFICOS (TRADUCIDOS + TRIMESTRES + HORAS TABLA)
+// 8. GRÁFICOS
 // ============================================================
-function changeTemporalView(v) { temporalView = v; updateUI(); }
+function changeTemporalView(v) { 
+    runWithLoader(() => {
+        temporalView = v; 
+        updateUI(); 
+    });
+}
+function toggleTimelineType() {
+    // Usamos el envoltorio de carga
+    runWithLoader(() => {
+        chartTimelineType = (chartTimelineType === 'bar') ? 'line' : 'bar';
+        const btnIcon = document.querySelector('#btn-toggle-chart-type i');
+        const btn = document.getElementById('btn-toggle-chart-type');
+        
+        if (chartTimelineType === 'line') {
+            btnIcon.className = 'fa-solid fa-chart-simple'; 
+            btn.title = "Volver a Barras";
+        } else {
+            btnIcon.className = 'fa-solid fa-chart-line'; 
+            btn.title = "Cambiar a Líneas";
+        }
+        updateUI(); // La operación pesada
+    });
+}
 
 function updateCharts(data, selYears) {
     const allYearsMaster = [...new Set(finalData.map(d => d.year))].sort((a,b) => a-b);
@@ -580,136 +577,143 @@ function updateCharts(data, selYears) {
     // --- TIMELINE ---
     const ctxTimeline = document.getElementById('chart-timeline');
     if (ctxTimeline) {
-        const sortedYears = [...selYears].sort((a,b) => a-b);
-        let labels = [], datasets = [];
+        
+        // 1. OBTENER CATEGORÍAS ACTIVAS
+        const activeCategories = [...new Set(data.map(d => d.cat))].sort();
+
+        // 2. CORRECCIÓN: CALCULAR AÑOS REALES (EJE X)
+        // En lugar de usar los filtros (selYears), miramos qué años existen realmente en los datos 'data'
+        // y nos aseguramos de que tengan al menos 1 registro válido.
+        let activeYears = [];
         
         if (temporalView === 'year') {
-            labels = sortedYears.map(y => y.toString());
-            datasets = [{ label: 'Registros', data: sortedYears.map(y => data.filter(d => d.year === y).length), backgroundColor: sortedYears.map(y => yearColors[allYearsMaster.indexOf(y) % yearColors.length].bg), borderColor: sortedYears.map(y => yearColors[allYearsMaster.indexOf(y) % yearColors.length].border), borderWidth: 2 }];
-        } else if (temporalView === 'month') {
-            labels = t.months_abbr;
-            datasets = sortedYears.map(y => {
-                const c = Array(12).fill(0); data.filter(d => d.year === y).forEach(d => c[d.month - 1]++);
-                const col = yearColors[allYearsMaster.indexOf(y) % yearColors.length];
-                return { label: y.toString(), data: c, backgroundColor: col.bg, borderColor: col.border, borderWidth: 2 };
-            });
-        } else if (temporalView === 'quarter') {
-            labels = t.quarters;
-            datasets = sortedYears.map(y => {
-                const c = Array(4).fill(0); 
-                data.filter(d => d.year === y).forEach(d => {
-                    const qIndex = Math.floor((d.month - 1) / 3);
-                    c[qIndex]++;
-                });
-                const col = yearColors[allYearsMaster.indexOf(y) % yearColors.length];
-                return { label: y.toString(), data: c, backgroundColor: col.bg, borderColor: col.border, borderWidth: 2 };
-            });
-        } else if (temporalView === 'day') {
-            labels = t.days_abbr.map(l => l.substring(0,3));
-            datasets = sortedYears.map(y => {
-                const c = Array(7).fill(0); 
-                data.filter(d => d.year === y).forEach(d => { let idx = d.date.getDay(); c[idx === 0 ? 6 : idx - 1]++; });
-                const col = yearColors[allYearsMaster.indexOf(y) % yearColors.length];
-                return { label: y.toString(), data: c, backgroundColor: col.bg, borderColor: col.border, borderWidth: 2 };
-            });
+            // Solo cogemos los años que están en los datos actuales
+            activeYears = [...new Set(data.map(d => d.year))].sort((a,b) => a-b);
+        } else {
+            // Para otras vistas (meses, días), usamos el filtro seleccionado para no romper la lógica
+            activeYears = [...selYears].sort((a,b) => a-b);
         }
 
+        // 3. GENERAR ETIQUETAS (LABELS)
+        let labels = [];
+        if (temporalView === 'year') labels = activeYears.map(y => y.toString());
+        else if (temporalView === 'month') labels = t.months_abbr;
+        else if (temporalView === 'quarter') labels = t.quarters;
+        else if (temporalView === 'day') labels = t.days_abbr.map(l => l.substring(0,3));
+
+        const getCategoryColor = (index) => {
+            const palette = ['#5e72e4', '#2dce89', '#fb6340', '#11cdef', '#f5365c', '#8965e0', '#ffd600', '#32325d', '#adb5bd', '#f3a4b5', '#2bffc6', '#8898aa'];
+            return palette[index % palette.length];
+        };
+
+        const datasets = activeCategories.map((catName, index) => {
+            let catData = [];
+            
+            if (temporalView === 'year') {
+                // Mapeamos los datos basándonos en 'activeYears', no en el filtro global
+                catData = activeYears.map(y => data.filter(d => d.year === y && d.cat === catName).length);
+            } 
+            else if (temporalView === 'month') {
+                catData = Array(12).fill(0);
+                data.filter(d => d.cat === catName).forEach(d => { catData[d.month - 1]++; });
+            } 
+            else if (temporalView === 'quarter') {
+                catData = Array(4).fill(0);
+                data.filter(d => d.cat === catName).forEach(d => { const qIndex = Math.floor((d.month - 1) / 3); catData[qIndex]++; });
+            } 
+            else if (temporalView === 'day') {
+                catData = Array(7).fill(0);
+                data.filter(d => d.cat === catName).forEach(d => { let idx = d.date.getDay(); catData[idx === 0 ? 6 : idx - 1]++; });
+            }
+
+            return {
+                label: catName,
+                data: catData,
+                backgroundColor: getCategoryColor(index),
+                borderColor: getCategoryColor(index),
+                borderWidth: chartTimelineType === 'line' ? 2 : 0,
+                fill: false,
+                tension: 0.3,
+                pointRadius: chartTimelineType === 'line' ? 3 : 0,
+                pointHoverRadius: 6,
+                stack: 'combined'
+            };
+        });
+
+        // Actualizar Tabla Cache
         tableDataCache = [];
         labels.forEach((lbl, index) => {
             let row = { label: lbl, index: index };
             datasets.forEach(ds => { row[ds.label] = ds.data[index]; });
+            row['TOTAL'] = datasets.reduce((sum, ds) => sum + ds.data[index], 0);
             tableDataCache.push(row);
         });
         if (isTableView) renderTimelineTable();
 
         if (chartTimeline) chartTimeline.destroy();
         chartTimeline = new Chart(ctxTimeline, { 
-            type: 'bar', 
+            type: chartTimelineType, 
             data: { labels, datasets }, 
             options: { 
                 ...commonOptions,
-                // AÑADIDO: Configuración del eje Y para enteros
+                interaction: {
+                    mode: 'nearest',   
+                    axis: 'xy',        
+                    intersect: true    
+                },
                 scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            precision: 0 // <--- ESTO FUERZA ENTEROS
-                        }
-                    }
+                    x: { stacked: chartTimelineType === 'bar', grid: { display: false } },
+                    y: { stacked: chartTimelineType === 'bar', beginAtZero: true, ticks: { precision: 0 } }
+                },
+                plugins: {
+                    legend: { display: false }, // Ocultar leyenda (bolas de colores)
+                    tooltip: {}
                 }
             } 
         });
     }
 
     // --- CATEGORY ---
-// --- CATEGORY ---
     const ctxCat = document.getElementById('chart-category');
     if (ctxCat) {
-        // 1. Detectar si estamos en pantalla completa
         const container = document.getElementById('container-category');
         const isFullscreen = container.classList.contains('fullscreen');
 
-        // Procesamiento de datos
         const catData = {}; 
         data.forEach(d => catData[d.cat] = (catData[d.cat] || 0) + 1);
         const sorted = Object.entries(catData).sort((a,b) => b[1]-a[1]);
         const top5 = sorted.slice(0, 5);
         const total = sorted.reduce((sum, item) => sum + item[1], 0);
-
-        // Definir etiquetas LARGAS y CORTAS
         const fullLabels = top5.map(s => s[0]);
         const shortLabels = top5.map(s => s[0].length > 20 ? s[0].substring(0, 20) + '...' : s[0]);
-
-        // 2. DECISIÓN: ¿Qué etiquetas y tamaño de letra usar?
-        // Si es fullscreen usamos las largas, si no, las cortas.
         const activeLabels = isFullscreen ? fullLabels : shortLabels;
-        const fontSize = isFullscreen ? 16 : 11; // Letra más grande en fullscreen
-        const boxSize = isFullscreen ? 20 : 12;  // Cuadradito de color más grande
+        const fontSize = isFullscreen ? 16 : 11;
+        const boxSize = isFullscreen ? 20 : 12;
 
-        // Cache para la tabla
         tableCatDataCache = sorted.map(item => ({
             cat: item[0], count: item[1], percent: ((item[1] / total) * 100).toFixed(1)
         }));
         if (isTableCatView) renderCategoryTable();
 
         if (chartCategory) chartCategory.destroy();
-        
         chartCategory = new Chart(ctxCat, { 
             type: 'doughnut', 
             data: { 
-                labels: activeLabels, // Usamos la variable dinámica
+                labels: activeLabels,
                 datasets: [{ 
                     data: top5.map(s => s[1]), 
                     backgroundColor: yearColors.map(c => c.bg), 
-                    borderColor: '#ffffff', 
-                    borderWidth: 2 
+                    borderColor: '#ffffff', borderWidth: 2 
                 }] 
             }, 
             options: { 
-                ...commonOptions, 
-                maintainAspectRatio: false, 
-                cutout: '60%',
-                
+                ...commonOptions, maintainAspectRatio: false, cutout: '60%',
                 scales: { x: { display: false }, y: { display: false } },
-                
-                layout: {
-                    padding: {
-                        top: 10,
-                        bottom: 20,
-                        left: 10,
-                        right: 10
-                    }
-                },
-
+                layout: { padding: { top: 10, bottom: 20, left: 10, right: 10 } },
                 plugins: { 
                     legend: { 
-                        // En móvil siempre abajo, en PC: derecha (normal) o izquierda/derecha (fullscreen)
                         position: window.innerWidth < 768 ? 'bottom' : 'right',
-                        labels: { 
-                            boxWidth: boxSize,     // Tamaño dinámico caja color
-                            padding: 15, 
-                            font: { size: fontSize } // Tamaño dinámico letra
-                        }
+                        labels: { boxWidth: boxSize, padding: 15, font: { size: fontSize } }
                     },
                     tooltip: {
                         callbacks: {
@@ -717,8 +721,7 @@ function updateCharts(data, selYears) {
                                 let label = fullLabels[context.dataIndex] || '';
                                 let value = context.parsed;
                                 let totalVal = context.chart._metasets[context.datasetIndex].total;
-                                let percentage = ((value / totalVal) * 100).toFixed(1) + "%";
-                                return ` ${label}: ${value} (${percentage})`;
+                                return ` ${label}: ${value} (${((value / totalVal) * 100).toFixed(1)}%)`;
                             }
                         }
                     }
@@ -731,16 +734,12 @@ function updateCharts(data, selYears) {
     const ctxHours = document.getElementById('chart-hours');
     if (ctxHours) {
         const hC = Array(24).fill(0); data.forEach(d => hC[d.hour]++);
-        
-        // Datos para tabla
         const totalReg = data.length;
         tableHoursDataCache = hC.map((count, index) => ({
             hour: index, hourLabel: String(index).padStart(2, '0') + ":00",
             count: count, percent: totalReg > 0 ? ((count / totalReg) * 100).toFixed(1) : "0.0"
         }));
         if (isTableHoursView) renderHoursTable();
-
-// ... código anterior de chartHours ...
 
         if (chartHours) chartHours.destroy();
         chartHours = new Chart(ctxHours, { 
@@ -751,13 +750,7 @@ function updateCharts(data, selYears) {
                 plugins: { legend: { display: false } }, 
                 scales: { 
                     x: { ticks: { maxTicksLimit: 8 } },
-                    // AÑADIDO: Configuración del eje Y para enteros
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            precision: 0 // <--- ESTO FUERZA ENTEROS
-                        }
-                    }
+                    y: { beginAtZero: true, ticks: { precision: 0 } }
                 } 
             } 
         });
@@ -786,30 +779,99 @@ function initMap() {
 }
 
 function updateMapData(data) {
-    if (!map || !map.getSource('puntos')) return;
-    const datosConGeo = data.filter(d => d.hasGeo); // Solo pintamos lo que tiene GPS
+    const container = document.getElementById('container-map');
+    
+    // 1. Filtrar solo los registros que tienen Geoposicionamiento real
+    const datosConGeo = data.filter(d => d.hasGeo); 
 
-    const geojson = { type: 'FeatureCollection', features: datosConGeo.map(d => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [d.lon, d.lat] }, properties: { exp: d.exp, cat: d.cat, year: d.year, fullDate: d.date.toLocaleString('es-ES'), calle: d.calle, numero: d.numero, refnum: d.refnum, refanno: d.refanno } })) };
+    // 2. LÓGICA DE ANIMACIÓN
+    if (datosConGeo.length === 0) {
+        // --- OCULTAR MAPA ---
+        if (container && container.classList.contains('active-map')) {
+            container.classList.remove('active-map');
+            // Esperar a que termine la animación para limpiar recursos si fuera necesario
+        }
+        return; 
+    } else {
+        // --- MOSTRAR MAPA ---
+        if (container) {
+            const estabaOculto = !container.classList.contains('active-map');
+            
+            if (estabaOculto) {
+                container.classList.add('active-map');
+                
+                // CRÍTICO: Esperar a que termine la transición CSS (0.6s)
+                // para decirle al mapa que recalcule su tamaño.
+                setTimeout(() => {
+                   if (map) map.resize();
+                }, 650);
+            } else {
+                // Si ya estaba visible, redimensionar por si cambió el tamaño de ventana
+                if (map) map.resize();
+            }
+        }
+    }
+
+    // 3. Actualizar datos del mapa (Puntos, colores, etc.)
+    if (!map || !map.getSource('puntos')) return;
+
+//tooltip mapa
+    const geojson = { 
+        type: 'FeatureCollection', 
+        features: datosConGeo.map(d => ({ 
+            type: 'Feature', 
+            geometry: { type: 'Point', coordinates: [d.lon, d.lat] }, 
+            properties: { 
+                exp: d.exp, cat: d.cat, year: d.year, 
+                
+                // --- CAMBIO AQUÍ: Formatear fecha sin segundos ---
+                fullDate: d.date.toLocaleString(undefined, { 
+                    year: 'numeric', 
+                    month: 'numeric', 
+                    day: 'numeric', 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                }), 
+                // ------------------------------------------------
+                
+                calle: d.calle, numero: d.numero, 
+                refnum: d.refnum, refanno: d.refanno 
+            } 
+        })) 
+    };
+
+    
     map.getSource('puntos').setData(geojson);
     
+    // Colores por año (Lógica existente)
     const allY = [...new Set(finalData.map(d => d.year))].sort((a,b) => a-b);
     const colorExpr = ['match', ['get', 'year']];
-    allY.forEach(y => colorExpr.push(y, yearColors[allY.indexOf(y) % yearColors.length].border));
-    colorExpr.push('#5e72e4');
+    const localColors = window.yearColors || [
+       { border: '#5e72e4'}, { border: '#2dce89'}, { border: '#fb6340'}, 
+       { border: '#11cdef'}, { border: '#f5365c'}, { border: '#8965e0'}, { border: '#b71825ff'}
+    ];
+    allY.forEach((y, index) => {
+        colorExpr.push(y, localColors[index % localColors.length].border);
+    });
+    colorExpr.push('#5e72e4'); 
     map.setPaintProperty('point-layer', 'circle-color', colorExpr);
     
+    // Centrar el mapa con un pequeño retraso para asegurar que el contenedor ya está expandido
     if (datosConGeo.length > 0) {
         const bounds = new maplibregl.LngLatBounds();
         datosConGeo.forEach(d => bounds.extend([d.lon, d.lat]));
-        try { map.fitBounds(bounds, { padding: 40, maxZoom: 16 }); } catch (e) {}
+        
+        setTimeout(() => {
+            try { 
+                map.fitBounds(bounds, { padding: 40, maxZoom: 16 }); 
+            } catch (e) { console.log(e); }
+        }, 700); // 700ms > 600ms de la transición CSS
     }
 }
 
 function toggleSatelite(btn) { isSatelite = !isSatelite; map.setLayoutProperty('satellite-layer', 'visibility', isSatelite ? 'visible' : 'none'); btn.style.background = isSatelite ? '#5e72e4' : ''; btn.style.color = isSatelite ? '#fff' : ''; }
 function toggleHeatmap(btn) { isHeatmap = !isHeatmap; map.setLayoutProperty('heat-layer', 'visibility', isHeatmap ? 'visible' : 'none'); map.setLayoutProperty('point-layer', 'visibility', isHeatmap ? 'none' : 'visible'); btn.innerHTML = isHeatmap ? '<i class="fa-solid fa-location-dot"></i>' : '<i class="fa-solid fa-fire"></i>'; }
 function toggle3D() { const p = map.getPitch(); map.easeTo({ pitch: p > 0 ? 0 : 60, bearing: p > 0 ? 0 : -20, duration: 1000 }); }
-
-/* --- script.js --- */
 
 function toggleFullscreen(containerId) {
     const container = document.getElementById(containerId);
@@ -818,12 +880,8 @@ function toggleFullscreen(containerId) {
     const isFullscreen = container.classList.toggle('fullscreen');
     const btnIcon = container.querySelector('.btn-maximize i');
     
-    // Cambiar icono
     if (isFullscreen) {
-        if (btnIcon) { 
-            btnIcon.classList.remove('fa-maximize', 'fa-expand'); 
-            btnIcon.classList.add('fa-xmark'); 
-        }
+        if (btnIcon) { btnIcon.classList.remove('fa-maximize', 'fa-expand'); btnIcon.classList.add('fa-xmark'); }
         document.body.style.overflow = 'hidden'; 
     } else {
         if (btnIcon) {
@@ -834,13 +892,9 @@ function toggleFullscreen(containerId) {
         document.body.style.overflow = '';
     }
 
-    // --- CORRECCIÓN AQUÍ ---
     setTimeout(() => {
         if (map) map.resize(); 
         updateUI(); 
-
-        // FUERZA VISUAL: Aseguramos que si estaba en modo tabla, se vea la tabla
-        // (A veces updateUI resetea la vista si no se controla bien)
         if (containerId === 'container-category' && isTableCatView) {
             document.getElementById('chart-category').style.display = 'none';
             document.getElementById('table-category-view').style.display = 'block';
@@ -853,20 +907,25 @@ function toggleFullscreen(containerId) {
              document.getElementById('chart-timeline').style.display = 'none';
              document.getElementById('table-timeline-view').style.display = 'block';
         }
-
     }, 300);
 }
 
 // ============================================================
 // 10. GEOLOCALIZACIÓN
 // ============================================================
+// ============================================================
+// 10. GEOLOCALIZACIÓN (CORREGIDO)
+// ============================================================
 async function updateLocationKPI(data) {
     const el = document.getElementById('kpi-location');
-    const t = translations[currentLang];
-
+    
+    // 1. Validaciones básicas
     if (!data || data.length === 0) { el.innerText = "Sin Datos"; return; }
+    
+    // 2. Si hay localidad manual en el excel, usarla
     if (data[0].locManual && data[0].locManual !== "") { el.innerText = data[0].locManual.toUpperCase(); return; }
 
+    // 3. Calcular centroide
     const dataConGeo = data.filter(d => d.hasGeo);
     if (dataConGeo.length === 0) { el.innerText = "Sin Ubicación GPS"; return; }
 
@@ -874,117 +933,103 @@ async function updateLocationKPI(data) {
     dataConGeo.forEach(d => { totalLat += d.lat; totalLon += d.lon; });
     const centerLat = totalLat / dataConGeo.length;
     const centerLon = totalLon / dataConGeo.length;
-
+    
+    // Mostrar coordenadas por defecto mientras carga
     el.innerText = `${centerLat.toFixed(3)}, ${centerLon.toFixed(3)}`;
 
+    // 4. INTENTO 1: BigDataCloud (Más rápido y sin bloqueo CORS en localhost)
     try {
-        const urlOSM = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${centerLat}&lon=${centerLon}&zoom=10&accept-language=eu,es`;
-        const response = await fetch(urlOSM, { method: 'GET', mode: 'cors', headers: { 'Accept': 'application/json' } });
+        // Usamos currentLang para pedir el idioma correcto
+        const langCode = currentLang === 'eu' ? 'eu' : (currentLang === 'ca' ? 'ca' : 'es');
+        const urlB = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${centerLat}&longitude=${centerLon}&localityLanguage=${langCode}`;
+        
+        const resB = await fetch(urlB);
+        if(resB.ok) {
+            const jB = await resB.json();
+            // Buscamos el nombre más relevante en orden
+            let p = jB.locality || jB.city || jB.principalSubdivision || jB.localityInfo?.administrative[2]?.name;
+            
+            if (p) { 
+                el.innerText = p.toUpperCase(); 
+                return; // Éxito, salimos de la función
+            }
+        }
+    } catch (er) {
+        console.warn("BigDataCloud sin respuesta, intentando OSM...");
+    }
+
+    // 5. INTENTO 2: OpenStreetMap (Solo si falla el anterior, suele dar 403 en localhost)
+    try {
+        const urlOSM = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${centerLat}&lon=${centerLon}&zoom=10&accept-language=${currentLang}`;
+        const response = await fetch(urlOSM, { 
+            method: 'GET', 
+            mode: 'cors', 
+            headers: { 'Accept': 'application/json' } 
+        });
+        
         if(response.ok) {
             const json = await response.json();
             const addr = json.address;
             let placeName = addr.city || addr.town || addr.village || addr.municipality || addr.county;
-            if (placeName) { el.innerText = placeName.toUpperCase(); return; }
+            if (placeName) { el.innerText = placeName.toUpperCase(); }
         }
-        throw new Error("OSM falló"); 
     } catch (e) {
-        try {
-            const urlB = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${centerLat}&longitude=${centerLon}&localityLanguage=es`;
-            const resB = await fetch(urlB);
-            if(resB.ok) {
-                const jB = await resB.json();
-                let p = jB.locality || jB.city || jB.principalSubdivision;
-                if (p) el.innerText = p.toUpperCase();
-            }
-        } catch (er) {}
+        // Si todo falla, se queda con las coordenadas numéricas que pusimos al principio
+        console.log("No se pudo obtener el nombre de la localidad.");
     }
 }
 
 // ============================================================
-// 11. TABLAS DE DATOS Y VISOR (CORREGIDO DEFINITIVO)
+// 11. TABLAS DE DATOS Y VISOR
 // ============================================================
 
-// 1. EVOLUCIÓN TEMPORAL
 function toggleTimelineView() {
     isTableView = !isTableView;
     const btn = document.querySelector('#btn-toggle-view i');
     const canvas = document.getElementById('chart-timeline');
     const table = document.getElementById('table-timeline-view');
 
-    // Alternar visibilidad
     canvas.style.display = isTableView ? 'none' : 'block';
     table.style.display = isTableView ? 'block' : 'none';
-    
-    // Cambiar icono y título
     btn.className = isTableView ? 'fa-solid fa-chart-column' : 'fa-solid fa-table';
     btn.parentElement.title = isTableView ? "Ver Gráfico" : "Ver Datos";
 
     if(isTableView) {
+        // Forzar orden descendente por defecto
+        currentSort = { col: 'index', dir: 'desc' }; 
+        tableDataCache.sort((a, b) => b.index - a.index);
         renderTimelineTable();
     } else {
-        // SOLUCIÓN: En lugar de resize(), llamamos a updateUI()
-        // Esto destruye el gráfico y lo crea de nuevo ajustado perfectamente al hueco
         setTimeout(() => { updateUI(); }, 50);
     }
 }
-
-// 2. TOP TIPOS (CATEGORÍA)
-function toggleCategoryView() {
-    isTableCatView = !isTableCatView;
-    const btn = document.querySelector('#btn-toggle-view-cat i');
-    const canvas = document.getElementById('chart-category');
-    const table = document.getElementById('table-category-view');
-
-    canvas.style.display = isTableCatView ? 'none' : 'block';
-    table.style.display = isTableCatView ? 'block' : 'none';
-    
-    btn.className = isTableCatView ? 'fa-solid fa-chart-pie' : 'fa-solid fa-table';
-    btn.parentElement.title = isTableCatView ? "Ver Gráfico" : "Ver Datos";
-
-    if(isTableCatView) {
-        renderCategoryTable();
-    } else {
-        // SOLUCIÓN: Redibujar completo para recalcular centro y márgenes
-        setTimeout(() => { updateUI(); }, 50);
-    }
-}
-
-// 3. HORAS
-function toggleHoursView() {
-    isTableHoursView = !isTableHoursView;
-    const btn = document.querySelector('#btn-toggle-view-hours i');
-    const canvas = document.getElementById('chart-hours');
-    const table = document.getElementById('table-hours-view');
-
-    canvas.style.display = isTableHoursView ? 'none' : 'block';
-    table.style.display = isTableHoursView ? 'block' : 'none';
-    
-    btn.className = isTableHoursView ? 'fa-solid fa-chart-line' : 'fa-solid fa-table';
-    btn.parentElement.title = isTableHoursView ? "Ver Gráfico" : "Ver Datos";
-
-    if(isTableHoursView) {
-        renderHoursTable();
-    } else {
-        // SOLUCIÓN: Redibujar completo
-        setTimeout(() => { updateUI(); }, 50);
-    }
-}
-
-// --- FUNCIONES DE RENDERIZADO DE TABLAS (Sin cambios) ---
 
 function renderTimelineTable() {
     const c = document.getElementById('table-timeline-view');
-    if (!tableDataCache || tableDataCache.length === 0) { c.innerHTML = '<p style="padding:20px; text-align:center; color:#888;">Sin datos</p>'; return; }
+    if (!tableDataCache || tableDataCache.length === 0) { 
+        c.innerHTML = '<p style="padding:20px; text-align:center; color:#888;">Sin datos</p>'; 
+        return; 
+    }
     
-    const keys = Object.keys(tableDataCache[0]).filter(k => k !== 'label' && k !== 'index');
-    let html = `<table class="data-table"><thead><tr><th onclick="sortTable('index')">PERIODO <i class="fa-solid fa-sort"></i></th>`;
-    keys.forEach(k => { html += `<th onclick="sortTable('${k}')">${k} <i class="fa-solid fa-sort"></i></th>`; });
-    html += `</tr></thead><tbody>`;
+    let categoryKeys = Object.keys(tableDataCache[0])
+        .filter(k => k !== 'label' && k !== 'index' && k !== 'TOTAL')
+        .sort(); 
+
+    let html = `<table class="data-table"><thead><tr><th onclick="sortTable('index')" style="cursor:pointer">PERIODO <i class="fa-solid fa-sort"></i></th>`;
+    categoryKeys.forEach(k => { 
+        let displayName = k.length > 20 ? k.substring(0, 20) + '...' : k;
+        html += `<th onclick="sortTable('${k}')" title="${k}" style="cursor:pointer">${displayName} <i class="fa-solid fa-sort"></i></th>`; 
+    });
+    html += `<th onclick="sortTable('TOTAL')" style="cursor:pointer; color:#333;">TOTAL <i class="fa-solid fa-sort"></i></th></tr></thead><tbody>`;
     
     tableDataCache.forEach(row => {
-        html += `<tr><td><strong>${row.label}</strong></td>`;
-        keys.forEach(k => { html += `<td>${row[k].toLocaleString()}</td>`; });
-        html += `</tr>`;
+        html += `<tr><td>${row.label}</td>`;
+        categoryKeys.forEach(k => { 
+            let val = row[k] !== undefined ? row[k] : 0;
+            let colorStyle = val === 0 ? 'color:#ccc;' : '';
+            html += `<td style="${colorStyle}">${val.toLocaleString()}</td>`; 
+        });
+        html += `<td>${(row['TOTAL'] || 0).toLocaleString()}</td></tr>`;
     });
     html += `</tbody></table>`;
     c.innerHTML = html;
@@ -993,15 +1038,32 @@ function renderTimelineTable() {
 
 function sortTable(column) {
     if (currentSort.col === column) currentSort.dir = currentSort.dir === 'asc' ? 'desc' : 'asc';
-    else { currentSort.col = column; currentSort.dir = column === 'index' ? 'asc' : 'desc'; }
+    else { currentSort.col = column; currentSort.dir = 'desc'; }
     
     tableDataCache.sort((a, b) => {
-        let valA = a[column], valB = b[column];
+        let valA = a[column];
+        let valB = b[column];
+        if (column === 'index') return currentSort.dir === 'asc' ? valA - valB : valB - valA;
         if (valA < valB) return currentSort.dir === 'asc' ? -1 : 1;
         if (valA > valB) return currentSort.dir === 'asc' ? 1 : -1;
         return 0;
     });
     renderTimelineTable();
+}
+
+function toggleCategoryView() {
+    isTableCatView = !isTableCatView;
+    const btn = document.querySelector('#btn-toggle-view-cat i');
+    const canvas = document.getElementById('chart-category');
+    const table = document.getElementById('table-category-view');
+
+    canvas.style.display = isTableCatView ? 'none' : 'block';
+    table.style.display = isTableCatView ? 'block' : 'none';
+    btn.className = isTableCatView ? 'fa-solid fa-chart-pie' : 'fa-solid fa-table';
+    btn.parentElement.title = isTableCatView ? "Ver Gráfico" : "Ver Datos";
+
+    if(isTableCatView) renderCategoryTable();
+    else setTimeout(() => { updateUI(); }, 50);
 }
 
 function renderCategoryTable() {
@@ -1017,13 +1079,27 @@ function renderCategoryTable() {
 function sortTableCategory(col) {
     if (currentSortCat.col === col) currentSortCat.dir = currentSortCat.dir === 'asc' ? 'desc' : 'asc'; 
     else { currentSortCat.col = col; currentSortCat.dir = 'desc'; }
-    
     tableCatDataCache.sort((a,b) => { 
         let vA = a[col], vB = b[col]; 
         if(col==='percent'){vA=parseFloat(vA);vB=parseFloat(vB);} 
         return vA < vB ? (currentSortCat.dir === 'asc' ? -1 : 1) : 1; 
     });
     renderCategoryTable();
+}
+
+function toggleHoursView() {
+    isTableHoursView = !isTableHoursView;
+    const btn = document.querySelector('#btn-toggle-view-hours i');
+    const canvas = document.getElementById('chart-hours');
+    const table = document.getElementById('table-hours-view');
+
+    canvas.style.display = isTableHoursView ? 'none' : 'block';
+    table.style.display = isTableHoursView ? 'block' : 'none';
+    btn.className = isTableHoursView ? 'fa-solid fa-chart-line' : 'fa-solid fa-table';
+    btn.parentElement.title = isTableHoursView ? "Ver Gráfico" : "Ver Datos";
+
+    if(isTableHoursView) renderHoursTable();
+    else setTimeout(() => { updateUI(); }, 50);
 }
 
 function renderHoursTable() {
@@ -1039,7 +1115,6 @@ function renderHoursTable() {
 function sortTableHours(col) {
     if (currentSortHours.col === col) currentSortHours.dir = currentSortHours.dir === 'asc' ? 'desc' : 'asc'; 
     else { currentSortHours.col = col; currentSortHours.dir = 'asc'; }
-    
     tableHoursDataCache.sort((a,b) => { 
         let vA = a[col], vB = b[col]; 
         if(col==='percent'){vA=parseFloat(vA);vB=parseFloat(vB);} 
@@ -1077,21 +1152,35 @@ function applyLanguage(lang) {
     if(finalData.length > 0) updateUI();
 }
 
-// ============================================================
-// MODIFICACIÓN: CACHE BUSTING AUTOMÁTICO
-// ============================================================
 function openPdfModal(fileName, title) {
     document.getElementById('pdf-modal-title').innerHTML = `<i class="fa-solid fa-file-pdf"></i> ${title}`;
     
-    // Creamos un sello de tiempo único (ej: 1709123456789)
-    const cacheBuster = new Date().getTime();
+    // USAR VERSIÓN GLOBAL
+    let versionParam = (typeof EUROCOP_VERSION !== 'undefined') ? EUROCOP_VERSION : new Date().getTime();
     
-    // Lo añadimos al final de la URL con "?v="
-    // El navegador creerá que es un archivo nuevo cada vez que lo abras
-    document.getElementById('pdf-frame').src = "./ArchivosPdf/" + fileName + "?v=" + cacheBuster;
-    
+    document.getElementById('pdf-frame').src = "./ArchivosPdf/" + fileName + "?v=" + versionParam;
     document.getElementById('pdf-modal').classList.add('active');
 }
 function closePdfModal() { document.getElementById('pdf-modal').classList.remove('active'); }
 document.getElementById('pdf-modal').addEventListener('click', function(e) { if (e.target === this) closePdfModal(); });
 document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closePdfModal(); });
+// ============================================================
+// NUEVA FUNCIÓN: ENVOLTORIO PARA CARGA VISUAL
+// ============================================================
+function runWithLoader(actionCallback) {
+    // 1. Mostrar pantalla de carga
+    document.getElementById('loading-overlay').classList.add('active');
+
+    // 2. Esperar un poco para que el navegador renderice el spinner
+    setTimeout(() => {
+        try {
+            // 3. Ejecutar la acción pesada
+            actionCallback();
+        } catch (e) {
+            console.error("Error durante el procesamiento:", e);
+        } finally {
+            // 4. Ocultar pantalla de carga (siempre, aunque haya error)
+            document.getElementById('loading-overlay').classList.remove('active');
+        }
+    }, 50); // 50ms de pausa técnica
+}

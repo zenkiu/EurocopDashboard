@@ -164,6 +164,18 @@ body {
 }
 .sidebar-logo:hover { opacity: 1; }
 
+.version-badge {
+    margin-top: 8px; 
+    font-size: 0.6rem;
+    color: var(--text-muted);
+    background: #f6f9fc;
+    padding: 2px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+    font-family: monospace; 
+    opacity: 0.7;
+}
+
 /* --- MAIN CONTENT --- */
 .main-content { 
     flex-grow: 1; padding: 20px; 
@@ -211,12 +223,44 @@ body {
     border-bottom: 1px solid #f0f0f0; margin-bottom: 8px;
 }
 
+/* Botones y Selectores pequeños */
 .btn-mini {
-    background: white; color: var(--text-muted); border: 1px solid var(--border-color);
-    padding: 4px 8px; border-radius: 4px; font-size: 0.65rem; cursor: pointer;
-    transition: all 0.2s;
+    background: #ffffff;
+    color: var(--accent-blue);
+    border: 1px solid var(--accent-blue);
+    padding: 6px 12px;
+    border-radius: 6px; 
+    font-size: 0.7rem; 
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    outline: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
-.btn-mini:hover { border-color: var(--accent-blue); color: var(--accent-blue); }
+
+.btn-mini:hover { 
+    background-color: var(--accent-blue); 
+    color: #ffffff;
+    box-shadow: 0 4px 6px rgba(50, 50, 93, 0.11), 0 1px 3px rgba(0, 0, 0, 0.08);
+    transform: translateY(-1px);
+}
+
+select.btn-mini {
+    appearance: none;
+    -webkit-appearance: none;
+    padding-right: 25px;
+    background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%235e72e4%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px top 50%;
+    background-size: 8px auto;
+}
+
+select.btn-mini:hover {
+    background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23ffffff%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+}
 
 .dropdown-items { max-height: 250px; overflow-y: auto; }
 .checkbox-item {
@@ -241,24 +285,105 @@ body {
 .kpi-data h3 { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px;}
 .kpi-data span { font-size: 1.4rem; font-weight: 800; }
 
-/* Gráficos y Contenedores */
-.charts-grid-top { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; flex: 1; min-height: 300px; }
-.bottom-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; flex: 1.2; min-height: 350px; }
+/* =========================================
+   5. GRÁFICOS Y CONTENEDORES (DESKTOP)
+   ========================================= */
+/* =========================================
+   5. GRÁFICOS Y CONTENEDORES (DESKTOP)
+   ========================================= */
 
+.charts-grid-top { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; flex: 1; min-height: 300px; }
+
+/* ESTILO BASE (ESCRITORIO) PARA ANIMACIÓN DEL MAPA */
+.bottom-grid {
+    display: flex; /* Flexbox para animación fluida */
+    gap: 0; /* IMPORTANTE: Sin gap fijo para evitar huecos vacíos a la derecha */
+    width: 100%;
+    min-height: 350px;
+    align-items: stretch; /* Estirar altura para que coincidan */
+    overflow: hidden; /* Evita scrollbars durante la animación */
+}
+
+/* Gráfico de Horas (Izquierda) */
+#container-hours {
+    flex: 1; 
+    transition: flex 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    min-width: 0;
+}
+
+/* Contenedor Mapa (Derecha) - ESTADO OCULTO DESKTOP */
+.map-container-wrapper {
+    flex: 0; 
+    width: 0; 
+    opacity: 0;
+    padding: 0;
+    border: none;
+    margin: 0; /* Sin margen cuando está oculto */
+    
+    transition: 
+        flex 0.6s cubic-bezier(0.4, 0, 0.2, 1),
+        opacity 0.4s ease 0.2s,
+        padding 0.6s ease,
+        margin 0.6s ease; /* Transición suave del margen */
+        
+    overflow: hidden;
+}
+
+/* Contenedor Mapa - ESTADO VISIBLE DESKTOP */
+.map-container-wrapper.active-map {
+    flex: 2; 
+    width: auto;
+    opacity: 1;
+    padding: 15px;
+    border: 1px solid rgba(0,0,0,0.05);
+    
+    /* El margen sustituye al gap para separar los elementos solo cuando el mapa existe */
+    margin-left: 20px; 
+}
+
+/* ESTILOS COMUNES DE TARJETAS */
 .chart-container, .map-container-wrapper { 
     background: white; border-radius: 12px; padding: 15px; 
     box-shadow: 0 2px 10px rgba(0,0,0,0.02);
     display: flex; flex-direction: column; overflow: hidden; position: relative;
 }
+
+/* CABECERAS DE GRÁFICOS */
 .chart-header { display: flex; justify-content: space-between; margin-bottom: 10px; flex-shrink: 0; }
 .chart-header h4 { font-size: 0.8rem; font-weight: 800; color: var(--text-dark); text-transform: uppercase; }
-.header-actions { display: flex; gap: 5px; }
-.btn-maximize { background: transparent; border: none; cursor: pointer; color: #8898aa; }
+.header-actions { 
+    display: flex; 
+    gap: 8px; 
+    align-items: center;
+}
 
+/* BOTÓN MAXIMIZAR */
+.btn-maximize { 
+    background: #f6f9fc;
+    border: 1px solid #e9ecef;
+    cursor: pointer; 
+    color: var(--text-muted);
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    margin-left: 5px;
+}
+
+.btn-maximize:hover {
+    background: var(--text-dark);
+    color: #fff;
+    border-color: var(--text-dark);
+}
+
+/* WRAPPERS INTERNOS */
 .canvas-wrapper { flex-grow: 1; position: relative; width: 100%; height: 100%; min-height: 0; }
 #main-map { position: absolute; top: 0; bottom: 0; width: 100%; border-radius: 8px; }
 
-/* Vistas Carga y Mapping */
+/* VISTAS CARGA Y MAPPING */
 .upload-center { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; }
 .upload-card { background: white; padding: 40px; border-radius: 20px; text-align: center; width: 450px; }
 
@@ -274,7 +399,7 @@ body {
 .brand-label { font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
 .brand-logo { max-width: 120px; height: auto; display: block; }
 
-/* Configuración */
+/* CONFIGURACIÓN */
 #mapping-view { align-items: center; justify-content: center; background: var(--bg-light); padding: 40px 0; overflow-y: auto;}
 .config-panel { background: white; width: 95%; max-width: 1100px; border-radius: 16px; margin-bottom: 40px; overflow: hidden;}
 .panel-header { background: var(--primary-dark); color: white; padding: 25px; }
@@ -286,44 +411,39 @@ body {
 .styled-select { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #dcdfe6; margin-top: 5px; }
 .action-footer { padding: 20px 30px; background: #f4f6f9; display: flex; justify-content: flex-end; gap: 15px; border-top: 1px solid var(--border-color); }
 .btn-primary { background: var(--accent-blue); color: white; border: none; padding: 12px 30px; border-radius: 8px; font-weight: 700; cursor: pointer; }
-
 /* =========================================
-   5. TABLA DE DATOS (ESTILOS CORREGIDOS)
+   6. TABLA DE DATOS (SCROLL HORIZONTAL)
    ========================================= */
 
 .table-view {
     width: 100%;
     height: 100%;
     overflow-y: auto;     
-    overflow-x: hidden;
+    overflow-x: auto; 
     background: white;
     border-radius: 0 0 12px 12px;
+    position: relative;
 }
 
 .data-table {
     width: 100%;
-    border-collapse: collapse;
+    min-width: 600px;
+    border-collapse: separate;
+    border-spacing: 0;
     font-size: 0.75rem; 
     font-family: 'Inter', sans-serif;
     color: var(--text-dark);
-    table-layout: fixed; 
+    table-layout: auto;
 }
 
-/* --- COLUMNAS AJUSTADAS PARA TEXTOS LARGOS --- */
-.data-table th:first-child, 
-.data-table td:first-child {
-    text-align: left;
-    width: 65%; /* MÁS ESPACIO PARA EL NOMBRE */
-    padding-right: 15px;
-}
-
-.data-table th:nth-child(2), .data-table td:nth-child(2),
-.data-table th:nth-child(3), .data-table td:nth-child(3) {
-    text-align: right;
-    width: 17.5%; 
+.data-table th, .data-table td {
+    padding: 10px 15px;
+    border-bottom: 1px solid var(--border-color);
     white-space: nowrap;
+    text-align: center;
 }
 
+/* Cabecera Sticky */
 .data-table th {
     background-color: #f8f9fe;
     font-weight: 800;
@@ -332,26 +452,42 @@ body {
     font-size: 0.65rem;
     position: sticky;
     top: 0;
-    z-index: 10;
-    padding: 10px 8px;
-    cursor: pointer;
-    user-select: none;
+    z-index: 20;
 }
 
-.data-table td {
-    padding: 12px 8px; /* MÁS AIRE VERTICAL */
-    border-bottom: 1px solid var(--border-color);
-    vertical-align: middle;
-    word-wrap: break-word; /* IMPORTANTE: Romper palabras largas */
-    line-height: 1.4;      /* IMPORTANTE: Altura de línea para lectura */
+/* Primera columna Sticky */
+.data-table th:first-child, 
+.data-table td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 30;
+    background-color: #ffffff;
+    border-right: 1px solid #e9ecef;
+    text-align: left;
+    font-weight: 700;
+    color: var(--accent-blue);
+    min-width: 120px;
 }
 
-.data-table tbody tr:hover { background-color: #f6f9fc; }
-.data-table th i { margin-left: 3px; opacity: 0.4; }
+.data-table th:first-child {
+    background-color: #f8f9fe;
+    z-index: 40;
+}
+
+/* Columna de TOTAL */
+.data-table th:last-child, 
+.data-table td:last-child {
+    font-weight: 800;
+    background-color: #fdfdfd;
+    border-left: 1px solid #e9ecef;
+}
+
+.data-table tbody tr:hover td { background-color: #f6f9fc; }
+.data-table th i { margin-left: 5px; opacity: 0.4; }
 
 
 /* =========================================
-   6. PANTALLA COMPLETA (CORRECCIÓN BUG BLANCO)
+   7. PANTALLA COMPLETA
    ========================================= */
 
 .fullscreen {
@@ -386,17 +522,15 @@ body {
     font-size: 1.1rem;
 }
 
-/* --- CORRECCIÓN CRÍTICA PARA QUE NO SALGA BLANCO --- */
 .fullscreen .canvas-wrapper {
     flex-grow: 1;
     display: flex;        
     flex-direction: column;
-    height: 100% !important; /* Forzar altura total */
-    min-height: 0;           /* Permitir scroll interno */
+    height: 100% !important; 
+    min-height: 0;           
     overflow: hidden;
 }
 
-/* Asegurar que el hijo (tabla o canvas) ocupe todo */
 .fullscreen .canvas-wrapper canvas,
 .fullscreen .canvas-wrapper .table-view {
     height: 100% !important;
@@ -404,9 +538,8 @@ body {
     flex-grow: 1;
 }
 
-/* Aumentar legibilidad en fullscreen */
 .fullscreen .data-table td {
-    font-size: 0.95rem; /* Texto más grande */
+    font-size: 0.95rem; 
     padding: 15px 10px;
 }
 .fullscreen .data-table th {
@@ -415,7 +548,7 @@ body {
 }
 
 /* =========================================
-   7. MODALES Y OVERLAYS
+   8. MODALES, LOADERS, NOTIFICACIONES
    ========================================= */
 
 /* Loading Overlay */
@@ -431,6 +564,38 @@ body {
 }
 .spinner-box p { font-weight: 800; color: var(--text-dark); margin-bottom: 5px; font-size: 1.1rem; }
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+/* Toast Notification (Aviso de archivo grande) */
+.toast-notification {
+    position: fixed;
+    top: -100px; /* Oculto arriba inicialmente */
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #ff9f43; /* Naranja advertencia */
+    color: #fff;
+    padding: 16px 24px;
+    border-radius: 50px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    z-index: 4000;
+    transition: top 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+    pointer-events: none;
+    width: 90%;
+    max-width: 600px;
+    text-align: center;
+    justify-content: center;
+}
+
+.toast-notification.active { top: 30px; }
+.toast-notification i {
+    font-size: 1.2rem; background: rgba(255,255,255,0.2);
+    padding: 5px; border-radius: 50%; width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+}
 
 /* Manual Buttons */
 .manual-container { margin-top: 25px; display: flex; justify-content: center; width: 100%; gap: 15px; flex-wrap: wrap; }
@@ -463,7 +628,7 @@ body {
 @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
 /* =========================================
-   8. RESPONSIVE (MÓVIL Y TABLET)
+   9. RESPONSIVE (MEDIA QUERIES)
    ========================================= */
 
 @media (max-width: 1024px) {
@@ -472,57 +637,156 @@ body {
     .mapping-layout { grid-template-columns: 1fr 1fr; }
 }
 
-@media (max-width: 768px) {
-    .mobile-menu-btn { display: block; }
-    .hide-mobile { display: none; }
-    .nav-filters-info { display: none; }
-    .nav-right { gap: 8px; }
-    .badge-records { padding: 4px 8px; font-size: 0.6rem; }
+/* --- MÓVIL Y TABLET VERTICAL (< 768px) --- */
+/* =========================================
+   RESPONSIVE: MÓVIL Y TABLET VERTICAL (< 768px)
+   ========================================= */
 
+@media (max-width: 768px) {
+
+    /* --- 1. CONFIGURACIÓN GENERAL --- */
+    body {
+        overflow: auto !important; 
+        height: auto !important;
+    }
+
+    /* Ocultamos las vistas inactivas para que no se superpongan */
+    .view-container { 
+        display: none; 
+        height: auto !important; 
+        min-height: calc(100vh - var(--nav-height)); 
+        overflow: visible !important;
+    }
+    .view-container.active { 
+        display: block !important; 
+    }
+
+    .main-content {
+        overflow-y: visible !important; 
+        height: auto !important;
+        padding: 10px; 
+        gap: 15px;
+        padding-bottom: 60px;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .navbar { position: sticky; top: 0; z-index: 1000; }
+
+    /* --- 2. SIDEBAR Y MENÚ --- */
+    .mobile-menu-btn { display: block; }
     .sidebar {
-        position: fixed; top: 0; left: 0; height: 100dvh; width: 85%; max-width: 300px;
-        transform: translateX(-100%); box-shadow: 5px 0 15px rgba(0,0,0,0.1);
-        transition: transform 0.3s ease; z-index: 1200;
+        position: fixed; top: 0; left: 0; height: 100vh; width: 85%; max-width: 300px;
+        transform: translateX(-100%);
+        box-shadow: 5px 0 15px rgba(0,0,0,0.1);
+        transition: transform 0.3s ease; 
+        z-index: 1200;
     }
     .sidebar.active { transform: translateX(0); }
     .sidebar-header-mobile { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
     .btn-close-sidebar { background: none; border: none; font-size: 1.2rem; cursor: pointer; }
     .sidebar-footer { padding-bottom: 80px; }
-
-    .mobile-overlay {
-        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-        background: rgba(0,0,0,0.5); z-index: 1100; display: none;
-    }
+    .mobile-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 1100; display: none; }
     .mobile-overlay.active { display: block; }
 
-    .view-container { height: calc(100dvh - var(--nav-height)); }
-    .main-content { padding: 10px; gap: 15px; }
-    
+    /* --- 3. ELEMENTOS A OCULTAR --- */
+    .hide-mobile, .nav-filters-info { display: none; }
+    .nav-right { gap: 8px; }
+    .badge-records { padding: 4px 8px; font-size: 0.6rem; }
+
+    /* --- 4. KPIs --- */
     .kpi-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
     .kpi-card:last-child { grid-column: span 2; }
     .kpi-card { padding: 15px; }
     .kpi-icon { width: 35px; height: 35px; font-size: 0.9rem; }
     .kpi-data span { font-size: 1.1rem; }
 
-    .charts-grid-top, .bottom-grid { display: flex; flex-direction: column; min-height: auto; }
-    .chart-container, .map-container-wrapper { height: 300px; min-height: 300px; }
-    #container-map { height: 350px; }
-
-    .dropdown-content { position: relative; top: 0; box-shadow: none; border: none; background: #f8f9fe; margin-top: 5px; }
+    /* --- 5. GRÁFICOS (SUPERIORES Y HORAS) --- */
+    .charts-grid-top { 
+        display: flex; flex-direction: column; 
+        min-height: auto; width: 100%;
+    }
+    .chart-container { 
+        width: 100%; height: 300px; min-height: 300px; 
+        margin-bottom: 0;
+    }
+    .bottom-grid { flex-direction: column; height: auto; width: 100%; }
     
+    #container-hours { flex: none; width: 100%; height: 300px; }
+
+    /* --- 6. CORRECCIÓN MAPA (VISUALIZACIÓN) --- */
+    
+    .map-container-wrapper {
+        flex: none; width: 100%;
+        /* Estado inicial: oculto y sin altura */
+        height: 0; 
+        min-height: 0;
+        margin: 0; padding: 0;
+        opacity: 0; 
+        overflow: hidden;
+        transition: height 0.6s ease, opacity 0.4s ease 0.2s, padding 0.6s ease;
+        
+        /* Aseguramos que sea flex vertical para que el header y el mapa se apilen */
+        display: flex;
+        flex-direction: column;
+    }
+
+    .map-container-wrapper.active-map {
+        flex: none; width: 100%;
+        /* Altura FIJA al activarse para que el mapa sepa cuánto ocupar */
+        height: 400px !important; 
+        padding: 15px;
+        opacity: 1; 
+        margin-top: 20px;
+    }
+
+    /* Forzamos al contenedor del canvas (debajo del título) a ocupar el resto del espacio */
+    .map-container-wrapper .canvas-wrapper {
+        flex: 1; /* Crece para llenar la tarjeta */
+        width: 100%;
+        position: relative; /* Necesario para que el mapa absoluto se posicione aquí */
+        min-height: 0; /* Evita desbordamientos en flex */
+        display: block; /* Asegura bloque */
+    }
+
+    /* El mapa en sí mismo */
+    #main-map { 
+        position: absolute;
+        top: 0; left: 0; 
+        width: 100% !important; 
+        height: 100% !important; 
+        border-radius: 8px;
+    }
+
+    /* --- 7. OTROS (CONFIG PANEL, ETC) --- */
+    .dropdown-content { position: relative; top: 0; box-shadow: none; border: none; background: #f8f9fe; margin-top: 5px; }
     .mapping-layout { grid-template-columns: 1fr; padding: 15px; }
     .upload-card { width: 100%; padding: 20px; }
+    .config-panel { width: 100%; margin-bottom: 20px; border-radius: 0; }
 }
-/* --- AÑADIR EN style.css --- */
+/* =========================================
+   CORRECCIÓN MODAL "NO INTEGRADOS"
+   ========================================= */
 
-.version-badge {
-    margin-top: 8px; /* Separación del logo */
-    font-size: 0.6rem;
-    color: var(--text-muted);
-    background: #f6f9fc;
-    padding: 2px 8px;
-    border-radius: 4px;
-    border: 1px solid var(--border-color);
-    font-family: monospace; /* Fuente tipo código */
-    opacity: 0.7;
+/* Estilo base para sobreescribir estilos en línea del HTML */
+#rejected-modal .pdf-modal-content {
+    display: flex !important;
+    flex-direction: column !important;
+    max-height: 90vh !important; /* Nunca más alto que el 90% de la pantalla */
+    width: 90% !important;
+    max-width: 600px !important;
+    overflow: hidden !important; /* Evita que el contenedor crezca infinitamente */
+}
+
+/* El cuerpo del modal es el que hace scroll */
+#rejected-modal .pdf-body {
+    overflow-y: auto !important;
+    flex: 1 !important; /* Ocupa el espacio restante */
+    min-height: 0; /* Necesario para Firefox flexbox */
+}
+
+/* Ajuste de la lista roja */
+#rejected-list {
+    max-height: none !important; /* Quitamos altura fija, dejamos que fluya */
+    overflow: visible !important;
 }
