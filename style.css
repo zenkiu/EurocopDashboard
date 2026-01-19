@@ -270,7 +270,7 @@ select.btn-mini:hover {
 }
 .checkbox-item:hover { background: #f4f6f9; }
 
-/* KPIs */
+/* KPIs Estilo Escritorio (Por defecto) */
 .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
 .kpi-card { 
     background: white; padding: 20px; border-radius: 12px; 
@@ -286,102 +286,102 @@ select.btn-mini:hover {
 .kpi-data span { font-size: 1.4rem; font-weight: 800; }
 
 /* =========================================
-   5. GRÁFICOS Y CONTENEDORES (DESKTOP)
-   ========================================= */
-/* =========================================
-   5. GRÁFICOS Y CONTENEDORES (DESKTOP)
+   5. GRÁFICOS Y CONTENEDORES (BASE - SIN MEDIA QUERY)
    ========================================= */
 
-.charts-grid-top { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; flex: 1; min-height: 300px; }
-
-/* ESTILO BASE (ESCRITORIO) PARA ANIMACIÓN DEL MAPA */
+/* Parte Inferior (Horas + Mapa) - BASE */
 .bottom-grid {
-    display: flex; /* Flexbox para animación fluida */
-    gap: 0; /* IMPORTANTE: Sin gap fijo para evitar huecos vacíos a la derecha */
+    display: flex;          
+    flex-direction: row;    
+    flex-wrap: wrap;
+    gap: 15px;              
     width: 100%;
-    min-height: 350px;
-    align-items: stretch; /* Estirar altura para que coincidan */
-    overflow: hidden; /* Evita scrollbars durante la animación */
+    min-height: 380px; 
+    height: auto;          
+    align-items: stretch;   
+    margin-bottom: 20px;
 }
 
 /* Gráfico de Horas (Izquierda) */
 #container-hours {
-    flex: 1; 
-    transition: flex 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-    min-width: 0;
+    flex: 1 1 400px;
+    min-width: 0;           
+    min-height: 300px;
+    transition: flex 0.5s ease;
 }
 
-/* Contenedor Mapa (Derecha) - ESTADO OCULTO DESKTOP */
+/* Contenedor del Mapa (Derecha) - Estado Inicial */
 .map-container-wrapper {
-    flex: 0; 
-    width: 0; 
-    opacity: 0;
+    flex: 0 0 0;
+    width: 0;               
+    opacity: 0;             
     padding: 0;
+    margin: 0;
     border: none;
-    margin: 0; /* Sin margen cuando está oculto */
-    
-    transition: 
-        flex 0.6s cubic-bezier(0.4, 0, 0.2, 1),
-        opacity 0.4s ease 0.2s,
-        padding 0.6s ease,
-        margin 0.6s ease; /* Transición suave del margen */
-        
-    overflow: hidden;
+    overflow: hidden;       
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1); 
 }
 
-/* Contenedor Mapa - ESTADO VISIBLE DESKTOP */
+/* Contenedor del Mapa - Estado Activo */
 .map-container-wrapper.active-map {
-    flex: 2; 
+    flex: 2 1 500px;
     width: auto;
     opacity: 1;
-    padding: 15px;
+    padding: 15px;          
     border: 1px solid rgba(0,0,0,0.05);
-    
-    /* El margen sustituye al gap para separar los elementos solo cuando el mapa existe */
-    margin-left: 20px; 
+    background: white;
+    border-radius: 12px;
+    display: flex;          
+    flex-direction: column;
+    min-height: 360px;
 }
 
-/* ESTILOS COMUNES DE TARJETAS */
+/* Ajustes internos del Mapa (Base) */
+.map-container-wrapper .canvas-wrapper {
+    flex: 1;
+    position: relative;
+    width: 100%;
+    height: 100%;
+    min-height: 300px;
+    overflow: hidden;
+    border-radius: 8px; 
+}
+
+#main-map {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100% !important;
+    height: 100% !important;
+    border-radius: 8px; 
+}
+
+/* ESTILOS COMUNES */
 .chart-container, .map-container-wrapper { 
-    background: white; border-radius: 12px; padding: 15px; 
+    background: white; 
+    border-radius: 12px; 
+    padding: 15px; 
     box-shadow: 0 2px 10px rgba(0,0,0,0.02);
-    display: flex; flex-direction: column; overflow: hidden; position: relative;
+    display: flex; 
+    flex-direction: column; 
+    overflow: hidden; 
+    position: relative;
 }
 
-/* CABECERAS DE GRÁFICOS */
 .chart-header { display: flex; justify-content: space-between; margin-bottom: 10px; flex-shrink: 0; }
 .chart-header h4 { font-size: 0.8rem; font-weight: 800; color: var(--text-dark); text-transform: uppercase; }
-.header-actions { 
-    display: flex; 
-    gap: 8px; 
-    align-items: center;
-}
+.header-actions { display: flex; gap: 8px; align-items: center; }
 
-/* BOTÓN MAXIMIZAR */
 .btn-maximize { 
     background: #f6f9fc;
     border: 1px solid #e9ecef;
-    cursor: pointer; 
-    color: var(--text-muted);
-    width: 30px;
-    height: 30px;
-    border-radius: 6px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s;
-    margin-left: 5px;
+    cursor: pointer; color: var(--text-muted);
+    width: 30px; height: 30px; border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s; margin-left: 5px;
 }
+.btn-maximize:hover { background: var(--text-dark); color: #fff; border-color: var(--text-dark); }
 
-.btn-maximize:hover {
-    background: var(--text-dark);
-    color: #fff;
-    border-color: var(--text-dark);
-}
-
-/* WRAPPERS INTERNOS */
 .canvas-wrapper { flex-grow: 1; position: relative; width: 100%; height: 100%; min-height: 0; }
-#main-map { position: absolute; top: 0; bottom: 0; width: 100%; border-radius: 8px; }
 
 /* VISTAS CARGA Y MAPPING */
 .upload-center { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; }
@@ -411,6 +411,7 @@ select.btn-mini:hover {
 .styled-select { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #dcdfe6; margin-top: 5px; }
 .action-footer { padding: 20px 30px; background: #f4f6f9; display: flex; justify-content: flex-end; gap: 15px; border-top: 1px solid var(--border-color); }
 .btn-primary { background: var(--accent-blue); color: white; border: none; padding: 12px 30px; border-radius: 8px; font-weight: 700; cursor: pointer; }
+
 /* =========================================
    6. TABLA DE DATOS (SCROLL HORIZONTAL)
    ========================================= */
@@ -627,6 +628,27 @@ select.btn-mini:hover {
 #pdf-frame { width: 100%; height: 100%; display: block; }
 @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
+/* MODAL DE NO INTEGRADOS */
+#rejected-modal .pdf-modal-content {
+    display: flex !important;
+    flex-direction: column !important;
+    max-height: 90vh !important;
+    width: 90% !important;
+    max-width: 600px !important;
+    overflow: hidden !important; 
+}
+
+#rejected-modal .pdf-body {
+    overflow-y: auto !important;
+    flex: 1 !important; 
+    min-height: 0;
+}
+
+#rejected-list {
+    max-height: none !important; 
+    overflow: visible !important;
+}
+
 /* =========================================
    9. RESPONSIVE (MEDIA QUERIES)
    ========================================= */
@@ -637,156 +659,324 @@ select.btn-mini:hover {
     .mapping-layout { grid-template-columns: 1fr 1fr; }
 }
 
-/* --- MÓVIL Y TABLET VERTICAL (< 768px) --- */
 /* =========================================
    RESPONSIVE: MÓVIL Y TABLET VERTICAL (< 768px)
    ========================================= */
 
 @media (max-width: 768px) {
 
-    /* --- 1. CONFIGURACIÓN GENERAL --- */
+    /* --- 1. NAVEGACIÓN ENTRE PANTALLAS --- */
     body {
-        overflow: auto !important; 
-        height: auto !important;
+        overflow-x: hidden; 
+        overflow-y: auto;
+        height: 100%;
+        position: relative;
     }
 
-    /* Ocultamos las vistas inactivas para que no se superpongan */
+    /* Ocultamos ESTRICTAMENTE las vistas no activas */
     .view-container { 
-        display: none; 
-        height: auto !important; 
-        min-height: calc(100vh - var(--nav-height)); 
-        overflow: visible !important;
+        display: none !important; 
+        width: 100%;
+        height: auto;
+        min-height: 100vh;
+        opacity: 0;
+        transition: opacity 0.3s ease;
     }
+
+    /* Mostramos SOLO la activa */
     .view-container.active { 
-        display: block !important; 
+        display: flex !important; 
+        flex-direction: column;
+        opacity: 1;
+        padding-bottom: 20px; 
     }
 
     .main-content {
-        overflow-y: visible !important; 
-        height: auto !important;
         padding: 10px; 
-        gap: 15px;
-        padding-bottom: 60px;
-        display: flex;
-        flex-direction: column;
+        gap: 20px;
+        height: auto !important;
+        overflow: visible !important;
     }
 
-    .navbar { position: sticky; top: 0; z-index: 1000; }
-
-    /* --- 2. SIDEBAR Y MENÚ --- */
-    .mobile-menu-btn { display: block; }
+    /* --- 2. SIDEBAR Y NAVBAR --- */
+    .navbar { position: sticky; top: 0; z-index: 2000; }
+    
     .sidebar {
         position: fixed; top: 0; left: 0; height: 100vh; width: 85%; max-width: 300px;
         transform: translateX(-100%);
-        box-shadow: 5px 0 15px rgba(0,0,0,0.1);
+        box-shadow: 5px 0 15px rgba(0,0,0,0.2);
         transition: transform 0.3s ease; 
-        z-index: 1200;
+        z-index: 3000;
     }
     .sidebar.active { transform: translateX(0); }
-    .sidebar-header-mobile { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-    .btn-close-sidebar { background: none; border: none; font-size: 1.2rem; cursor: pointer; }
-    .sidebar-footer { padding-bottom: 80px; }
-    .mobile-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 1100; display: none; }
-    .mobile-overlay.active { display: block; }
+    .mobile-overlay { z-index: 2500; }
 
-    /* --- 3. ELEMENTOS A OCULTAR --- */
     .hide-mobile, .nav-filters-info { display: none; }
-    .nav-right { gap: 8px; }
-    .badge-records { padding: 4px 8px; font-size: 0.6rem; }
+    .nav-right { gap: 10px; }
 
-    /* --- 4. KPIs --- */
-    .kpi-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
-    .kpi-card:last-child { grid-column: span 2; }
-    .kpi-card { padding: 15px; }
-    .kpi-icon { width: 35px; height: 35px; font-size: 0.9rem; }
-    .kpi-data span { font-size: 1.1rem; }
-
-    /* --- 5. GRÁFICOS (SUPERIORES Y HORAS) --- */
-    .charts-grid-top { 
-        display: flex; flex-direction: column; 
-        min-height: auto; width: 100%;
+    /* --- 3. KPIs (ESTILO HEADER CARD - BARRA SUPERIOR DE COLOR) --- */
+    .kpi-grid { 
+        display: grid; 
+        grid-template-columns: 1fr 1fr 1fr; /* 3 Columnas */
+        gap: 8px; 
+        margin-bottom: 15px;
     }
-    .chart-container { 
-        width: 100%; height: 300px; min-height: 300px; 
+
+    .kpi-card:last-child { grid-column: auto; }
+
+    .kpi-card { 
+        background: #ffffff; 
+        padding: 0; /* Sin padding para que la barra de color toque bordes */
+        border-radius: 8px; 
+        display: flex; 
+        flex-direction: column; 
+        align-items: center; 
+        text-align: center;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
+        min-height: 65px;
+        overflow: hidden; 
+    }
+
+    /* BARRA SUPERIOR DE COLOR */
+    .kpi-icon { 
+        width: 100%; 
+        height: 24px; 
+        border-radius: 0; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center;
+        color: white; 
+        font-size: 0.75rem; 
+        margin-bottom: 6px; 
+    }
+
+    /* ASIGNACIÓN DE COLORES MÓVIL */
+    .kpi-card:nth-child(1) .kpi-icon { background-color: #5e72e4 !important; }
+    .kpi-card:nth-child(2) .kpi-icon { background-color: #2dce89 !important; }
+    .kpi-card:nth-child(3) .kpi-icon { background-color: #fb6340 !important; }
+
+    /* DATOS */
+    .kpi-data {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        padding: 0 4px 6px 4px;
+    }
+
+    .kpi-data h3 { 
+        font-size: 0.55rem; 
+        margin-bottom: 2px;
+        opacity: 0.7;
+        font-weight: 700;
+    }
+
+    .kpi-data span { 
+        font-size: 0.8rem; 
+        font-weight: 800; 
+        line-height: 1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        color: #32325d;
+    }
+
+    /* --- 4. ARREGLO DEL MAPA (Layout Vertical Móvil) --- */
+    .bottom-grid {
+        display: flex;
+        flex-direction: column;
+        height: auto !important;
+        gap: 20px; 
+        overflow: visible;
+    }
+
+    #container-hours {
+        flex: none;
+        width: 100%;
+        height: 320px; 
         margin-bottom: 0;
     }
-    .bottom-grid { flex-direction: column; height: auto; width: 100%; }
-    
-    #container-hours { flex: none; width: 100%; height: 300px; }
 
-    /* --- 6. CORRECCIÓN MAPA (VISUALIZACIÓN) --- */
-    
     .map-container-wrapper {
-        flex: none; width: 100%;
-        /* Estado inicial: oculto y sin altura */
-        height: 0; 
-        min-height: 0;
-        margin: 0; padding: 0;
-        opacity: 0; 
+        display: none; 
+        flex: none;
+        width: 100%;
+        height: 400px !important; /* Altura fija mapa móvil */
+        margin: 0;
+        padding: 0 !important; /* Sin padding para borde completo */
+        border: 1px solid #eee;
+        border-radius: 12px;
+        background: white;
+        opacity: 1;
         overflow: hidden;
-        transition: height 0.6s ease, opacity 0.4s ease 0.2s, padding 0.6s ease;
+    }
+
+    .map-container-wrapper.active-map {
+        display: flex !important;
+        flex-direction: column;
+        margin-top: 10px;
+    }
+
+    .map-container-wrapper .chart-header {
+        padding: 15px 15px 5px 15px; 
+        background: white; 
+        flex-shrink: 0; 
+    }
+
+    .map-container-wrapper .canvas-wrapper {
+        flex: 1; 
+        width: 100%;
+        position: relative;
+        min-height: 0;
+    }
+
+    #main-map {
+        position: absolute;
+        top: 0; left: 0;
+        width: 100% !important;
+        height: 100% !important;
+        border-radius: 0 0 12px 12px;
+    }
+
+    /* --- 5. AJUSTES GENERALES VISUALES --- */
+    .charts-grid-top { display: flex; flex-direction: column; gap: 20px; }
+    .chart-container { height: 300px; min-height: 300px; }
+    .mapping-layout { grid-template-columns: 1fr; gap: 15px; padding: 15px; }
+    .config-panel { margin-bottom: 20px; width: 100%; }
+    .upload-card { width: 100%; padding: 20px; }
+}
+
+/* =========================================
+   MODO DASHBOARD ARQUITECTÓNICO (SÓLO ESCRITORIO > 1024px)
+   Solución Final: GRID Proporcional 35/65 + CORRECCIÓN DE ALTURAS FLEX
+   ========================================= */
+
+@media (min-width: 1025px) {
+    
+    /* 1. Bloqueo total del scroll del cuerpo */
+    body {
+        overflow: hidden;
+        height: 100vh;
+        width: 100vw;
+    }
+
+    /* 2. ESTRUCTURA MAESTRA (GRID VERTICAL) */
+    .main-content {
+        height: calc(100vh - var(--nav-height));
+        padding: 10px; 
+        gap: 10px;
+        overflow: hidden; 
+
+        /* ESTRUCTURA RIGIDA: */
+        display: grid !important;
+        /* Fila 1 (KPIs): Automático (~60px) */
+        /* Fila 2 (Arriba): 35% */
+        /* Fila 3 (Abajo): 65% */
+        grid-template-rows: auto 35fr 65fr !important;
+        grid-template-columns: 1fr; 
+    }
+
+    /* --- FILA 1: KPIs --- */
+    .kpi-grid {
+        display: grid !important;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        height: 60px;
+        flex-shrink: 0;
+    }
+    
+    .kpi-card {
+        height: 100%;
+        padding: 0 15px;
+        justify-content: center;
+        gap: 10px;
+        flex-direction: row; 
+    }
+    
+    .kpi-icon { width: 35px; height: 35px; font-size: 1rem; }
+    .kpi-data h3 { font-size: 0.65rem; margin: 0; }
+    .kpi-data span { font-size: 1.2rem; }
+
+    /* --- FILA 2: GRÁFICOS SUPERIORES --- */
+    .charts-grid-top {
+        display: grid !important;
+        grid-template-columns: 75% 25% !important; 
+        gap: 10px;
+        width: 100%;
+        height: 100% !important; 
+        margin: 0;
+        min-height: 0; 
+    }
+
+    /* --- FILA 3: GRÁFICOS INFERIORES --- */
+    .bottom-grid {
+        display: grid !important;
+        grid-template-columns: 40% 60% !important;
+        gap: 10px;
+        width: 100%;
+        height: 100% !important; 
+        margin: 0;
+        min-height: 0; 
+    }
+
+    /* --- CONTENEDORES DE TARJETAS (FIX DE RECORTE) --- */
+    #container-timeline, #container-category, 
+    #container-hours, .map-container-wrapper {
+        width: 100% !important;
+        height: 100% !important;
+        flex: none !important;
+        max-width: none !important;
+    }
+
+    .chart-container, 
+    .map-container-wrapper.active-map {
+        background: white;
+        border-radius: 12px;
+        height: 100%;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
         
-        /* Aseguramos que sea flex vertical para que el header y el mapa se apilen */
+        /* PADDING CORREGIDO: Uniforme y suficiente para evitar desbordes */
+        padding: 15px !important; 
+        
+        box-sizing: border-box;
+        overflow: hidden;
+    }
+
+    /* --- ÁREA DE DIBUJO FLEXIBLE (SOLUCIÓN MATEMÁTICA) --- */
+    /* Usamos flex: 1 en lugar de height: 100% para que ocupe el espacio RESTANTE */
+    .canvas-wrapper {
+        flex: 1; 
+        width: 100%;
+        height: auto; /* CRUCIAL: Dejar que flex calcule la altura */
+        min-height: 0; 
+        position: relative;
         display: flex;
         flex-direction: column;
     }
 
-    .map-container-wrapper.active-map {
-        flex: none; width: 100%;
-        /* Altura FIJA al activarse para que el mapa sepa cuánto ocupar */
-        height: 400px !important; 
-        padding: 15px;
-        opacity: 1; 
-        margin-top: 20px;
+    /* Los hijos (canvas, mapa, tabla) sí ocupan el 100% del wrapper */
+    .canvas-wrapper canvas, 
+    .canvas-wrapper .table-view,
+    #main-map {
+        flex: 1;
+        width: 100% !important;
+        height: 100% !important;
     }
 
-    /* Forzamos al contenedor del canvas (debajo del título) a ocupar el resto del espacio */
-    .map-container-wrapper .canvas-wrapper {
-        flex: 1; /* Crece para llenar la tarjeta */
-        width: 100%;
-        position: relative; /* Necesario para que el mapa absoluto se posicione aquí */
-        min-height: 0; /* Evita desbordamientos en flex */
-        display: block; /* Asegura bloque */
+    /* Cabeceras */
+    .chart-header {
+        flex-shrink: 0;
+        margin-bottom: 5px;
+        height: auto;
+        min-height: 25px;
     }
+    .chart-header h4 { font-size: 0.75rem; margin: 0; line-height: 25px; }
 
-    /* El mapa en sí mismo */
-    #main-map { 
-        position: absolute;
-        top: 0; left: 0; 
-        width: 100% !important; 
-        height: 100% !important; 
-        border-radius: 8px;
+    /* Ajuste para el Mapa */
+    #main-map {
+        width: 100% !important;
+        height: 100% !important;
+        border-radius: 6px;
     }
-
-    /* --- 7. OTROS (CONFIG PANEL, ETC) --- */
-    .dropdown-content { position: relative; top: 0; box-shadow: none; border: none; background: #f8f9fe; margin-top: 5px; }
-    .mapping-layout { grid-template-columns: 1fr; padding: 15px; }
-    .upload-card { width: 100%; padding: 20px; }
-    .config-panel { width: 100%; margin-bottom: 20px; border-radius: 0; }
-}
-/* =========================================
-   CORRECCIÓN MODAL "NO INTEGRADOS"
-   ========================================= */
-
-/* Estilo base para sobreescribir estilos en línea del HTML */
-#rejected-modal .pdf-modal-content {
-    display: flex !important;
-    flex-direction: column !important;
-    max-height: 90vh !important; /* Nunca más alto que el 90% de la pantalla */
-    width: 90% !important;
-    max-width: 600px !important;
-    overflow: hidden !important; /* Evita que el contenedor crezca infinitamente */
-}
-
-/* El cuerpo del modal es el que hace scroll */
-#rejected-modal .pdf-body {
-    overflow-y: auto !important;
-    flex: 1 !important; /* Ocupa el espacio restante */
-    min-height: 0; /* Necesario para Firefox flexbox */
-}
-
-/* Ajuste de la lista roja */
-#rejected-list {
-    max-height: none !important; /* Quitamos altura fija, dejamos que fluya */
-    overflow: visible !important;
 }

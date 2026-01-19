@@ -173,9 +173,11 @@ function processFile(file) {
 }
 
 function goToMapping() {
+    // Si estamos en dashboard, volvemos a config
     if (document.getElementById('dashboard-view').classList.contains('active')) {
         document.getElementById('dashboard-view').classList.remove('active');
         document.getElementById('mapping-view').classList.add('active');
+        window.scrollTo(0, 0); // Scroll arriba
         setTimeout(() => { if(map) map.resize(); }, 300);
     }
 }
@@ -250,8 +252,9 @@ function showMapping(data) {
     if(locInput) locInput.value = "";
     
     refreshMappingStatus();
-    document.getElementById('upload-view').style.display = 'none';
-    document.getElementById('mapping-view').classList.add('active');
+    document.getElementById('upload-view').classList.remove('active'); // Quitar activa a upload
+    document.getElementById('mapping-view').classList.add('active');   // Poner activa a mapping
+    window.scrollTo(0, 0);
 }
 
 function refreshMappingStatus() {
@@ -386,10 +389,16 @@ document.getElementById('btn-visualizar').onclick = () => {
     }
 
     document.getElementById('mapping-view').classList.remove('active');
-    document.getElementById('dashboard-view').classList.add('active');
+    document.getElementById('dashboard-view').classList.add('active')
+    // Resetear scroll
+    window.scrollTo(0, 0);
     setupFilters();
     initMap();
-    setTimeout(updateUI, 500);
+    // Pequeño timeout para asegurar que el DOM está pintado antes de actualizar gráficos
+    setTimeout(() => {
+        updateUI();
+        if(map) map.resize(); // Forzar redimensionado del mapa
+    }, 500);
 
     if (registrosSinFecha.length > 0) {
         registrosSinFecha.sort((a, b) => b.localeCompare(a, undefined, { numeric: true, sensitivity: 'base' }));
@@ -712,8 +721,9 @@ function updateCharts(data, selYears) {
                 layout: { padding: { top: 10, bottom: 20, left: 10, right: 10 } },
                 plugins: { 
                     legend: { 
-                        position: window.innerWidth < 768 ? 'bottom' : 'right',
-                        labels: { boxWidth: boxSize, padding: 15, font: { size: fontSize } }
+                        display: false 
+                        //position: window.innerWidth < 768 ? 'bottom' : 'right',
+                        //labels: { boxWidth: boxSize, padding: 15, font: { size: fontSize } }
                     },
                     tooltip: {
                         callbacks: {
