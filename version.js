@@ -1,3 +1,3 @@
 /* --- CONTROL DE VERSIONES CENTRALIZADO --- */
 /* Cambia este valor para actualizar Cache y UI */
-const EUROCOP_VERSION = "1.2";
+const EUROCOP_VERSION = "1.3";

@@ -53,14 +53,28 @@ body {
 .nav-left-group { display: flex; align-items: center; gap: 15px; }
 
 /* Botón Hamburguesa (Oculto en escritorio) */
-.mobile-menu-btn {
-    display: none; 
-    background: transparent;
-    border: none;
-    color: white;
-    font-size: 1.2rem;
-    cursor: pointer;
-}
+/* --- CORRECCIÓN NAVBAR MÓVIL --- */
+    
+    /* 1. Hacemos visible el botón del menú */
+    .mobile-menu-btn {
+        display: block !important; /* Importante: Forzar visualización */
+        margin-right: 10px;
+        color: white;
+        font-size: 1.2rem;
+        cursor: pointer;
+        background: transparent;
+        border: none;
+    }
+
+    /* 2. Ajustamos el grupo izquierdo para que quepan el botón y el logo */
+    .nav-left-group {
+        gap: 5px; /* Reducir espacio entre icono y logo */
+    }
+
+    /* 3. Ajustamos el texto del logo para ganar espacio */
+    .logo-text {
+        font-size: 0.85rem; /* Un poco más pequeño en móvil */
+    }
 
 .logo { display: flex; align-items: center; gap: 10px; cursor: pointer; }
 .logo-icon { 
@@ -663,17 +677,21 @@ select.btn-mini:hover {
    RESPONSIVE: MÓVIL Y TABLET VERTICAL (< 768px)
    ========================================= */
 
+/* =========================================
+   RESPONSIVE: MÓVIL Y TABLET VERTICAL (< 768px)
+   ========================================= */
+
 @media (max-width: 768px) {
 
-    /* --- 1. NAVEGACIÓN ENTRE PANTALLAS --- */
+    /* --- 1. ESTRUCTURA Y NAVEGACIÓN --- */
     body {
         overflow-x: hidden; 
-        overflow-y: auto;
+        overflow-y: auto; /* Permitir scroll en el cuerpo */
         height: 100%;
         position: relative;
     }
 
-    /* Ocultamos ESTRICTAMENTE las vistas no activas */
+    /* Ocultar vistas inactivas estrictamente */
     .view-container { 
         display: none !important; 
         width: 100%;
@@ -683,7 +701,7 @@ select.btn-mini:hover {
         transition: opacity 0.3s ease;
     }
 
-    /* Mostramos SOLO la activa */
+    /* Mostrar vista activa */
     .view-container.active { 
         display: flex !important; 
         flex-direction: column;
@@ -696,48 +714,96 @@ select.btn-mini:hover {
         gap: 20px;
         height: auto !important;
         overflow: visible !important;
+        display: flex !important; /* Forzar Flex, anular Grid de escritorio */
+        flex-direction: column !important;
     }
 
-    /* --- 2. SIDEBAR Y NAVBAR --- */
-    .navbar { position: sticky; top: 0; z-index: 2000; }
+    /* --- 2. NAVBAR Y SIDEBAR --- */
+    .navbar { 
+        position: sticky; 
+        top: 0; 
+        z-index: 2000; 
+        padding: 0 15px; 
+    }
+
+    /* ¡IMPORTANTE! RECUPERAR EL BOTÓN DE MENÚ */
+    .mobile-menu-btn {
+        display: block !important; /* Forzamos que se vea */
+        margin-right: 10px;
+        background: transparent;
+        border: none;
+        color: white;
+        font-size: 1.3rem;
+        cursor: pointer;
+    }
+
+    /* Ajustes Logo Móvil */
+    .nav-left-group { gap: 8px; }
+    .logo-text { font-size: 0.85rem; }
     
+    /* Ocultar elementos de escritorio */
+    .hide-mobile, .nav-filters-info { display: none !important; }
+    .nav-right { gap: 10px; flex-grow: 0; }
+
+    /* Estilo del Sidebar (Menú Lateral) */
     .sidebar {
-        position: fixed; top: 0; left: 0; height: 100vh; width: 85%; max-width: 300px;
+        position: fixed; 
+        top: 0; 
+        left: 0; 
+        height: 100vh; 
+        width: 85%; 
+        max-width: 300px;
         transform: translateX(-100%);
         box-shadow: 5px 0 15px rgba(0,0,0,0.2);
         transition: transform 0.3s ease; 
         z-index: 3000;
+        background: white;
+        display: flex;
+        flex-direction: column;
     }
     .sidebar.active { transform: translateX(0); }
-    .mobile-overlay { z-index: 2500; }
+    
+    .sidebar-header-mobile {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 15px 20px;
+        border-bottom: 1px solid #eee;
+        background: #f8f9fe;
+    }
+    
+    /* Overlay oscuro cuando se abre el menú */
+    .mobile-overlay { 
+        display: none; 
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+        background: rgba(0,0,0,0.5); z-index: 2500; 
+    }
+    .mobile-overlay.active { display: block; }
 
-    .hide-mobile, .nav-filters-info { display: none; }
-    .nav-right { gap: 10px; }
-
-    /* --- 3. KPIs (ESTILO HEADER CARD - BARRA SUPERIOR DE COLOR) --- */
+    /* --- 3. KPIs (ESTILO COMPACTO 3 COLUMNAS) --- */
     .kpi-grid { 
-        display: grid; 
+        display: grid !important; 
         grid-template-columns: 1fr 1fr 1fr; /* 3 Columnas */
         gap: 8px; 
-        margin-bottom: 15px;
+        margin-bottom: 10px;
+        height: auto;
     }
-
-    .kpi-card:last-child { grid-column: auto; }
 
     .kpi-card { 
         background: #ffffff; 
-        padding: 0; /* Sin padding para que la barra de color toque bordes */
+        padding: 0; 
         border-radius: 8px; 
         display: flex; 
         flex-direction: column; 
         align-items: center; 
         text-align: center;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
-        min-height: 65px;
+        min-height: 70px;
         overflow: hidden; 
+        height: auto;
     }
 
-    /* BARRA SUPERIOR DE COLOR */
+    /* Barra de color superior */
     .kpi-icon { 
         width: 100%; 
         height: 24px; 
@@ -746,103 +812,88 @@ select.btn-mini:hover {
         align-items: center; 
         justify-content: center;
         color: white; 
-        font-size: 0.75rem; 
-        margin-bottom: 6px; 
+        font-size: 0.8rem; 
+        margin-bottom: 5px; 
     }
-
-    /* ASIGNACIÓN DE COLORES MÓVIL */
+    
+    /* Asignación de colores específica */
     .kpi-card:nth-child(1) .kpi-icon { background-color: #5e72e4 !important; }
     .kpi-card:nth-child(2) .kpi-icon { background-color: #2dce89 !important; }
     .kpi-card:nth-child(3) .kpi-icon { background-color: #fb6340 !important; }
 
-    /* DATOS */
     .kpi-data {
-        display: flex;
-        flex-direction: column;
         width: 100%;
         padding: 0 4px 6px 4px;
     }
+    .kpi-data h3 { font-size: 0.55rem; margin-bottom: 2px; opacity: 0.8; }
+    .kpi-data span { font-size: 0.9rem; font-weight: 800; line-height: 1.1; }
 
-    .kpi-data h3 { 
-        font-size: 0.55rem; 
-        margin-bottom: 2px;
-        opacity: 0.7;
-        font-weight: 700;
-    }
-
-    .kpi-data span { 
-        font-size: 0.8rem; 
-        font-weight: 800; 
-        line-height: 1;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        color: #32325d;
-    }
-
-    /* --- 4. ARREGLO DEL MAPA (Layout Vertical Móvil) --- */
-    .bottom-grid {
-        display: flex;
-        flex-direction: column;
-        height: auto !important;
+    /* --- 4. GRÁFICOS (APILADOS VERTICALMENTE) --- */
+    
+    /* Contenedores Flex Verticales */
+    .charts-grid-top, .bottom-grid { 
+        display: flex !important; 
+        flex-direction: column !important; 
         gap: 20px; 
-        overflow: visible;
+        height: auto !important; 
+        width: 100%;
     }
 
-    #container-hours {
-        flex: none;
-        width: 100%;
-        height: 320px; 
-        margin-bottom: 0;
-    }
-
-    .map-container-wrapper {
-        display: none; 
-        flex: none;
-        width: 100%;
-        height: 400px !important; /* Altura fija mapa móvil */
+    /* Reset de estilos de escritorio */
+    .chart-container { 
+        width: 100% !important;
+        height: 320px !important; /* Altura fija para móvil */
+        min-height: 320px !important;
         margin: 0;
-        padding: 0 !important; /* Sin padding para borde completo */
+        padding: 15px !important;
+    }
+
+    #container-hours { flex: none; }
+
+    /* Header del gráfico */
+    .chart-header { height: auto; min-height: 30px; margin-bottom: 10px; }
+
+    /* --- 5. MAPA (ESPECÍFICO MÓVIL) --- */
+    .map-container-wrapper {
+        display: none; /* Oculto por defecto */
+        flex: none;
+        width: 100% !important;
+        height: 400px !important; /* Altura mayor para el mapa */
+        margin: 0;
+        padding: 0 !important;
         border: 1px solid #eee;
         border-radius: 12px;
         background: white;
-        opacity: 1;
-        overflow: hidden;
     }
 
     .map-container-wrapper.active-map {
-        display: flex !important;
+        display: flex !important; /* Mostrar cuando tenga datos */
         flex-direction: column;
-        margin-top: 10px;
     }
 
     .map-container-wrapper .chart-header {
-        padding: 15px 15px 5px 15px; 
-        background: white; 
-        flex-shrink: 0; 
+        padding: 15px 15px 5px 15px;
+        background: white;
     }
 
     .map-container-wrapper .canvas-wrapper {
-        flex: 1; 
+        flex: 1;
         width: 100%;
+        height: 100%;
         position: relative;
-        min-height: 0;
     }
 
     #main-map {
-        position: absolute;
-        top: 0; left: 0;
-        width: 100% !important;
-        height: 100% !important;
         border-radius: 0 0 12px 12px;
     }
 
-    /* --- 5. AJUSTES GENERALES VISUALES --- */
-    .charts-grid-top { display: flex; flex-direction: column; gap: 20px; }
-    .chart-container { height: 300px; min-height: 300px; }
+    /* --- 6. PANTALLAS DE CARGA Y CONFIG --- */
     .mapping-layout { grid-template-columns: 1fr; gap: 15px; padding: 15px; }
     .config-panel { margin-bottom: 20px; width: 100%; }
-    .upload-card { width: 100%; padding: 20px; }
+    .upload-card { width: 100%; padding: 25px 20px; }
+    
+    /* Ajuste modal PDF en móvil */
+    .pdf-modal-content { width: 95%; height: 80%; }
 }
 
 /* =========================================
@@ -979,4 +1030,50 @@ select.btn-mini:hover {
         height: 100% !important;
         border-radius: 6px;
     }
+}
+
+/* =========================================
+   FIX FINAL: FORZADO DE PANTALLA COMPLETA
+   (Pega esto al final de style.css)
+   ========================================= */
+
+/* Usamos el ID + la clase para ganar prioridad sobre cualquier otra regla */
+#container-timeline.fullscreen,
+#container-category.fullscreen,
+#container-hours.fullscreen,
+#container-map.fullscreen,
+.map-container-wrapper.fullscreen {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    z-index: 99999 !important; /* Asegura que esté encima del mapa y navbar */
+    background: #ffffff !important;
+    max-width: none !important;
+    max-height: none !important;
+    padding: 20px !important;
+    transform: none !important; /* Evita conflictos con animaciones */
+    box-shadow: none !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+/* Aseguramos que el área de dibujo interna también crezca */
+.fullscreen .canvas-wrapper {
+    height: 100% !important;
+    width: 100% !important;
+    flex: 1 !important;
+    min-height: 0 !important;
+}
+
+/* Ajuste específico para el botón de cerrar en modo pantalla completa */
+.fullscreen .btn-maximize {
+    background: #ffecec !important;
+    color: #f5365c !important;
+    border-color: #f5365c !important;
 }
