@@ -225,6 +225,8 @@
                 </div>
             </div>
 
+            <!-- ... dentro de index.html ... -->
+
             <div class="filter-group">
                 <label data-i18n="filter_cats">Categorías</label>
                 <div class="custom-dropdown" id="drop-category">
@@ -232,13 +234,22 @@
                         <span id="label-category" data-i18n="sel_select">Seleccionar...</span>
                         <i class="fa-solid fa-chevron-down"></i>
                     </div>
+                    
+                    <!-- INICIO MODIFICACIÓN -->
                     <div id="list-category" class="dropdown-content">
+                        <!-- Nuevo Campo de Búsqueda -->
+                        <div style="padding: 10px 10px 0 10px;">
+                            <input type="text" id="cat-search-input" class="dropdown-search" placeholder="Buscar categoría..." autocomplete="off">
+                        </div>
+
                         <div class="dropdown-controls">
                             <button class="btn-mini" onclick="toggleGroup('items-category', true, event)" data-i18n="sel_all">Todos</button>
                             <button class="btn-mini" onclick="toggleGroup('items-category', false, event)" data-i18n="sel_none">Ninguno</button>
                         </div>
                         <div class="dropdown-items" id="items-category"></div>
                     </div>
+                    <!-- FIN MODIFICACIÓN -->
+
                 </div>
             </div>
 

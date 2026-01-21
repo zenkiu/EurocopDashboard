@@ -494,57 +494,233 @@ function toggleGroup(containerId, state, event) {
         }
     });
 }
+/* ... dentro de script.js ... */
 
+// VARIABLE GLOBAL PARA EL TEMPORIZADOR DE BÚSQUEDA
+let searchTimeout = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+    // ... tu código existente ...
+
+    // LÓGICA DEL BUSCADOR DE CATEGORÍAS
+// ... dentro de document.addEventListener ...
+
+    // LÓGICA DEL BUSCADOR DE CATEGORÍAS (MULTITERMINO / AND)
+    const searchInput = document.getElementById('cat-search-input');
+    
+    if (searchInput) {
+        searchInput.addEventListener('input', function(e) {
+            // 1. Obtener lo que escribe el usuario en minúsculas
+            const rawText = e.target.value.toLowerCase();
+            
+            // 2. Dividir por espacios para obtener las "palabras clave"
+            // .trim() quita espacios al inicio/final
+            // .split(' ') separa por espacios
+            // .filter(...) elimina huecos vacíos si el usuario pone doble espacio
+            const terms = rawText.split(' ').map(t => t.trim()).filter(t => t.length > 0);
+
+            const container = document.getElementById('items-category');
+            if (!container) return;
+            
+            const items = container.querySelectorAll('.checkbox-item');
+
+            // 3. FILTRADO VISUAL
+            items.forEach(div => {
+                const labelText = div.querySelector('span').textContent.toLowerCase();
+                
+                // LÓGICA CLAVE: Verificamos si el texto de la categoría incluye TODAS las palabras escritas
+                // 'every' devuelve true solo si todas las condiciones se cumplen
+                const isMatch = terms.every(term => labelText.includes(term));
+                
+                // Si no hay términos escritos (input vacío), mostramos todo (isMatch será true por defecto en arrays vacíos con every, pero forzamos validación)
+                if (terms.length === 0) {
+                    div.style.display = 'flex';
+                } else {
+                    div.style.display = isMatch ? 'flex' : 'none';
+                }
+            });
+
+            // 4. AUTO-SELECCIÓN (Con Debounce)
+            clearTimeout(searchTimeout); 
+            
+            searchTimeout = setTimeout(() => {
+                // Solo ejecutar si el usuario ha escrito algo
+                if (terms.length > 0) {
+                    let hasChanges = false;
+                    
+                    items.forEach(div => {
+                        const isVisible = div.style.display !== 'none';
+                        const checkbox = div.querySelector('input');
+                        
+                        // Seleccionar lo visible, Deseleccionar lo oculto
+                        if (isVisible && !checkbox.checked) {
+                            checkbox.checked = true;
+                            hasChanges = true;
+                        } else if (!isVisible && checkbox.checked) {
+                            checkbox.checked = false;
+                            hasChanges = true;
+                        }
+                    });
+
+                    if (hasChanges) {
+                        triggerUpdateWithLoader();
+                    }
+                }
+            }, 600); 
+        });
+    }
+});
+
+/**
+ * MODIFICACIÓN DE LA FUNCIÓN toggleGroup EXISTENTE
+ * Para que los botones "Todos/Ninguno" solo afecten a lo que se ve en pantalla
+ */
+function toggleGroup(containerId, state, event) {
+    if (event) event.stopPropagation();
+    
+    runWithLoader(() => {
+        const container = document.getElementById(containerId);
+        if (container) {
+            // Modificamos el selector para incluir solo elementos VISIBLES (que no tengan display:none)
+            const items = container.querySelectorAll('.checkbox-item');
+            
+            items.forEach(div => {
+                // Solo actuar si el elemento es visible (respetando el filtro de búsqueda)
+                if (div.style.display !== 'none') {
+                    const cb = div.querySelector('input');
+                    if (cb) cb.checked = state;
+                }
+            });
+            updateUI(); 
+        }
+    });
+}
 // ============================================================
 // 7. ACTUALIZAR UI
 // ============================================================
 function updateUI() {
-    // SINCRONIZAR DESPLEGABLE
+    // 1. SINCRONIZAR SELECTOR DE VISTA TEMPORAL
     const temporalSelect = document.getElementById('select-temporal-view');
     if (temporalSelect) temporalSelect.value = temporalView; 
 
     const t = translations[currentLang];
     
-    const getValues = (containerId) => Array.from(document.querySelectorAll(`#${containerId} input:checked`)).map(i => i.value);
-    const getLabels = (containerId) => {
-        const all = document.querySelectorAll(`#${containerId} input`);
+    // --- HELPER 1: Obtener valores (IDs) de los checkbox marcados ---
+    const getValues = (containerId) => {
+        return Array.from(document.querySelectorAll(`#${containerId} input:checked`)).map(i => i.value);
+    };
+
+    // --- HELPER 2: Obtener lista completa en texto (para el Tooltip) ---
+    const getFullListString = (containerId) => {
         const checked = Array.from(document.querySelectorAll(`#${containerId} input:checked`));
-        if (checked.length === 0) return t.sel_none.toUpperCase();
-        if (checked.length === all.length) return t.sel_all.toUpperCase();
+        if (checked.length === 0) return t.sel_none || "NINGUNO";
         return checked.map(i => i.nextElementSibling.innerText).join(", ");
     };
 
+    // --- HELPER 3: LÓGICA DE ETIQUETAS INTELIGENTE (Visualización Resumida) ---
+    const getLabels = (containerId) => {
+        const container = document.getElementById(containerId);
+        if (!container) return "---";
+
+        const allCount = container.querySelectorAll('input').length;
+        const checkedInputs = Array.from(container.querySelectorAll('input:checked'));
+        const count = checkedInputs.length;
+        
+        // A) Ninguno
+        if (count === 0) return (t.sel_none || "NINGUNO").toUpperCase();
+        
+        // B) Todos (solo si hay más de 0 items totales)
+        if (count === allCount && allCount > 0) return (t.sel_all || "TODOS").toUpperCase();
+        
+        // C) Uno solo seleccionado: Mostrar nombre completo
+        if (count === 1) {
+            return checkedInputs[0].nextElementSibling.innerText;
+        }
+
+        // D) Dos seleccionados: Mostrar "Nombre1, Nombre2" (truncados si son largos)
+        if (count === 2) {
+             const n1 = checkedInputs[0].nextElementSibling.innerText;
+             const n2 = checkedInputs[1].nextElementSibling.innerText;
+             // Cortar a 12 caracteres para que quepa bien
+             const safeN1 = n1.length > 12 ? n1.substring(0,12) + '...' : n1;
+             const safeN2 = n2.length > 12 ? n2.substring(0,12) + '...' : n2;
+             return `${safeN1}, ${safeN2}`;
+        }
+
+        // E) Muchos: Mostrar contador "15 SELECCIONADOS"
+        // (Usamos una traducción genérica o un texto fijo)
+        const labelSelected = currentLang === 'en' ? 'SELECTED' : 'SELECCIONADOS';
+        return `${count} ${labelSelected}`;
+    };
+
+    // 2. OBTENER SELECCIONES ACTUALES
     const selYears = getValues('items-year').map(Number);
     const selMonths = getValues('items-month').map(Number);
     const selCats = getValues('items-category');
 
-    if(document.getElementById('label-year')) document.getElementById('label-year').innerText = getLabels('items-year');
-    if(document.getElementById('header-year')) document.getElementById('header-year').innerText = getLabels('items-year');
-    if(document.getElementById('label-month')) document.getElementById('label-month').innerText = getLabels('items-month');
-    if(document.getElementById('header-month')) document.getElementById('header-month').innerText = getLabels('items-month');
-    if(document.getElementById('label-category')) document.getElementById('label-category').innerText = getLabels('items-category');
-    if(document.getElementById('header-category')) document.getElementById('header-category').innerText = getLabels('items-category');
+    // 3. ACTUALIZAR TEXTOS E INDICADORES (Sidebar y Header)
+    // Para cada grupo actualizamos: Texto visible (Resumen) y Title (Tooltip completo)
 
+    // AÑOS
+    const txtYear = getLabels('items-year');
+    const titleYear = getFullListString('items-year');
+    if(document.getElementById('label-year')) {
+        document.getElementById('label-year').innerText = txtYear;
+        document.getElementById('label-year').title = titleYear;
+    }
+    if(document.getElementById('header-year')) {
+        document.getElementById('header-year').innerText = txtYear;
+        document.getElementById('header-year').title = titleYear;
+    }
+
+    // MESES
+    const txtMonth = getLabels('items-month');
+    const titleMonth = getFullListString('items-month');
+    if(document.getElementById('label-month')) {
+        document.getElementById('label-month').innerText = txtMonth;
+        document.getElementById('label-month').title = titleMonth;
+    }
+    if(document.getElementById('header-month')) {
+        document.getElementById('header-month').innerText = txtMonth;
+        document.getElementById('header-month').title = titleMonth;
+    }
+
+    // CATEGORÍAS
+    const txtCat = getLabels('items-category');
+    const titleCat = getFullListString('items-category');
+    if(document.getElementById('label-category')) {
+        document.getElementById('label-category').innerText = txtCat;
+        document.getElementById('label-category').title = titleCat; // Tooltip al pasar mouse
+    }
+    if(document.getElementById('header-category')) {
+        document.getElementById('header-category').innerText = txtCat;
+        document.getElementById('header-category').title = titleCat;
+    }
+
+    // 4. FILTRAR DATOS
     const filtered = finalData.filter(d => 
         selYears.includes(d.year) && 
         selMonths.includes(d.month) && 
         selCats.includes(d.cat)
     );
 
+    // 5. ACTUALIZAR KPIS
     document.getElementById('kpi-count').innerText = filtered.length.toLocaleString();
     if(document.getElementById('kpi-total-filas')) 
         document.getElementById('kpi-total-filas').innerHTML = `${filtered.length} <span data-i18n="kpi_reg">${t.kpi_reg}</span>`;
 
+    // 6. ACTUALIZAR GRÁFICOS Y MAPA
     updateMapData(filtered);
     updateCharts(filtered, selYears);
     updateLocationKPI(filtered);
 
+    // 7. ACTUALIZAR TÍTULOS ESTÁTICOS
     const labelTitulo = document.getElementById('card-label-titulo');
     if (labelTitulo) labelTitulo.innerText = currentLang === 'eu' ? "IZENBURUA" : "TITULO";
+    
     const textFilename = document.getElementById('card-text-filename');
     if (textFilename) textFilename.innerText = nombreArchivoSubido || "SIN ARCHIVO";
 }
-
 // ============================================================
 // 8. GRÁFICOS
 // ============================================================
@@ -1193,4 +1369,10 @@ function runWithLoader(actionCallback) {
             document.getElementById('loading-overlay').classList.remove('active');
         }
     }, 50); // 50ms de pausa técnica
+}
+// Función auxiliar para obtener la lista completa de texto para el "tooltip"
+function getFullListString(containerId) {
+    const checked = Array.from(document.querySelectorAll(`#${containerId} input:checked`));
+    if (checked.length === 0) return "Ninguno";
+    return checked.map(i => i.nextElementSibling.innerText).join(", ");
 }

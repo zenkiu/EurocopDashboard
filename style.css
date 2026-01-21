@@ -1077,3 +1077,43 @@ select.btn-mini:hover {
     color: #f5365c !important;
     border-color: #f5365c !important;
 }
+/* ... dentro de style.css ... */
+
+.dropdown-search {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-family: 'Inter', sans-serif;
+    color: var(--text-dark);
+    outline: none;
+    transition: all 0.2s;
+    background: #f8f9fe;
+    margin-bottom: 5px;
+}
+
+.dropdown-search:focus {
+    border-color: var(--accent-blue);
+    background: #ffffff;
+    box-shadow: 0 0 0 2px rgba(94, 114, 228, 0.1);
+}
+
+.dropdown-search::placeholder {
+    color: #adb5bd;
+}
+/* Asegura que el texto del dropdown no se salga ni rompa el diseño */
+.dropdown-header span {
+    white-space: nowrap;       /* No permite saltos de línea */
+    overflow: hidden;          /* Oculta lo que sobre */
+    text-overflow: ellipsis;   /* Pone "..." si es muy largo */
+    max-width: 170px;          /* Ajusta según el ancho de tu sidebar */
+    display: inline-block;
+    vertical-align: middle;
+}
+
+/* Opcional: Estilo para cuando dice "X SELECCIONADOS" */
+.dropdown-header span:contains("SELECCIONADOS") {
+    font-weight: 800;
+    color: var(--accent-blue);
+}
