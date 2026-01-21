@@ -472,13 +472,37 @@ function toggleDropdown(id) {
 }
 
 window.onclick = (e) => {
+    // 1. CERRAR FILTROS (Años, Meses, Categorías)
+    // Si el clic NO fue dentro de un dropdown personalizado, cerramos todos los desplegables
     if (!e.target.closest('.custom-dropdown')) {
         document.querySelectorAll('.dropdown-content').forEach(d => d.classList.remove('active'));
+        // Quitar clase active a los headers también si fuera necesario visualmente
+        document.querySelectorAll('.dropdown-header').forEach(h => h.classList.remove('active'));
     }
+
+    // 2. CERRAR SIDEBAR MÓVIL
+    // Si estamos en móvil, el sidebar está abierto, y el clic no fue en el sidebar ni en el botón de abrir
     const sidebar = document.getElementById('sidebar');
     const toggleBtn = document.querySelector('.mobile-menu-btn');
-    if (window.innerWidth <= 768 && sidebar.classList.contains('active') && !sidebar.contains(e.target) && !toggleBtn.contains(e.target)) {
-        toggleSidebarMobile();
+    
+    if (sidebar && toggleBtn && window.innerWidth <= 768) {
+        if (sidebar.classList.contains('active') && !sidebar.contains(e.target) && !toggleBtn.contains(e.target)) {
+            toggleSidebarMobile();
+        }
+    }
+
+    // 3. CERRAR GESTOR DE CAPAS DEL MAPA (NUEVO)
+    const layerMenu = document.getElementById('layers-dropdown');
+    const layerBtn = document.getElementById('btn-layers-menu');
+    
+    // Si el menú existe y está abierto...
+    if (layerMenu && layerMenu.classList.contains('active')) {
+        // ...y el clic NO fue dentro del menú NI en el botón que lo abre
+        if (!layerMenu.contains(e.target) && !layerBtn.contains(e.target)) {
+            layerMenu.classList.remove('active');
+            // Resetear el estilo del botón (quitar el fondo gris)
+            if (layerBtn) layerBtn.style.background = '';
+        }
     }
 };
 
@@ -617,7 +641,7 @@ function updateUI() {
         return checked.map(i => i.nextElementSibling.innerText).join(", ");
     };
 
-    // --- HELPER 3: LÓGICA DE ETIQUETAS INTELIGENTE (Visualización Resumida) ---
+    // --- HELPER 3: LÓGICA DE ETIQUETAS INTELIGENTE ---
     const getLabels = (containerId) => {
         const container = document.getElementById(containerId);
         if (!container) return "---";
@@ -626,83 +650,67 @@ function updateUI() {
         const checkedInputs = Array.from(container.querySelectorAll('input:checked'));
         const count = checkedInputs.length;
         
-        // A) Ninguno
         if (count === 0) return (t.sel_none || "NINGUNO").toUpperCase();
-        
-        // B) Todos (solo si hay más de 0 items totales)
         if (count === allCount && allCount > 0) return (t.sel_all || "TODOS").toUpperCase();
-        
-        // C) Uno solo seleccionado: Mostrar nombre completo
-        if (count === 1) {
-            return checkedInputs[0].nextElementSibling.innerText;
-        }
-
-        // D) Dos seleccionados: Mostrar "Nombre1, Nombre2" (truncados si son largos)
+        if (count === 1) return checkedInputs[0].nextElementSibling.innerText;
         if (count === 2) {
              const n1 = checkedInputs[0].nextElementSibling.innerText;
              const n2 = checkedInputs[1].nextElementSibling.innerText;
-             // Cortar a 12 caracteres para que quepa bien
              const safeN1 = n1.length > 12 ? n1.substring(0,12) + '...' : n1;
              const safeN2 = n2.length > 12 ? n2.substring(0,12) + '...' : n2;
              return `${safeN1}, ${safeN2}`;
         }
-
-        // E) Muchos: Mostrar contador "15 SELECCIONADOS"
-        // (Usamos una traducción genérica o un texto fijo)
         const labelSelected = currentLang === 'en' ? 'SELECTED' : 'SELECCIONADOS';
         return `${count} ${labelSelected}`;
     };
 
-    // 2. OBTENER SELECCIONES ACTUALES
+    // 2. OBTENER SELECCIONES ACTUALES DE FILTROS
     const selYears = getValues('items-year').map(Number);
     const selMonths = getValues('items-month').map(Number);
     const selCats = getValues('items-category');
 
     // 3. ACTUALIZAR TEXTOS E INDICADORES (Sidebar y Header)
-    // Para cada grupo actualizamos: Texto visible (Resumen) y Title (Tooltip completo)
-
-    // AÑOS
-    const txtYear = getLabels('items-year');
-    const titleYear = getFullListString('items-year');
     if(document.getElementById('label-year')) {
-        document.getElementById('label-year').innerText = txtYear;
-        document.getElementById('label-year').title = titleYear;
+        document.getElementById('label-year').innerText = getLabels('items-year');
+        document.getElementById('label-year').title = getFullListString('items-year');
     }
     if(document.getElementById('header-year')) {
-        document.getElementById('header-year').innerText = txtYear;
-        document.getElementById('header-year').title = titleYear;
+        document.getElementById('header-year').innerText = getLabels('items-year');
+        document.getElementById('header-year').title = getFullListString('items-year');
     }
 
-    // MESES
-    const txtMonth = getLabels('items-month');
-    const titleMonth = getFullListString('items-month');
     if(document.getElementById('label-month')) {
-        document.getElementById('label-month').innerText = txtMonth;
-        document.getElementById('label-month').title = titleMonth;
+        document.getElementById('label-month').innerText = getLabels('items-month');
+        document.getElementById('label-month').title = getFullListString('items-month');
     }
     if(document.getElementById('header-month')) {
-        document.getElementById('header-month').innerText = txtMonth;
-        document.getElementById('header-month').title = titleMonth;
+        document.getElementById('header-month').innerText = getLabels('items-month');
+        document.getElementById('header-month').title = getFullListString('items-month');
     }
 
-    // CATEGORÍAS
-    const txtCat = getLabels('items-category');
-    const titleCat = getFullListString('items-category');
     if(document.getElementById('label-category')) {
-        document.getElementById('label-category').innerText = txtCat;
-        document.getElementById('label-category').title = titleCat; // Tooltip al pasar mouse
+        document.getElementById('label-category').innerText = getLabels('items-category');
+        document.getElementById('label-category').title = getFullListString('items-category'); 
     }
     if(document.getElementById('header-category')) {
-        document.getElementById('header-category').innerText = txtCat;
-        document.getElementById('header-category').title = titleCat;
+        document.getElementById('header-category').innerText = getLabels('items-category');
+        document.getElementById('header-category').title = getFullListString('items-category');
     }
 
-    // 4. FILTRAR DATOS
-    const filtered = finalData.filter(d => 
+    // 4. FILTRAR DATOS (FECHA + CATEGORÍA)
+    // <--- CORRECCIÓN 1: Usamos 'let' en lugar de 'const' para poder modificar la variable después
+    let filtered = finalData.filter(d => 
         selYears.includes(d.year) && 
         selMonths.includes(d.month) && 
         selCats.includes(d.cat)
     );
+
+    // --- NUEVO: 4.1. FILTRADO ESPACIAL (ZONAS) ---
+    // <--- CORRECCIÓN 2: Aquí llamamos a la función que te faltaba
+    // Si la función applySpatialFilter existe, la usamos
+    if (typeof applySpatialFilter === 'function') {
+        filtered = applySpatialFilter(filtered);
+    }
 
     // 5. ACTUALIZAR KPIS
     document.getElementById('kpi-count').innerText = filtered.length.toLocaleString();
@@ -964,44 +972,45 @@ function initMap() {
     });
 }
 
+// ============================================================
+// ACTUALIZAR DATOS DEL MAPA (Versión: No ocultar si hay capas)
+// ============================================================
 function updateMapData(data) {
     const container = document.getElementById('container-map');
     
     // 1. Filtrar solo los registros que tienen Geoposicionamiento real
     const datosConGeo = data.filter(d => d.hasGeo); 
 
-    // 2. LÓGICA DE ANIMACIÓN
-    if (datosConGeo.length === 0) {
-        // --- OCULTAR MAPA ---
+    // --- LÓGICA DE VISIBILIDAD MEJORADA ---
+    // Verificamos si hay "razones" para mantener el mapa abierto aunque no haya puntos
+    const isFilterActive = document.getElementById('chk-spatial-filter')?.checked;
+    const hasLayers = (typeof mapLayers !== 'undefined' && mapLayers.length > 0);
+    const shouldKeepOpen = isFilterActive || hasLayers;
+
+    if (datosConGeo.length === 0 && !shouldKeepOpen) {
+        // Solo ocultamos el mapa si NO hay datos Y TAMPOCO hay capas/filtros activos
         if (container && container.classList.contains('active-map')) {
             container.classList.remove('active-map');
-            // Esperar a que termine la animación para limpiar recursos si fuera necesario
         }
         return; 
     } else {
-        // --- MOSTRAR MAPA ---
+        // --- MOSTRAR MAPA (O mantenerlo) ---
         if (container) {
             const estabaOculto = !container.classList.contains('active-map');
             
             if (estabaOculto) {
                 container.classList.add('active-map');
-                
-                // CRÍTICO: Esperar a que termine la transición CSS (0.6s)
-                // para decirle al mapa que recalcule su tamaño.
-                setTimeout(() => {
-                   if (map) map.resize();
-                }, 650);
+                // Esperar transición CSS para redimensionar
+                setTimeout(() => { if (map) map.resize(); }, 650);
             } else {
-                // Si ya estaba visible, redimensionar por si cambió el tamaño de ventana
                 if (map) map.resize();
             }
         }
     }
 
-    // 3. Actualizar datos del mapa (Puntos, colores, etc.)
+    // 3. Actualizar datos del mapa (Puntos)
     if (!map || !map.getSource('puntos')) return;
 
-//tooltip mapa
     const geojson = { 
         type: 'FeatureCollection', 
         features: datosConGeo.map(d => ({ 
@@ -1009,24 +1018,17 @@ function updateMapData(data) {
             geometry: { type: 'Point', coordinates: [d.lon, d.lat] }, 
             properties: { 
                 exp: d.exp, cat: d.cat, year: d.year, 
-                
-                // --- CAMBIO AQUÍ: Formatear fecha sin segundos ---
                 fullDate: d.date.toLocaleString(undefined, { 
-                    year: 'numeric', 
-                    month: 'numeric', 
-                    day: 'numeric', 
-                    hour: '2-digit', 
-                    minute: '2-digit' 
+                    year: 'numeric', month: 'numeric', day: 'numeric', 
+                    hour: '2-digit', minute: '2-digit' 
                 }), 
-                // ------------------------------------------------
-                
                 calle: d.calle, numero: d.numero, 
                 refnum: d.refnum, refanno: d.refanno 
             } 
         })) 
     };
-
     
+    // Actualizamos la fuente (Si está vacío, simplemente borrará los puntos viejos)
     map.getSource('puntos').setData(geojson);
     
     // Colores por año (Lógica existente)
@@ -1042,16 +1044,22 @@ function updateMapData(data) {
     colorExpr.push('#5e72e4'); 
     map.setPaintProperty('point-layer', 'circle-color', colorExpr);
     
-    // Centrar el mapa con un pequeño retraso para asegurar que el contenedor ya está expandido
+    // Centrar el mapa SOLO si hay puntos nuevos
+    // (Si no hay puntos, no movemos el mapa para no perder de vista el polígono)
     if (datosConGeo.length > 0) {
         const bounds = new maplibregl.LngLatBounds();
         datosConGeo.forEach(d => bounds.extend([d.lon, d.lat]));
         
-        setTimeout(() => {
-            try { 
-                map.fitBounds(bounds, { padding: 40, maxZoom: 16 }); 
-            } catch (e) { console.log(e); }
-        }, 700); // 700ms > 600ms de la transición CSS
+        // Pequeño debounce para no marear con el zoom
+        if (!window.isZooming) {
+            window.isZooming = true;
+            setTimeout(() => {
+                try { 
+                    map.fitBounds(bounds, { padding: 40, maxZoom: 16 }); 
+                } catch (e) { console.log(e); }
+                window.isZooming = false;
+            }, 700); 
+        }
     }
 }
 
@@ -1375,4 +1383,620 @@ function getFullListString(containerId) {
     const checked = Array.from(document.querySelectorAll(`#${containerId} input:checked`));
     if (checked.length === 0) return "Ninguno";
     return checked.map(i => i.nextElementSibling.innerText).join(", ");
+}
+
+// ============================================================
+// 13. MAPA POLIGONOS
+// ============================================================
+
+// VARIABLES GLOBALES PARA POLÍGONOS
+let isPolygonLoaded = false;
+let isPolygonVisible = false;
+
+// 1. Simular clic en el input oculto o alternar visibilidad si ya existe
+function clickPolygonUpload() {
+    if (!map) return;
+    
+    // Si ya cargamos una capa, solo alternamos visibilidad
+    if (isPolygonLoaded) {
+        isPolygonVisible = !isPolygonVisible;
+        const visibility = isPolygonVisible ? 'visible' : 'none';
+        
+        if (map.getLayer('poly-fill')) map.setLayoutProperty('poly-fill', 'visibility', visibility);
+        if (map.getLayer('poly-line')) map.setLayoutProperty('poly-line', 'visibility', visibility);
+        
+        // Cambiar estilo del botón
+        const btn = document.getElementById('btn-polygons');
+        btn.style.background = isPolygonVisible ? '#5e72e4' : '';
+        btn.style.color = isPolygonVisible ? '#fff' : '';
+    } else {
+        // Si no hay capa, abrir selector de archivos
+        document.getElementById('input-geojson').click();
+    }
+}
+
+// 2. Procesar el archivo GeoJSON subido
+// 2. Manejar la subida del archivo (ACTUALIZADA PARA FILTRO ESPACIAL)
+function handleGeojsonUpload(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    // Mostrar loader
+    document.getElementById('loading-overlay').classList.add('active');
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            // 1. Parsear el archivo GeoJSON
+            const geojson = JSON.parse(e.target.result);
+            
+            // 2. Generar metadatos (ID único y Color)
+            const layerId = 'layer-' + Date.now(); 
+            const color = getRandomColor(); 
+            
+            // 3. Añadir visualmente al mapa (Pintar)
+            addLayerToMap(layerId, geojson, color);
+            
+            // 4. Guardar en el registro global
+            mapLayers.push({
+                id: layerId,
+                name: file.name.replace('.geojson', '').replace('.json', ''),
+                visible: true,
+                color: color,
+                geojson: geojson // <--- IMPORTANTE: Guardamos los datos crudos para el filtro espacial (Turf.js)
+            });
+            
+            // 5. Actualizar la lista visual en el menú
+            renderLayerList();
+
+            // 6. Si el interruptor "Filtrar datos por zona" ya estaba encendido,
+            // forzamos una actualización de los KPIs y gráficos inmediatamente.
+            const isFilterActive = document.getElementById('chk-spatial-filter')?.checked;
+            if (isFilterActive) {
+                triggerUpdateWithLoader();
+            }
+
+        } catch (err) {
+            console.error(err);
+            alert("Error: El archivo no es un GeoJSON válido.");
+        } finally {
+            // Limpieza final
+            document.getElementById('loading-overlay').classList.remove('active');
+            input.value = ''; // Resetear input para permitir subir el mismo archivo de nuevo si se desea
+        }
+    };
+    reader.readAsText(file);
+}
+
+// 3. Pintar en el mapa (Debajo de los puntos)
+function addPolygonLayerToMap(geojson) {
+    if (!map) return;
+
+    // Si ya existen fuentes/capas previas, borrarlas para actualizar
+    if (map.getSource('poligonos-source')) {
+        map.removeLayer('poly-line');
+        map.removeLayer('poly-fill');
+        map.removeSource('poligonos-source');
+    }
+
+    // Agregar Fuente
+    map.addSource('poligonos-source', {
+        type: 'geojson',
+        data: geojson
+    });
+
+    // TRUCO: 'point-layer' es el ID de tus puntos. 
+    // Al ponerlo como segundo argumento, decimos "Dibuja esto ANTES (debajo) de point-layer"
+    const beforeLayer = map.getLayer('point-layer') ? 'point-layer' : null;
+
+    // Capa de Relleno (Transparente)
+    map.addLayer({
+        'id': 'poly-fill',
+        'type': 'fill',
+        'source': 'poligonos-source',
+        'layout': { 'visibility': 'visible' },
+        'paint': {
+            'fill-color': '#8898aa', // Color grisáceo neutro
+            'fill-opacity': 0.2      // Muy transparente
+        }
+    }, beforeLayer);
+
+    // Capa de Borde (Línea)
+    map.addLayer({
+        'id': 'poly-line',
+        'type': 'line',
+        'source': 'poligonos-source',
+        'layout': { 'visibility': 'visible' },
+        'paint': {
+            'line-color': '#525f7f',
+            'line-width': 2,
+            'line-dasharray': [2, 1] // Línea punteada opcional
+        }
+    }, beforeLayer);
+
+    // Zoom para encuadrar los polígonos
+    try {
+        const bounds = new maplibregl.LngLatBounds();
+        geojson.features.forEach(function(feature) {
+            if(feature.geometry.type === 'Polygon') {
+                feature.geometry.coordinates[0].forEach(coord => bounds.extend(coord));
+            } else if (feature.geometry.type === 'MultiPolygon') {
+                feature.geometry.coordinates.forEach(poly => poly[0].forEach(coord => bounds.extend(coord)));
+            }
+        });
+        if (!bounds.isEmpty()) map.fitBounds(bounds, { padding: 40 });
+    } catch (e) { console.log("No se pudo centrar mapa en polígonos"); }
+
+    // Click en polígono para ver info (Nombre/Barrio)
+    map.on('click', 'poly-fill', (e) => {
+        // Evitar que se solape con el click del punto
+        const props = e.features[0].properties;
+        // Buscamos propiedades comunes de nombre
+        const name = props.Name || props.NAME || props.nombre || props.BARRIO || props.DISTRITO || "Polígono";
+        
+        new maplibregl.Popup()
+            .setLngLat(e.lngLat)
+            .setHTML(`<div style="color:#333; font-weight:bold;">${name}</div>`)
+            .addTo(map);
+    });
+    
+    // Cambiar cursor
+    map.on('mouseenter', 'poly-fill', () => map.getCanvas().style.cursor = 'pointer');
+    map.on('mouseleave', 'poly-fill', () => map.getCanvas().style.cursor = '');
+}
+/* ... AL FINAL DE SCRIPT.JS ... */
+
+// --- GESTOR DE CAPAS AVANZADO ---
+let mapLayers = []; // Almacena objetos: { id, name, visible, color }
+
+// 1. Abrir/Cerrar el menú
+function toggleLayerMenu() {
+    const menu = document.getElementById('layers-dropdown');
+    menu.classList.toggle('active');
+    
+    // Cambiar estilo del botón principal
+    const btn = document.getElementById('btn-layers-menu');
+    btn.style.background = menu.classList.contains('active') ? '#e9ecef' : '';
+}
+
+// 2. Manejar la subida del archivo
+function handleGeojsonUpload(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    document.getElementById('loading-overlay').classList.add('active');
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const geojson = JSON.parse(e.target.result);
+            const layerId = 'layer-' + Date.now(); // ID único
+            const color = getRandomColor(); // Color aleatorio
+            
+            // Añadir al mapa
+            addLayerToMap(layerId, geojson, color);
+            
+            // Guardar en nuestro registro
+            mapLayers.push({
+                id: layerId,
+                name: file.name.replace('.geojson', '').replace('.json', ''),
+                visible: true,
+                color: color
+            });
+            
+            // Actualizar la lista visual
+            renderLayerList();
+
+        } catch (err) {
+            console.error(err);
+            alert("Error: Archivo GeoJSON inválido.");
+        } finally {
+            document.getElementById('loading-overlay').classList.remove('active');
+            input.value = ''; // Reset input
+        }
+    };
+    reader.readAsText(file);
+}
+
+// 3. Función técnica para pintar en MapLibre
+// 3. Función técnica para pintar en MapLibre (VERSION UNIVERSAL)
+function addLayerToMap(id, geojson, color) {
+    if (!map) return;
+
+    // Agregar Fuente
+    map.addSource(id, { type: 'geojson', data: geojson });
+
+    // Asegurar que se pinte DEBAJO de los puntos (point-layer)
+    const beforeLayer = map.getLayer('point-layer') ? 'point-layer' : null;
+
+    // 1. CAPA DE RELLENO (Solo para Polígonos)
+    map.addLayer({
+        'id': id + '-fill',
+        'type': 'fill',
+        'source': id,
+        'layout': { 'visibility': 'visible' },
+        'paint': {
+            'fill-color': color,
+            'fill-opacity': 0.3, // Aumentado a 0.3 para que se vea mejor
+            'fill-outline-color': color
+        },
+        'filter': ['==', '$type', 'Polygon'] // Solo aplica a polígonos
+    }, beforeLayer);
+
+    // 2. CAPA DE LÍNEAS (Para Polígonos y LineStrings/Rutas)
+    map.addLayer({
+        'id': id + '-line',
+        'type': 'line',
+        'source': id,
+        'layout': { 
+            'visibility': 'visible',
+            'line-join': 'round',
+            'line-cap': 'round'
+        },
+        'paint': {
+            'line-color': color,
+            'line-width': 3
+        },
+        // Aplica a Polígonos (borde) y LineStrings (rutas)
+        'filter': ['in', '$type', 'Polygon', 'LineString'] 
+    }, beforeLayer);
+
+    // 3. CAPA DE PUNTOS (Por si el GeoJSON trae marcadores)
+    map.addLayer({
+        'id': id + '-circle',
+        'type': 'circle',
+        'source': id,
+        'layout': { 'visibility': 'visible' },
+        'paint': {
+            'circle-radius': 6,
+            'circle-color': color,
+            'circle-stroke-width': 2,
+            'circle-stroke-color': '#ffffff'
+        },
+        'filter': ['==', '$type', 'Point'] // Solo aplica a puntos
+    }, beforeLayer);
+    
+    // POPUP AL HACER CLICK (Detecta cualquier geometría)
+    const layerIds = [id + '-fill', id + '-line', id + '-circle'];
+    
+    // Evento Click
+    map.on('click', (e) => {
+        // Verificar si el click fue sobre alguna de nuestras capas
+        const features = map.queryRenderedFeatures(e.point, { layers: layerIds });
+        if (!features.length) return;
+
+        const p = features[0].properties;
+        // Intentar buscar el nombre en varias propiedades comunes
+        const name = p.Name || p.NAME || p.Name || p.nombre || p.label || p.title || p.BARRIO || p.DISTRITO || "Sin nombre";
+        const desc = p.description || p.Description || "";
+        
+        let htmlContent = `<div style="padding:5px; color:#333;"><b>${name}</b>`;
+        if(desc) htmlContent += `<br><span style="font-size:0.8em; color:#666;">${desc}</span>`;
+        htmlContent += `</div>`;
+
+        new maplibregl.Popup()
+            .setLngLat(e.lngLat)
+            .setHTML(htmlContent)
+            .addTo(map);
+    });
+
+    // Cambiar cursor al pasar por encima
+    map.on('mouseenter', id + '-fill', () => map.getCanvas().style.cursor = 'pointer');
+    map.on('mouseenter', id + '-line', () => map.getCanvas().style.cursor = 'pointer');
+    map.on('mouseenter', id + '-circle', () => map.getCanvas().style.cursor = 'pointer');
+    
+    map.on('mouseleave', id + '-fill', () => map.getCanvas().style.cursor = '');
+    map.on('mouseleave', id + '-line', () => map.getCanvas().style.cursor = '');
+    map.on('mouseleave', id + '-circle', () => map.getCanvas().style.cursor = '');
+
+    // 4. ZOOM AUTOMÁTICO MEJORADO (Detecta todas las coordenadas)
+    try {
+        const bounds = new maplibregl.LngLatBounds();
+        
+        // Función recursiva para extraer coordenadas de cualquier estructura GeoJSON
+        const extractCoords = (coords) => {
+            if (typeof coords[0] === 'number') {
+                bounds.extend(coords);
+            } else {
+                coords.forEach(extractCoords);
+            }
+        };
+
+        geojson.features.forEach(feature => {
+            if (feature.geometry && feature.geometry.coordinates) {
+                extractCoords(feature.geometry.coordinates);
+            }
+        });
+
+        if (!bounds.isEmpty()) {
+            map.fitBounds(bounds, { padding: 50, maxZoom: 14 });
+        }
+    } catch (e) { 
+        console.log("No se pudo centrar mapa en la capa", e); 
+    }
+    // Disparar efecto visual para localizar la capa
+    flashLayerEffect(id);
+}
+
+// 4. Renderizar la lista en el HTML
+function renderLayerList() {
+    const container = document.getElementById('layers-list');
+    
+    if (mapLayers.length === 0) {
+        container.innerHTML = '<p class="empty-layers-msg">Sin capas cargadas</p>';
+        return;
+    }
+    
+    container.innerHTML = ''; // Limpiar
+    
+    mapLayers.forEach(layer => {
+        const div = document.createElement('div');
+        div.className = 'layer-item';
+        div.innerHTML = `
+            <span class="layer-color-indicator" style="background:${layer.color}"></span>
+            <input type="checkbox" ${layer.visible ? 'checked' : ''} onchange="toggleLayer('${layer.id}')">
+            <span class="layer-name" title="${layer.name}">${layer.name}</span>
+            <button class="btn-remove-layer" onclick="removeLayer('${layer.id}')"><i class="fa-solid fa-trash"></i></button>
+        `;
+        container.appendChild(div);
+    });
+}
+
+// 5. Alternar Visibilidad
+// 5. Alternar Visibilidad (CORREGIDO)
+function toggleLayer(id) {
+    const layerObj = mapLayers.find(l => l.id === id);
+    if (!layerObj) return;
+    
+    layerObj.visible = !layerObj.visible;
+    const val = layerObj.visible ? 'visible' : 'none';
+    
+    // Actualizamos visibilidad en el mapa
+    if (map.getLayer(id + '-fill')) map.setLayoutProperty(id + '-fill', 'visibility', val);
+    if (map.getLayer(id + '-line')) map.setLayoutProperty(id + '-line', 'visibility', val);
+    if (map.getLayer(id + '-circle')) map.setLayoutProperty(id + '-circle', 'visibility', val);
+
+    // Efecto visual si se activa
+    if (layerObj.visible) {
+        flashLayerEffect(id);
+    }
+
+    // --- NUEVO: FORZAR ACTUALIZACIÓN DE DATOS ---
+    // Si el filtro de zona está activo, tenemos que recalcular los gráficos
+    // porque ahora hay una capa más (o menos) para filtrar.
+    const isFilterActive = document.getElementById('chk-spatial-filter')?.checked;
+    if (isFilterActive) {
+        triggerUpdateWithLoader();
+    }
+}
+
+// 6. Eliminar Capa (ACTUALIZADO)
+// 6. Eliminar Capa (CORREGIDO)
+function removeLayer(id) {
+    if(!confirm("¿Eliminar esta capa?")) return;
+    
+    // Quitar del mapa las 3 capas posibles
+    if (map.getLayer(id + '-fill')) map.removeLayer(id + '-fill');
+    if (map.getLayer(id + '-line')) map.removeLayer(id + '-line');
+    if (map.getLayer(id + '-circle')) map.removeLayer(id + '-circle');
+    
+    // Quitar la fuente
+    if (map.getSource(id)) map.removeSource(id);
+    
+    // Quitar del array
+    mapLayers = mapLayers.filter(l => l.id !== id);
+    renderLayerList();
+
+    // --- NUEVO: Recalcular gráficos si el filtro estaba activo ---
+    const isFilterActive = document.getElementById('chk-spatial-filter')?.checked;
+    if (isFilterActive) {
+        triggerUpdateWithLoader();
+    }
+}
+
+// Helper: Color aleatorio legible
+function getRandomColor() {
+    const letters = '0123456789ABCDEF';
+    let color = '#';
+    for (let i = 0; i < 6; i++) {
+        color += letters[Math.floor(Math.random() * 16)];
+    }
+    return color;
+}
+// --- EFECTO VISUAL DE PARPADEO ---
+function flashLayerEffect(id) {
+    if (!map) return;
+    
+    let count = 0;
+    const maxFlashes = 6; // Parpadeará 3 veces (Encendido/Apagado x3)
+    const speed = 300;    // Velocidad en milisegundos
+
+    const interval = setInterval(() => {
+        // Calculamos si es momento "ALTO" (brillante) o "BAJO" (normal)
+        const isHigh = count % 2 === 0;
+
+        // 1. EFECTO EN POLÍGONOS (Opacidad)
+        if (map.getLayer(id + '-fill')) {
+            // Sube a 0.7 y baja a 0.3
+            map.setPaintProperty(id + '-fill', 'fill-opacity', isHigh ? 0.7 : 0.3);
+        }
+
+        // 2. EFECTO EN LÍNEAS (Grosor y Color)
+        if (map.getLayer(id + '-line')) {
+            // Engrosa la línea a 6px y luego vuelve a 3px
+            map.setPaintProperty(id + '-line', 'line-width', isHigh ? 6 : 3);
+        }
+
+        // 3. EFECTO EN PUNTOS (Radio)
+        if (map.getLayer(id + '-circle')) {
+            // Agranda el punto a 12px y luego vuelve a 6px
+            map.setPaintProperty(id + '-circle', 'circle-radius', isHigh ? 12 : 6);
+            map.setPaintProperty(id + '-circle', 'circle-stroke-width', isHigh ? 4 : 2);
+        }
+
+        count++;
+
+        // DETENER ANIMACIÓN
+        if (count >= maxFlashes) {
+            clearInterval(interval);
+            // Aseguramos que quede en el estado normal final
+            if (map.getLayer(id + '-fill')) map.setPaintProperty(id + '-fill', 'fill-opacity', 0.3);
+            if (map.getLayer(id + '-line')) map.setPaintProperty(id + '-line', 'line-width', 3);
+            if (map.getLayer(id + '-circle')) {
+                map.setPaintProperty(id + '-circle', 'circle-radius', 6);
+                map.setPaintProperty(id + '-circle', 'circle-stroke-width', 2);
+            }
+        }
+    }, speed);
+}
+// --- FILTRO ESPACIAL (TURF.JS) ---
+/* ============================================================
+   BLOQUE DE REPARACIÓN Y DIAGNÓSTICO ZONAS (Sobrescribe anteriores)
+   ============================================================ */
+
+// 1. CARGA DE ARCHIVO: Aseguramos que se guarde el GeoJSON crudo
+function handleGeojsonUpload(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    document.getElementById('loading-overlay').classList.add('active');
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const geojson = JSON.parse(e.target.result);
+            const layerId = 'layer-' + Date.now(); 
+            const color = getRandomColor(); 
+            
+            // Pintar en mapa
+            addLayerToMap(layerId, geojson, color);
+            
+            // Guardar datos
+            mapLayers.push({
+                id: layerId,
+                name: file.name.replace('.geojson', '').replace('.json', ''),
+                visible: true,
+                color: color,
+                geojson: geojson // <--- CRÍTICO: Guardamos la geometría
+            });
+            
+            renderLayerList();
+
+            // Si el filtro ya estaba activo, refrescamos
+            if (document.getElementById('chk-spatial-filter')?.checked) {
+                triggerUpdateWithLoader();
+            }
+
+        } catch (err) {
+            console.error(err);
+            alert("❌ Error: Archivo GeoJSON inválido.");
+        } finally {
+            document.getElementById('loading-overlay').classList.remove('active');
+            input.value = ''; 
+        }
+    };
+    reader.readAsText(file);
+}
+
+// 2. FILTRO ESPACIAL: Con Diagnóstico VISUAL (Alert)
+function applySpatialFilter(data) {
+    const isFilterActive = document.getElementById('chk-spatial-filter')?.checked;
+    
+    // Si apagado, devolver todo
+    if (!isFilterActive) return data; 
+
+    // Obtener capas activas
+    const activeLayers = mapLayers.filter(l => l.visible);
+    
+    // CHECK 1: ¿Hay capas cargadas?
+    if (activeLayers.length === 0) return []; 
+
+    // CHECK 2: ¿Tienen datos GeoJSON guardados?
+    if (!activeLayers[0].geojson) {
+        alert("⚠️ ERROR DE CÓDIGO: La capa no tiene datos geométricos guardados.\n\nAsegúrate de haber copiado la función 'handleGeojsonUpload' nueva que te acabo de dar.");
+        return data;
+    }
+
+    // Preparar Polígonos
+    let activePolygons = [];
+    try {
+        activeLayers.forEach(layer => {
+            // Limpieza profunda de geometría
+            let clone = JSON.parse(JSON.stringify(layer.geojson));
+            clone = turf.truncate(clone, {precision: 6, coordinates: 2}); // Solo 2D
+            clone = turf.rewind(clone, {mutate: true}); // Sentido horario correcto
+
+            turf.flatten(clone).features.forEach(feature => {
+                if (feature.geometry && (feature.geometry.type === "Polygon" || feature.geometry.type === "MultiPolygon")) {
+                    activePolygons.push(feature);
+                }
+            });
+        });
+    } catch (e) {
+        alert("❌ Error procesando el polígono: " + e.message);
+        return data;
+    }
+
+    if (activePolygons.length === 0) {
+        alert("⚠️ La capa activa es una LÍNEA o PUNTO, no una ZONA CERRADA.\nNo se puede filtrar 'dentro' de una línea.");
+        return data;
+    }
+
+    // --- DIAGNÓSTICO: ALERTA DE COORDENADAS ---
+    // Tomamos el primer punto del polígono y el primer punto de tus datos para comparar
+    const polyCoord = activePolygons[0].geometry.coordinates[0][0]; // [X, Y]
+    const dataPoint = data.find(d => d.hasGeo); // Tu primer dato con GPS
+
+    if (dataPoint) {
+        // Solo mostramos la alerta UNA vez por sesión para no molestar
+        if (!window.hasShownDiagAlert) {
+            const msg = `🔍 DIAGNÓSTICO DE COORDENADAS:\n\n` +
+                        `📍 POLÍGONO (Zona): [${polyCoord[0].toFixed(3)}, ${polyCoord[1].toFixed(3)}]\n` +
+                        `🚓 TUS DATOS (Punto): [${dataPoint.lon.toFixed(3)}, ${dataPoint.lat.toFixed(3)}]\n\n` +
+                        `REGLA DE ORO:\n` +
+                        `España está en Longitud (X) negativa (-2.0) y Latitud (Y) positiva (43.0).\n\n` +
+                        `Si tus datos muestran [43.0, -2.0] están AL REVÉS.`;
+            
+            // alert(msg); // Descomenta esto si quieres verlo siempre
+            console.log(msg);
+            window.hasShownDiagAlert = true;
+        }
+    }
+    // -------------------------------------------
+
+    // FILTRADO REAL
+    const filtered = data.filter(point => {
+        if (!point.hasGeo) return false;
+        const pt = turf.point([point.lon, point.lat]); 
+        
+        for (let poly of activePolygons) {
+            if (turf.booleanPointInPolygon(pt, poly)) return true;
+        }
+        return false;
+    });
+
+    // AUTO-CORRECCIÓN SI SALE 0 RESULTADOS
+    if (filtered.length === 0 && data.length > 0) {
+        console.warn("Intento 1 falló. Probando inversión de coordenadas...");
+        
+        const invertedData = data.filter(point => {
+            if (!point.hasGeo) return false;
+            // PRUEBA INVERTIDA: [Lat, Lon]
+            const pt = turf.point([point.lat, point.lon]); 
+            for (let poly of activePolygons) {
+                if (turf.booleanPointInPolygon(pt, poly)) return true;
+            }
+            return false;
+        });
+
+        if (invertedData.length > 0) {
+            if (!window.hasShownFixAlert) {
+                alert("✅ ¡ARREGLADO!\n\nEl sistema detectó que tus coordenadas estaban invertidas (Latitud en lugar de Longitud) y las ha corregido automáticamente para este filtro.\n\nAhora verás los datos correctos.");
+                window.hasShownFixAlert = true;
+            }
+            return invertedData;
+        }
+    }
+
+    return filtered;
 }

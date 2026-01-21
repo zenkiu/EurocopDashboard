@@ -23,6 +23,8 @@
     <!-- LIBRERÍAS PARA EXPORTACIÓN PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- LIBRERÍA GEOMÉTRICA (Turf.js) -->
+    <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
 </head>
 <body>
 
@@ -357,28 +359,70 @@
                     </div>
                 </div>
                 
-                <div class="map-container-wrapper" id="container-map">
-                    <div class="chart-header">
-                        <h4 data-i18n="chart_map">Mapa</h4>
-                        <div class="header-actions">
-                            <button class="btn-mini" id="btn-heatmap" onclick="toggleHeatmap(this)">
-                                <i class="fa-solid fa-fire"></i>
-                            </button>
-                            <button class="btn-mini" onclick="toggleSatelite(this)">
-                                <i class="fa-solid fa-earth-americas"></i>
-                            </button>
-                            <button class="btn-mini" onclick="toggle3D()">
-                                <i class="fa-solid fa-cube"></i>
-                            </button>
-                            <button class="btn-maximize" onclick="toggleFullscreen('container-map')">
-                                <i class="fa-solid fa-expand"></i>
-                            </button>
+            <!-- ... dentro de index.html, en el contenedor del mapa ... -->
+            <div class="map-container-wrapper" id="container-map">
+                <div class="chart-header">
+                    <h4 data-i18n="chart_map">Mapa</h4>
+            <div class="header-actions">
+                <!-- 1. NUEVO GESTOR DE CAPAS (Dropdown) -->
+                <div class="layer-manager-container" style="position: relative;">
+                    <button class="btn-mini" id="btn-layers-menu" onclick="toggleLayerMenu()" title="Gestor de Capas">
+                        <i class="fa-solid fa-layer-group"></i>
+                    </button>
+                    
+                    <!-- Menú Desplegable (Oculto por defecto) -->
+                    <div id="layers-dropdown" class="layer-dropdown-content">
+<!-- ... dentro de index.html -> #layers-dropdown ... -->
+
+                        <div class="layer-header" style="flex-direction: column; align-items: flex-start; gap: 10px;">
+                            <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
+                                <span>Mis Capas</span>
+                                <button class="btn-add-layer" onclick="document.getElementById('input-geojson').click()" title="Subir GeoJSON">
+                                    <i class="fa-solid fa-plus"></i>
+                                </button>
+                            </div>
+                            
+                            <!-- NUEVO INTERRUPTOR DE FILTRADO -->
+                            <div style="display:flex; align-items:center; gap:8px; font-size:0.7rem; color:#525f7f; width:100%; padding-top:5px; border-top:1px solid #eee;">
+                                <label class="switch">
+                                    <input type="checkbox" id="chk-spatial-filter" onchange="triggerUpdateWithLoader()">
+                                    <span class="slider round"></span>
+                                </label>
+                                <span>Filtrar datos por zona</span>
+                            </div>
+                        </div>
+                        <!-- Lista donde se pintan las capas con JS -->
+                        <div id="layers-list" class="layer-list-body">
+                            <p class="empty-layers-msg">Sin capas cargadas</p>
                         </div>
                     </div>
-                    <div class="canvas-wrapper">
-                        <div id="main-map"></div>
-                    </div>
                 </div>
+
+                <!-- Input Oculto para cargar archivos -->
+                <input type="file" id="input-geojson" accept=".geojson, .json" style="display: none;" onchange="handleGeojsonUpload(this)">
+                
+                <!-- 2. BOTONES DE HERRAMIENTAS (EXISTENTES) -->
+                <button class="btn-mini" id="btn-heatmap" onclick="toggleHeatmap(this)" title="Mapa de Calor">
+                    <i class="fa-solid fa-fire"></i>
+                </button>
+                
+                <button class="btn-mini" onclick="toggleSatelite(this)" title="Vista Satélite">
+                    <i class="fa-solid fa-earth-americas"></i>
+                </button>
+                
+                <button class="btn-mini" onclick="toggle3D()" title="Vista 3D">
+                    <i class="fa-solid fa-cube"></i>
+                </button>
+                
+                <button class="btn-maximize" onclick="toggleFullscreen('container-map')" title="Pantalla Completa">
+                    <i class="fa-solid fa-expand"></i>
+                </button>
+            </div>
+    </div>
+    <div class="canvas-wrapper">
+        <div id="main-map"></div>
+    </div>
+</div>
             </div>
         </main>
     </section>
