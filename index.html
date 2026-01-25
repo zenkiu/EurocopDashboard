@@ -82,7 +82,11 @@
                 </div>
                 
                 <div class="csv-info">
-                    <small><i class="fa-solid fa-circle-info"></i> <span data-i18n="upload_mobile">Compatible con móviles</span></small>
+                    
+                    <small class="clickable-info" onclick="openImageModal('./ImagenCoorporativa/Infografia.png', 'Infografía')">
+                        <i class="fa-solid fa-circle-info"></i> 
+                        <span data-i18n="upload_mobile">Compatible con móviles</span>
+                    </small>
                 </div>
 
                 <!-- BOTONES PDF -->
@@ -254,7 +258,11 @@
 
                 </div>
             </div>
-
+            <!-- BOTÓN IA INFOGRAFÍA -->
+            <button class="btn-ai-infographic" onclick="generateSmartInfographic()">
+                <i class="fa-solid fa-wand-magic-sparkles"></i> 
+                <span data-i18n="btn_ai_infographic">SINTESIS</span>
+            </button>
             <div class="sidebar-footer">
                 <img src="./ImagenCoorporativa/zzenkiu.png" alt="Zzenkiu" class="sidebar-logo">
             </div>
@@ -284,7 +292,7 @@
             <div class="charts-grid-top">
                 <div class="chart-container" id="container-timeline">
                     <div class="chart-header">
-                        <h4 data-i18n="chart_timeline">Evolución Temporal</h4>
+                        <h4 data-i18n="chart_timeline">Evolución</h4>
                         <div class="header-actions">
                             <!-- 1. Selector de periodo (Años, Meses, etc.) -->
                             <select id="select-temporal-view" class="btn-mini" onchange="changeTemporalView(this.value)">
@@ -374,23 +382,31 @@
                     <div id="layers-dropdown" class="layer-dropdown-content">
 <!-- ... dentro de index.html -> #layers-dropdown ... -->
 
-                        <div class="layer-header" style="flex-direction: column; align-items: flex-start; gap: 10px;">
-                            <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
-                                <span>Mis Capas</span>
-                                <button class="btn-add-layer" onclick="document.getElementById('input-geojson').click()" title="Subir GeoJSON">
-                                    <i class="fa-solid fa-plus"></i>
-                                </button>
-                            </div>
+                    <div class="layer-header" style="flex-direction: column; align-items: flex-start; gap: 10px;">
+                        <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
+                            <!-- AÑADIDO data-i18n -->
+                            <span data-i18n="map_layers_title">Mis Capas</span>
                             
-                            <!-- NUEVO INTERRUPTOR DE FILTRADO -->
-                            <div style="display:flex; align-items:center; gap:8px; font-size:0.7rem; color:#525f7f; width:100%; padding-top:5px; border-top:1px solid #eee;">
-                                <label class="switch">
-                                    <input type="checkbox" id="chk-spatial-filter" onchange="triggerUpdateWithLoader()">
-                                    <span class="slider round"></span>
-                                </label>
-                                <span>Filtrar datos por zona</span>
-                            </div>
+                            <!-- AÑADIDO id="btn-add-layer-icon" para cambiar el title por JS -->
+                            <button id="btn-add-layer-icon" class="btn-add-layer" onclick="document.getElementById('input-geojson').click()" title="Subir GeoJSON">
+                                <i class="fa-solid fa-plus"></i>
+                            </button>
                         </div>
+                        
+                        <div style="display:flex; align-items:center; gap:8px; font-size:0.7rem; color:#525f7f; width:100%; padding-top:5px; border-top:1px solid #eee;">
+                            <label class="switch">
+                                <input type="checkbox" id="chk-spatial-filter" onchange="triggerUpdateWithLoader()">
+                                <span class="slider round"></span>
+                            </label>
+                            <!-- AÑADIDO data-i18n -->
+                            <span data-i18n="map_filter_zone">Filtrar datos por zona</span>
+                        </div>
+                    </div>
+
+                    <div id="layers-list" class="layer-list-body">
+                        <!-- El texto "Sin capas cargadas" se genera via JS, ver paso 3 -->
+                        <p class="empty-layers-msg" data-i18n="map_no_layers">Sin capas cargadas</p>
+                    </div>
                         <!-- Lista donde se pintan las capas con JS -->
                         <div id="layers-list" class="layer-list-body">
                             <p class="empty-layers-msg">Sin capas cargadas</p>
@@ -434,41 +450,34 @@
             <p data-i18n="loading_msg">Procesando archivo...</p>
         </div>
     </div>
-    <!-- MODAL DE REGISTROS DESCARTADOS (SIN FECHA) -->
-    <!-- MODAL DE REGISTROS DESCARTADOS (SIN FECHA) - VERSIÓN MEJORADA VISIBILIDAD -->
+    <!-- MODAL DE REGISTROS DESCARTADOS -->
     <div id="rejected-modal" class="pdf-modal-overlay">
-        <div class="pdf-modal-content" style="max-width: 600px; height: auto; max-height: 80vh; background-color: #34495e;"> 
+        <div class="pdf-modal-content" style="max-width: 550px; height: auto; max-height: 85vh;"> 
             <!-- Header Rojo -->
             <div class="pdf-header" style="background: #f5365c; color: white;"> 
                 <h3><i class="fa-solid fa-triangle-exclamation"></i> Expedientes no integrados</h3>
                 <button onclick="closeRejectedModal()" class="btn-close-pdf" style="color: white;"><i class="fa-solid fa-xmark"></i></button>
             </div>
             
-            <div class="pdf-body" style="padding: 25px;">
-                <!-- TEXTO DE AVISO (Color Blanco y un poco más grande) -->
-                <p style="margin-bottom: 20px; color: #ffffff; font-size: 15px; line-height: 1.4;">
-                    Los siguientes expedientes <strong style="color: #ff8fa3;">no tienen fecha válida</strong> y no se han incluido en el recuento:
+            <div class="pdf-body">
+                <p style="color: #ffffff; font-size: 15px; margin-bottom: 15px;">
+                    Los siguientes expedientes <strong style="color: #ff8fa3;">no tienen fecha válida</strong> y no se han incluido:
                 </p>
                 
-                <!-- LISTA (Letra más grande y negrita) -->
                 <div id="rejected-list" style="
                     background: #ffffff; 
-                    border: 2px solid #f5365c; /* Borde rojo para destacar */
                     border-radius: 8px; 
                     padding: 15px; 
-                    max-height: 350px; 
+                    max-height: 300px; 
                     overflow-y: auto; 
-                    font-family: 'Courier New', monospace; 
-                    font-size: 16px;    /* AUMENTADO: Antes 13px */
-                    line-height: 1.6;   /* AUMENTADO: Espacio entre líneas */
-                    color: #333;        /* Texto negro sobre fondo blanco */
-                    font-weight: bold;  /* Negrita */
-                    box-shadow: inset 0 0 10px rgba(0,0,0,0.1);">
-                    <!-- Aquí se inyectará la lista -->
+                    color: #333;
+                    font-family: monospace;
+                    font-weight: bold;">
+                    <!-- Aquí se inyectan los datos vía JS -->
                 </div>
                 
                 <div style="text-align: right; margin-top: 20px;">
-                    <button onclick="closeRejectedModal()" class="btn-primary" style="background:#5e72e4; border:none; padding: 12px 25px; font-size: 14px;">ENTENDIDO</button>
+                    <button onclick="closeRejectedModal()" class="btn-primary" style="padding: 10px 20px;">ENTENDIDO</button>
                 </div>
             </div>
         </div>
@@ -476,11 +485,15 @@
     <div id="pdf-modal" class="pdf-modal-overlay">
         <div class="pdf-modal-content">
             <div class="pdf-header">
-                <h3 id="pdf-modal-title"><i class="fa-solid fa-book"></i> Documento</h3>
+                <h3 id="pdf-modal-title"><i class="fa-solid fa-image"></i> Infografía</h3>
                 <button onclick="closePdfModal()" class="btn-close-pdf"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="pdf-body">
-                <iframe src="" id="pdf-frame" frameborder="0"></iframe>
+                <!-- Iframe para PDFs (Oculto al abrir imagen) -->
+                <iframe src="" id="pdf-frame" frameborder="0" style="display:none; width:100%; height:100%;"></iframe>
+                
+                <!-- Imagen adaptada -->
+                <img id="img-frame" src="" style="display:none;">
             </div>
         </div>
     </div>
@@ -490,7 +503,94 @@
         <i class="fa-solid fa-triangle-exclamation"></i>
         <span id="toast-message">Mensaje de aviso</span>
     </div>
+    <!-- PLANTILLA OCULTA PARA GENERACIÓN DE INFOGRAFÍA (ESTILO NOTEBOOK LM) -->
+<div id="ai-infographic-container" class="infographic-canvas">
+    <div class="info-header">
+        <div class="header-text-group">
+            <div class="info-tag" data-i18n="info_tag">EUROCOP ANALYTICS • SINTESIS</div>
+            <h1 id="info-title">Resumen de Seguridad</h1>
+            <p id="info-subtitle" data-i18n="info_subtitle">Análisis de datos filtrados</p>
+        </div>
+        <img src="./ImagenCoorporativa/zzenkiu.png" class="header-logo" alt="Logo Corporativo">
+    </div>
 
+    <div class="info-grid">
+        <div class="info-card highlight-card">
+            <div class="card-icon"><i class="fa-solid fa-bolt"></i> <span data-i18n="info_card_sintesis">SINTESIS PRINCIPAL</span></div>
+            <h2 id="info-insight-main">...</h2>
+        </div>
+
+        <div class="info-card stats-card">
+            <div class="stat-item">
+                <span class="stat-label" data-i18n="info_lbl_total">TOTAL REGISTROS</span>
+                <span class="stat-value" id="info-stat-total">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label" data-i18n="info_lbl_peak">PICO DE ACTIVIDAD</span>
+                <span class="stat-value" id="info-stat-peak">--:--</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label" data-i18n="info_lbl_day">DÍA MÁS ACTIVO</span>
+                <span class="stat-value" id="info-stat-day">---</span>
+            </div>
+        </div>
+
+        <div class="info-card">
+            <h3 data-i18n="info_lbl_trend">Tendencia Temporal</h3>
+            <p id="info-text-trend" class="info-text-body">...</p>
+            <div class="mini-chart-bar" id="info-visual-bar"></div>
+        </div>
+
+        <div class="info-card dark-card">
+            <h3 data-i18n="info_lbl_top3">Top 3 Categorías</h3>
+            <ul id="info-top-list" class="info-list"></ul>
+        </div>
+        
+<!-- Tarjeta 5: Gráfico Comparativo -->
+<div class="info-card graph-card">
+    <h3 data-i18n="info_lbl_dominance">Dominancia</h3>
+    <div class="comparison-layout">
+        <!-- Gráfico Circular SVG -->
+        <div class="svg-pie-container">
+            <svg width="120" height="120" viewBox="0 0 120 120">
+                <circle cx="60" cy="60" r="54" fill="none" stroke="#edf2f7" stroke-width="12" />
+                <circle id="svg-pie-progress" cx="60" cy="60" r="54" fill="none" stroke="#5e72e4" 
+                        stroke-width="12" stroke-linecap="round"
+                        stroke-dasharray="339.29" stroke-dashoffset="339.29"
+                        transform="rotate(-90 60 60)" />
+            </svg>
+            <div class="pie-inner-text">
+                <span id="info-pie-percent">0%</span>
+                <span class="pie-sublabel">TOTAL</span>
+            </div>
+        </div>
+        
+        <!-- Leyenda -->
+        <div class="pie-legend">
+            <div class="legend-row">
+                <span class="dot-leader"></span>
+                <div class="legend-content">
+                    <span id="info-lbl-leader" class="legend-text">Líder</span>
+                </div>
+            </div>
+            <div class="legend-row">
+                <span class="dot-rest"></span>
+                <div class="legend-content">
+                    <!-- HE AÑADIDO ESTE ID info-lbl-resto -->
+                    <span id="info-lbl-resto" class="legend-text">Resto</span>
+                </div>
+            </div>
+            <div class="pie-subtext" id="info-pie-subtext">0 vs 0</div>
+        </div>
+    </div>
+</div>
+    </div>
+
+    <div class="info-footer">
+        <span data-i18n="info_lbl_footer">Generado por Eurocop Analytics AI</span>
+        <span id="info-date">--/--/----</span>
+    </div>
+</div>
     <!-- LIBRERÍAS EXTERNAS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script> 

@@ -509,16 +509,21 @@ window.onclick = (e) => {
 function toggleGroup(containerId, state, event) {
     if (event) event.stopPropagation();
     
-    // Usamos el envoltorio de carga
     runWithLoader(() => {
         const container = document.getElementById(containerId);
         if (container) {
-            container.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = state);
-            updateUI(); // La operación pesada
+            const items = container.querySelectorAll('.checkbox-item');
+            items.forEach(div => {
+                if (div.style.display !== 'none') {
+                    const cb = div.querySelector('input');
+                    if (cb) cb.checked = state;
+                }
+            });
+            // El updateUI debe ir AQUÍ, UNA SOLA VEZ al final del bucle
+            updateUI(); 
         }
     });
 }
-/* ... dentro de script.js ... */
 
 // VARIABLE GLOBAL PARA EL TEMPORIZADOR DE BÚSQUEDA
 let searchTimeout = null;
@@ -720,7 +725,8 @@ function updateUI() {
     // 6. ACTUALIZAR GRÁFICOS Y MAPA
     updateMapData(filtered);
     updateCharts(filtered, selYears);
-    updateLocationKPI(filtered);
+    updateLocationKPI(filtered).catch(err => console.warn("Aviso KPI Ubicación:", err));
+   // updateLocationKPI(filtered);
 
     // 7. ACTUALIZAR TÍTULOS ESTÁTICOS
     const labelTitulo = document.getElementById('card-label-titulo');
@@ -1107,69 +1113,68 @@ function toggleFullscreen(containerId) {
 // ============================================================
 // 10. GEOLOCALIZACIÓN
 // ============================================================
-// ============================================================
-// 10. GEOLOCALIZACIÓN (CORREGIDO)
-// ============================================================
+// 1. Variable global para evitar colapsar la API (ponla al inicio de script.js)
+let isGeocodingActive = false;
+
 async function updateLocationKPI(data) {
     const el = document.getElementById('kpi-location');
-    
-    // 1. Validaciones básicas
-    if (!data || data.length === 0) { el.innerText = "Sin Datos"; return; }
-    
-    // 2. Si hay localidad manual en el excel, usarla
-    if (data[0].locManual && data[0].locManual !== "") { el.innerText = data[0].locManual.toUpperCase(); return; }
+    if (!el) return;
 
-    // 3. Calcular centroide
+    // Si no hay datos, resetear
+    if (!data || data.length === 0) { 
+        el.innerText = "Sin Datos"; 
+        return; 
+    }
+    
+    // Si hay localidad manual, usarla y no llamar a la API
+    if (data[0].locManual && data[0].locManual !== "") { 
+        el.innerText = data[0].locManual.toUpperCase(); 
+        return; 
+    }
+
+    // Calcular centroide
     const dataConGeo = data.filter(d => d.hasGeo);
-    if (dataConGeo.length === 0) { el.innerText = "Sin Ubicación GPS"; return; }
+    if (dataConGeo.length === 0) { 
+        el.innerText = "Sin Ubicación GPS"; 
+        return; 
+    }
 
     let totalLat = 0, totalLon = 0;
     dataConGeo.forEach(d => { totalLat += d.lat; totalLon += d.lon; });
     const centerLat = totalLat / dataConGeo.length;
     const centerLon = totalLon / dataConGeo.length;
     
-    // Mostrar coordenadas por defecto mientras carga
+    // Mostrar coordenadas temporalmente por si la API falla
     el.innerText = `${centerLat.toFixed(3)}, ${centerLon.toFixed(3)}`;
 
-    // 4. INTENTO 1: BigDataCloud (Más rápido y sin bloqueo CORS en localhost)
+    // --- BLOQUEO PARA EVITAR "NO RESPONSE" O COLAPSOS ---
+    if (isGeocodingActive) return; // Si ya hay una petición en curso, ignorar la nueva
+    isGeocodingActive = true;
+
+    // Declaramos variables de control fuera del try para usarlas en finally
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 segundos timeout
+
     try {
-        // Usamos currentLang para pedir el idioma correcto
         const langCode = currentLang === 'eu' ? 'eu' : (currentLang === 'ca' ? 'ca' : 'es');
         const urlB = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${centerLat}&longitude=${centerLon}&localityLanguage=${langCode}`;
         
-        const resB = await fetch(urlB);
+        const resB = await fetch(urlB, { signal: controller.signal });
+
         if(resB.ok) {
             const jB = await resB.json();
-            // Buscamos el nombre más relevante en orden
-            let p = jB.locality || jB.city || jB.principalSubdivision || jB.localityInfo?.administrative[2]?.name;
-            
+            let p = jB.locality || jB.city || jB.principalSubdivision;
             if (p) { 
                 el.innerText = p.toUpperCase(); 
-                return; // Éxito, salimos de la función
             }
         }
     } catch (er) {
-        console.warn("BigDataCloud sin respuesta, intentando OSM...");
-    }
-
-    // 5. INTENTO 2: OpenStreetMap (Solo si falla el anterior, suele dar 403 en localhost)
-    try {
-        const urlOSM = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${centerLat}&lon=${centerLon}&zoom=10&accept-language=${currentLang}`;
-        const response = await fetch(urlOSM, { 
-            method: 'GET', 
-            mode: 'cors', 
-            headers: { 'Accept': 'application/json' } 
-        });
-        
-        if(response.ok) {
-            const json = await response.json();
-            const addr = json.address;
-            let placeName = addr.city || addr.town || addr.village || addr.municipality || addr.county;
-            if (placeName) { el.innerText = placeName.toUpperCase(); }
-        }
-    } catch (e) {
-        // Si todo falla, se queda con las coordenadas numéricas que pusimos al principio
-        console.log("No se pudo obtener el nombre de la localidad.");
+        // Error silencioso: Si la API falla, nos quedamos con las coordenadas
+        // console.warn("Geocoding API falló o tardó demasiado");
+    } finally {
+        // LIMPIEZA CRUCIAL: Cancelar el timeout y liberar el bloqueo
+        clearTimeout(timeoutId); 
+        setTimeout(() => { isGeocodingActive = false; }, 1000);
     }
 }
 
@@ -1338,24 +1343,85 @@ function changeLanguage(lang) {
 function applyLanguage(lang) {
     const t = translations[lang];
     if (!t) return;
-    document.querySelectorAll('[data-i18n]').forEach(el => { const k = el.getAttribute('data-i18n'); if (t[k]) el.textContent = t[k]; });
-    const locInput = document.getElementById('map-localidad');
-    if(locInput && t.col_loc_placeholder) locInput.placeholder = t.col_loc_placeholder;
-    document.querySelectorAll('.dropdown-controls button:nth-child(1)').forEach(b => b.textContent = t.sel_all);
-    document.querySelectorAll('.dropdown-controls button:nth-child(2)').forEach(b => b.textContent = t.sel_none);
+    
+    // 1. Traducción estándar de etiquetas data-i18n
+    document.querySelectorAll('[data-i18n]').forEach(el => { 
+        const k = el.getAttribute('data-i18n'); 
+        if (t[k]) el.textContent = t[k]; 
+    });
+
+    // ... (código existente del placeholder, botones dropdown, etc.) ...
+
+    // 2. NUEVO: Traducir title del botón de subir capa
+    const btnAdd = document.getElementById('btn-add-layer-icon');
+    if(btnAdd && t.btn_add_layer_title) {
+        btnAdd.title = t.btn_add_layer_title;
+    }
+
+    // 3. NUEVO: Refrescar mensaje de "Sin capas" si la lista está vacía
+    if(typeof renderLayerList === 'function') {
+        renderLayerList();
+    }
+
     if(finalData.length > 0) updateUI();
 }
+
+// ============================================================
+// MODALES PDF E IMAGEN (ACTUALIZADO)
+// ============================================================
 
 function openPdfModal(fileName, title) {
     document.getElementById('pdf-modal-title').innerHTML = `<i class="fa-solid fa-file-pdf"></i> ${title}`;
     
-    // USAR VERSIÓN GLOBAL
+    // Versión para evitar caché
     let versionParam = (typeof EUROCOP_VERSION !== 'undefined') ? EUROCOP_VERSION : new Date().getTime();
     
-    document.getElementById('pdf-frame').src = "./ArchivosPdf/" + fileName + "?v=" + versionParam;
+    // 1. Mostrar IFRAME y Ocultar IMAGEN
+    const iframe = document.getElementById('pdf-frame');
+    const img = document.getElementById('img-frame');
+    
+    if (img) img.style.display = 'none';
+    if (iframe) {
+        iframe.style.display = 'block';
+        iframe.src = "./ArchivosPdf/" + fileName + "?v=" + versionParam;
+    }
+
     document.getElementById('pdf-modal').classList.add('active');
 }
-function closePdfModal() { document.getElementById('pdf-modal').classList.remove('active'); }
+
+// NUEVA FUNCIÓN PARA ABRIR IMAGEN
+function openImageModal(path, title) {
+    const titleEl = document.getElementById('pdf-modal-title');
+    if(titleEl) titleEl.innerHTML = `<i class="fa-solid fa-image"></i> ${title}`;
+    
+    const iframe = document.getElementById('pdf-frame');
+    const img = document.getElementById('img-frame');
+    const modal = document.getElementById('pdf-modal');
+
+    // Ocultamos el iframe y mostramos la imagen
+    if (iframe) iframe.style.display = 'none';
+    if (img) {
+        img.src = path + "?v=" + new Date().getTime(); // Evitar caché
+        img.style.display = 'block'; // Mostrar la imagen
+    }
+
+    modal.classList.add('active');
+}
+
+function closePdfModal() { 
+    const modal = document.getElementById('pdf-modal');
+    const iframe = document.getElementById('pdf-frame');
+    const img = document.getElementById('img-frame');
+
+    modal.classList.remove('active');
+    
+    // Limpiar fuentes para detener carga/memoria
+    setTimeout(() => {
+        if(iframe) iframe.src = "";
+        if(img) img.src = "";
+    }, 300);
+}
+
 document.getElementById('pdf-modal').addEventListener('click', function(e) { if (e.target === this) closePdfModal(); });
 document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closePdfModal(); });
 // ============================================================
@@ -1719,17 +1785,21 @@ function addLayerToMap(id, geojson, color) {
 }
 
 // 4. Renderizar la lista en el HTML
+// Busca esta función y actualízala
 function renderLayerList() {
     const container = document.getElementById('layers-list');
+    const t = translations[currentLang]; // Obtener traducciones actuales
     
     if (mapLayers.length === 0) {
-        container.innerHTML = '<p class="empty-layers-msg">Sin capas cargadas</p>';
+        // Usar la traducción
+        container.innerHTML = `<p class="empty-layers-msg">${t.map_no_layers}</p>`;
         return;
     }
     
-    container.innerHTML = ''; // Limpiar
+    container.innerHTML = ''; 
     
     mapLayers.forEach(layer => {
+        // ... (el resto del código del bucle sigue igual)
         const div = document.createElement('div');
         div.className = 'layer-item';
         div.innerHTML = `
@@ -1999,4 +2069,173 @@ function applySpatialFilter(data) {
     }
 
     return filtered;
+}
+// ============================================================
+// UTILIDADES PARA INFOGRAFÍA
+// ============================================================
+
+/**
+ * Función auxiliar para cortar texto si es demasiado largo
+ * Añade "..." al final.
+ */
+function truncateText(str, maxLength) {
+    if (!str) return "";
+    if (str.length > maxLength) {
+        return str.substring(0, maxLength).trim() + "...";
+    }
+    return str;
+}
+
+// ============================================================
+// GENERADOR DE INFOGRAFÍA IA (Smart Brief)
+// ============================================================
+function generateSmartInfographic() {
+    const t = translations[currentLang];
+    if (!t) return;
+
+    // 1. RECOPILAR DATOS
+    const selYears = Array.from(document.querySelectorAll('#items-year input:checked')).map(i => Number(i.value));
+    const selMonths = Array.from(document.querySelectorAll('#items-month input:checked')).map(i => Number(i.value));
+    const selCats = Array.from(document.querySelectorAll('#items-category input:checked')).map(i => i.value);
+
+    let data = finalData.filter(d => 
+        selYears.includes(d.year) && 
+        selMonths.includes(d.month) && 
+        selCats.includes(d.cat)
+    );
+    
+    if (typeof applySpatialFilter === 'function') data = applySpatialFilter(data);
+
+    if (data.length === 0) {
+        alert(currentLang === 'eu' ? "Ez dago daturik" : "No hay datos para la síntesis");
+        return;
+    }
+
+    document.getElementById('loading-overlay').classList.add('active');
+
+    // 2. CÁLCULOS
+    const total = data.length;
+    const catCounts = {};
+    data.forEach(d => catCounts[d.cat] = (catCounts[d.cat] || 0) + 1);
+    const sortedCats = Object.entries(catCounts).sort((a, b) => b[1] - a[1]);
+    
+    const topCatName = sortedCats.length > 0 ? sortedCats[0][0] : "N/A"; 
+    const topCatVal = sortedCats.length > 0 ? sortedCats[0][1] : 0;  
+    const percent = total > 0 ? (topCatVal / total) * 100 : 0;
+    const percentRounded = Math.round(percent);
+
+    const hourCounts = Array(24).fill(0);
+    data.forEach(d => hourCounts[d.hour]++);
+    const maxHourIdx = hourCounts.indexOf(Math.max(...hourCounts));
+    const peakTime = `${String(maxHourIdx).padStart(2,'0')}:00 - ${String(maxHourIdx+1).padStart(2,'0')}:00`;
+
+    const dayCounts = Array(7).fill(0);
+    data.forEach(d => dayCounts[d.date.getDay()]++);
+    const maxDayIdx = dayCounts.indexOf(Math.max(...dayCounts));
+    const busiestDay = t.days_full ? t.days_full[maxDayIdx] : "---";
+
+    // 3. FUNCIÓN AUXILIAR PARA LLENAR DATOS
+    const setSafeInner = (id, value, isHTML = false) => {
+        const el = document.getElementById(id);
+        if (el) {
+            if (isHTML) el.innerHTML = value;
+            else el.innerText = value;
+        }
+    };
+
+    // 4. RELLENAR TEXTOS
+    const yearsText = selYears.length > 3 ? (currentLang === 'eu' ? "Anitzak" : "Multi-Periodo") : selYears.join(', ');
+    setSafeInner('info-title', `${t.info_report_title || 'Informe'} ${yearsText}`);
+    setSafeInner('info-date', new Date().toLocaleDateString());
+
+    const insightHTML = (t.info_insight_text || "Categoría: {cat} ({percent}%)")
+        .replace('{cat}', `<span style="color:#ffd600">${truncateText(topCatName, 60)}</span>`)
+        .replace('{percent}', percentRounded);
+    setSafeInner('info-insight-main', insightHTML, true);
+
+    setSafeInner('info-stat-total', total.toLocaleString());
+    setSafeInner('info-stat-peak', peakTime);
+    setSafeInner('info-stat-day', busiestDay);
+
+    let trendText = t.info_trend_night;
+    if (maxHourIdx >= 6 && maxHourIdx < 14) trendText = t.info_trend_morning;
+    else if (maxHourIdx >= 14 && maxHourIdx < 22) trendText = t.info_trend_afternoon;
+    setSafeInner('info-text-trend', trendText);
+    
+    // Lista Top 3
+    const listContainer = document.getElementById('info-top-list');
+    if (listContainer) {
+        listContainer.innerHTML = '';
+        sortedCats.slice(0, 3).forEach(item => {
+            const li = document.createElement('li');
+            li.innerHTML = `<span>${truncateText(item[0], 45)}</span> <span>${item[1].toLocaleString()}</span>`;
+            listContainer.appendChild(li);
+        });
+    }
+
+    // --- SECCIÓN DOMINANCIA (CORREGIDA) ---
+    setSafeInner('info-pie-percent', `${percentRounded}%`);
+    const circle = document.getElementById('svg-pie-progress');
+    if (circle) {
+        const radius = circle.r.baseVal.value;
+        const circumference = 2 * Math.PI * radius;
+        const offset = circumference - (percent / 100) * circumference;
+        circle.style.strokeDasharray = circumference; // Asegurar que el total es correcto
+        circle.style.strokeDashoffset = offset;
+    }
+
+    setSafeInner('info-lbl-leader', truncateText(topCatName, 40));
+    
+    const lblRestoText = currentLang === 'es' ? 'Resto' : (currentLang === 'eu' ? 'Gainerakoak' : (currentLang === 'ca' ? 'Resta' : 'Resto'));
+    setSafeInner('info-lbl-resto', lblRestoText);
+
+    const restVal = total - topCatVal;
+    setSafeInner('info-pie-subtext', `${topCatVal.toLocaleString()} vs ${restVal.toLocaleString()}`);
+
+    // Aplicar i18n final
+    document.querySelectorAll('#ai-infographic-container [data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (t[key]) el.textContent = t[key];
+    });
+
+    // 5. EXPORTACIÓN
+// ... (Cálculos y llenado de datos igual que antes) ...
+
+    // 5. EXPORTACIÓN (AJUSTADA AL CUADRO COMPLETO)
+    const container = document.getElementById('ai-infographic-container');
+
+    setTimeout(() => {
+        // Calculamos dimensiones reales del contenido
+        const contentHeight = container.scrollHeight;
+        const contentWidth = container.scrollWidth;
+
+        html2canvas(container, {
+            scale: 2, // Calidad retina
+            useCORS: true,
+            backgroundColor: '#f3f4f6',
+            width: 800, // Forzamos el ancho de diseño
+            height: contentHeight, // Capturamos TODA la altura calculada
+            windowWidth: 800,
+            windowHeight: contentHeight,
+            onclone: (clonedDoc) => {
+                const clonedEl = clonedDoc.getElementById('ai-infographic-container');
+                clonedEl.style.display = 'flex';
+                clonedEl.style.position = 'relative';
+                clonedEl.style.left = '0';
+                clonedEl.style.top = '0';
+                clonedEl.style.height = 'auto';
+            }
+        }).then(canvas => {
+            const link = document.createElement('a');
+            const fileNamePrefix = currentLang === 'eu' ? 'Sintesia' : (currentLang === 'ca' ? 'Sintesi' : 'Sintesis');
+            link.download = `Eurocop_${fileNamePrefix}_${new Date().getTime()}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }).catch(err => {
+            console.error("Error en captura:", err);
+            alert("Error al generar la imagen.");
+        }).finally(() => {
+            document.getElementById('loading-overlay').classList.remove('active');
+        });
+    }, 800); // Un poco más de tiempo para renderizar el SVG completo
 }
