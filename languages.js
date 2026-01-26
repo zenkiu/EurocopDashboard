@@ -40,6 +40,7 @@ const translations = {
         sel_select: "Seleccionar...",
         kpi_expedientes: "Expedientes",
         kpi_zona: "Zona",
+        kpi_titulo: "TÍTULO",
         kpi_periodo: "Periodo",
         kpi_waiting: "Esperando...",
         kpi_filtered: "Filtrado",
@@ -76,7 +77,8 @@ const translations = {
         info_trend_afternoon: "Se observa un repunte significativo durante la tarde-noche, típico de actividades sociales y cierre de comercios.",
         info_trend_night: "La actividad nocturna es predominante, lo que podría requerir vigilancia especial en horarios de madrugada.",
         days_full: ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'],
-        info_report_title: "Informe"
+        info_report_title: "Informe",
+        btn_ai_infographic: "SÍNTESIS"
     },
     eu: {
         nav_title: "EUROCOP",
@@ -119,6 +121,7 @@ const translations = {
         sel_select: "Hautatu...",
         kpi_expedientes: "Espedienteak",
         kpi_zona: "Eremua",
+        kpi_titulo: "IZENBURUA",
         kpi_periodo: "Epea",
         kpi_waiting: "Zain...",
         kpi_filtered: "Iragazita",
@@ -154,7 +157,8 @@ const translations = {
         info_trend_afternoon: "Arratsalde-gauean gorakada nabarmena ikusten da, gizarte-jarduerekin eta denden itxierarekin lotua.",
         info_trend_night: "Gaueko jarduera nagusia da, eta horrek zainketa berezia behar dezake goizaldean.",
         days_full: ['Igandea', 'Astelehena', 'Asteartea', 'Asteazkena', 'Osteguna', 'Ostirala', 'Larunbata'],
-        info_report_title: "Txostena"
+        info_report_title: "Txostena",
+        btn_ai_infographic: "SINTESIA"
     },
     ca: {
         nav_title: "EUROCOP",
@@ -196,6 +200,7 @@ const translations = {
         sel_select: "Seleccionar...",
         kpi_expedientes: "Expedients",
         kpi_zona: "Zona",
+        kpi_titulo: "TÍTOL",
         kpi_periodo: "Període",
         kpi_waiting: "Esperant...",
         kpi_filtered: "Filtrat",
@@ -207,6 +212,7 @@ const translations = {
         view_months: "Vista: Mesos",
         view_quarters: "Vista: Trimestral",
         view_days: "Vista: Dies Setmanal",
+        loading_msg: "Processant l'arxiu...",
         months_abbr: ['Gen', 'Feb', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Oct', 'Nov', 'Des'],
         days_abbr: ['Dl-Dilluns', 'Dm-Dimarts', 'Dc-Dimecres', 'Dj-Dijous', 'Dv-Divendres', 'Ds-Dissabte', 'Dg-Diumenge'],
         quarters: ['1r Trim', '2n Trim', '3r Trim', '4t Trim'],
@@ -230,7 +236,8 @@ const translations = {
         info_trend_afternoon: "S'observa un repunt significatiu durant la tarda-nit, típic d'activitats socials i tancament de comerços.",
         info_trend_night: "L'activitat nocturna és predominant, la qual cosa podria requerir vigilància especial en horaris de matinada.",
         days_full: ['Diumenge', 'Dilluns', 'Dimarts', 'Dimecres', 'Dijous', 'Divendres', 'Dissabte'],
-        info_report_title: "Informe"
+        info_report_title: "Informe",
+        btn_ai_infographic: "SÍNTESI"
     },
     gl: {
         nav_title: "EUROCOP",
@@ -272,6 +279,7 @@ const translations = {
         sel_select: "Seleccionar...",
         kpi_expedientes: "Expedientes",
         kpi_zona: "Zona",
+        kpi_titulo: "TÍTULO",
         kpi_periodo: "Período",
         kpi_waiting: "Agardando...",
         kpi_filtered: "Filtrado",
@@ -307,6 +315,7 @@ const translations = {
         info_trend_afternoon: "Obsérvase un repunte significativo durante a tarde-noite, típico de actividades sociais e peche de comercios.",
         info_trend_night: "A actividade nocturna é predominante, o que podería requirir vixilancia especial en horarios de madrugada.",
         days_full: ['Domingo', 'Luns', 'Martes', 'Mércores', 'Xoves', 'Venres', 'Sábado'],
-        info_report_title: "Informe"
+        info_report_title: "Informe",
+        btn_ai_infographic: "SÍNTESE"
     }
 };

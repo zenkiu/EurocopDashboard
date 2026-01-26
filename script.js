@@ -729,8 +729,8 @@ function updateUI() {
    // updateLocationKPI(filtered);
 
     // 7. ACTUALIZAR TÍTULOS ESTÁTICOS
-    const labelTitulo = document.getElementById('card-label-titulo');
-    if (labelTitulo) labelTitulo.innerText = currentLang === 'eu' ? "IZENBURUA" : "TITULO";
+    //const labelTitulo = document.getElementById('card-label-titulo');
+    //if (labelTitulo) labelTitulo.innerText = currentLang === 'eu' ? "IZENBURUA" : "TITULO";
     
     const textFilename = document.getElementById('card-text-filename');
     if (textFilename) textFilename.innerText = nombreArchivoSubido || "SIN ARCHIVO";
@@ -983,61 +983,60 @@ function initMap() {
 // ============================================================
 function updateMapData(data) {
     const container = document.getElementById('container-map');
-    
-    // 1. Filtrar solo los registros que tienen Geoposicionamiento real
     const datosConGeo = data.filter(d => d.hasGeo); 
 
-    // --- LÓGICA DE VISIBILIDAD MEJORADA ---
-    // Verificamos si hay "razones" para mantener el mapa abierto aunque no haya puntos
+    // --- LÓGICA DE VISIBILIDAD ---
     const isFilterActive = document.getElementById('chk-spatial-filter')?.checked;
     const hasLayers = (typeof mapLayers !== 'undefined' && mapLayers.length > 0);
     const shouldKeepOpen = isFilterActive || hasLayers;
 
     if (datosConGeo.length === 0 && !shouldKeepOpen) {
-        // Solo ocultamos el mapa si NO hay datos Y TAMPOCO hay capas/filtros activos
         if (container && container.classList.contains('active-map')) {
             container.classList.remove('active-map');
         }
         return; 
     } else {
-        // --- MOSTRAR MAPA (O mantenerlo) ---
-        if (container) {
-            const estabaOculto = !container.classList.contains('active-map');
-            
-            if (estabaOculto) {
-                container.classList.add('active-map');
-                // Esperar transición CSS para redimensionar
-                setTimeout(() => { if (map) map.resize(); }, 650);
-            } else {
-                if (map) map.resize();
-            }
+        if (container && !container.classList.contains('active-map')) {
+            container.classList.add('active-map');
+            setTimeout(() => { if (map) map.resize(); }, 650);
         }
     }
 
-    // 3. Actualizar datos del mapa (Puntos)
-    if (!map || !map.getSource('puntos')) return;
+if (!map || !map.getSource('puntos')) return;
 
-    const geojson = { 
-        type: 'FeatureCollection', 
-        features: datosConGeo.map(d => ({ 
+// Definimos la intensidad de la dispersión (0.0002 es ideal para calles)
+const factor = 0.0002; 
+
+const geojson = { 
+    type: 'FeatureCollection', 
+    features: datosConGeo.map(d => {
+        // Si hay varios puntos iguales, les sumamos un valor aleatorio minúsculo
+        const jitterLon = (Math.random() - 0.5) * factor;
+        const jitterLat = (Math.random() - 0.5) * factor;
+
+        return { 
             type: 'Feature', 
-            geometry: { type: 'Point', coordinates: [d.lon, d.lat] }, 
+            geometry: { 
+                type: 'Point', 
+                coordinates: [d.lon + jitterLon, d.lat + jitterLat] // <--- AQUÍ se aplica
+            }, 
             properties: { 
-                exp: d.exp, cat: d.cat, year: d.year, 
-                fullDate: d.date.toLocaleString(undefined, { 
-                    year: 'numeric', month: 'numeric', day: 'numeric', 
-                    hour: '2-digit', minute: '2-digit' 
-                }), 
-                calle: d.calle, numero: d.numero, 
-                refnum: d.refnum, refanno: d.refanno 
+                exp: d.exp, 
+                cat: d.cat, 
+                year: d.year, 
+                fullDate: d.date.toLocaleString(), 
+                refnum: d.refnum, 
+                refanno: d.refanno 
             } 
-        })) 
-    };
+        };
+    })
+};
+
+    // --- FIN JITTERING ---
     
-    // Actualizamos la fuente (Si está vacío, simplemente borrará los puntos viejos)
     map.getSource('puntos').setData(geojson);
     
-    // Colores por año (Lógica existente)
+    // (El resto del código de colores y zoom se mantiene igual...)
     const allY = [...new Set(finalData.map(d => d.year))].sort((a,b) => a-b);
     const colorExpr = ['match', ['get', 'year']];
     const localColors = window.yearColors || [
@@ -1050,19 +1049,13 @@ function updateMapData(data) {
     colorExpr.push('#5e72e4'); 
     map.setPaintProperty('point-layer', 'circle-color', colorExpr);
     
-    // Centrar el mapa SOLO si hay puntos nuevos
-    // (Si no hay puntos, no movemos el mapa para no perder de vista el polígono)
     if (datosConGeo.length > 0) {
         const bounds = new maplibregl.LngLatBounds();
         datosConGeo.forEach(d => bounds.extend([d.lon, d.lat]));
-        
-        // Pequeño debounce para no marear con el zoom
         if (!window.isZooming) {
             window.isZooming = true;
             setTimeout(() => {
-                try { 
-                    map.fitBounds(bounds, { padding: 40, maxZoom: 16 }); 
-                } catch (e) { console.log(e); }
+                try { map.fitBounds(bounds, { padding: 40, maxZoom: 16 }); } catch (e) {}
                 window.isZooming = false;
             }, 700); 
         }

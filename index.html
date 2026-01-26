@@ -261,7 +261,7 @@
             <!-- BOTÓN IA INFOGRAFÍA -->
             <button class="btn-ai-infographic" onclick="generateSmartInfographic()">
                 <i class="fa-solid fa-wand-magic-sparkles"></i> 
-                <span data-i18n="btn_ai_infographic">SINTESIS</span>
+                <span data-i18n="btn_ai_infographic">SÍNTESIS</span>
             </button>
             <div class="sidebar-footer">
                 <img src="./ImagenCoorporativa/zzenkiu.png" alt="Zzenkiu" class="sidebar-logo">
@@ -278,12 +278,11 @@
                     <div class="kpi-icon" style="background: #2dce89;"><i class="fa-solid fa-location-crosshairs"></i></div>
                      <div class="kpi-data"><h3 data-i18n="kpi_zona">Zona</h3><span id="kpi-location" data-i18n="kpi_waiting">Esperando...</span></div>
                 </div>
+                <!-- Busca esta parte y déjala así: -->
                 <div class="kpi-card">
                     <div class="kpi-icon" style="background: #fb6340;"><i class="fa-solid fa-calendar-check"></i></div>
                     <div class="kpi-data">
-                        <!-- 1. ID para el título -->
-                        <h3 id="card-label-titulo">TITULO</h3> 
-                        <!-- 2. ID para el nombre del archivo -->
+                        <h3 id="card-label-titulo" data-i18n="kpi_titulo">TÍTULO</h3> <!-- Añadido data-i18n -->
                         <span id="card-text-filename">SIN ARCHIVO</span>
                     </div>
                 </div>
