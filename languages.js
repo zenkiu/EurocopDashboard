@@ -79,7 +79,8 @@ const translations = {
         info_trend_night: "La actividad nocturna es predominante, lo que podría requerir vigilancia especial en horarios de madrugada.",
         days_full: ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'],
         info_report_title: "Informe",
-        btn_ai_infographic: "SÍNTESIS"
+        btn_ai_infographic: "SÍNTESIS",
+        btn_download_tip: "Descargar Imagen"
     },
     eu: {
         nav_title: "EUROCOP",
@@ -160,7 +161,8 @@ const translations = {
         info_trend_night: "Gaueko jarduera nagusia da, eta horrek zainketa berezia behar dezake goizaldean.",
         days_full: ['Igandea', 'Astelehena', 'Asteartea', 'Asteazkena', 'Osteguna', 'Ostirala', 'Larunbata'],
         info_report_title: "Txostena",
-        btn_ai_infographic: "SINTESIA"
+        btn_ai_infographic: "SINTESIA",
+        btn_download_tip: "Irudia Deskargatu"
     },
     ca: {
         nav_title: "EUROCOP",
@@ -240,7 +242,8 @@ const translations = {
         info_trend_night: "L'activitat nocturna és predominant, la qual cosa podria requerir vigilància especial en horaris de matinada.",
         days_full: ['Diumenge', 'Dilluns', 'Dimarts', 'Dimecres', 'Dijous', 'Divendres', 'Dissabte'],
         info_report_title: "Informe",
-        btn_ai_infographic: "SÍNTESI"
+        btn_ai_infographic: "SÍNTESI",
+        btn_download_tip: "Descarregar Imatge"
     },
     gl: {
         nav_title: "EUROCOP",
@@ -320,6 +323,7 @@ const translations = {
         info_trend_night: "A actividade nocturna é predominante, o que podería requirir vixilancia especial en horarios de madrugada.",
         days_full: ['Domingo', 'Luns', 'Martes', 'Mércores', 'Xoves', 'Venres', 'Sábado'],
         info_report_title: "Informe",
-        btn_ai_infographic: "SÍNTESE"
+        btn_ai_infographic: "SÍNTESE",
+        btn_download_tip: "Descargar Imaxe"
     }
 };

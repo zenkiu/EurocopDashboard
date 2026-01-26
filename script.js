@@ -944,7 +944,14 @@ function updateCharts(data, selYears) {
 // ============================================================
 function initMap() {
     if (map) map.remove();
-    map = new maplibregl.Map({ container: 'main-map', style: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json', center: [-2.63, 43.17], zoom: 12, preserveDrawingBuffer: true });
+    map = new maplibregl.Map({ 
+        container: 'main-map', 
+        style: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json', 
+        center: [-2.63, 43.17], 
+        zoom: 12, 
+        preserveDrawingBuffer: true, // Esto ya lo tenías, mantenlo.
+        antialias: true              // Añade esto para mejorar compatibilidad de captura.
+    });
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
 
     map.on('load', () => {
@@ -2300,4 +2307,74 @@ function generateSmartInfographic() {
             document.getElementById('loading-overlay').classList.remove('active');
         });
     }, 800); // Un poco más de tiempo para renderizar el SVG completo
+}
+/**
+ * Descarga el contenido actual de un contenedor (Gráfico, Mapa o Tabla) como imagen
+ * @param {string} containerId ID del contenedor padre
+ */
+function downloadComponent(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    // 1. Caso específico para el MAPA
+    if (containerId === 'container-map' && map) {
+        // Forzamos al mapa a redibujarse para llenar el búfer
+        map.triggerRepaint();
+
+        // Esperamos al siguiente "frame" de renderizado para capturar
+        requestAnimationFrame(() => {
+            try {
+                // Buscamos el canvas técnico de MapLibre
+                const mapCanvas = container.querySelector('.maplibregl-canvas');
+                if (mapCanvas) {
+                    const link = document.createElement('a');
+                    link.download = `Mapa_${nombreArchivoSubido}_${new Date().getTime()}.png`;
+                    // Capturamos el contenido del canvas
+                    link.href = mapCanvas.toDataURL('image/png');
+                    link.click();
+                }
+            } catch (e) {
+                console.error("Error capturando mapa:", e);
+                alert("Error al exportar el mapa. Inténtalo de nuevo.");
+            }
+        });
+        return;
+    }
+
+    // 2. Caso para las TABLAS (Evolución, Calles, etc.)
+    const tableView = container.querySelector('.table-view');
+    if (tableView && tableView.style.display !== 'none') {
+        document.getElementById('loading-overlay').classList.add('active');
+        html2canvas(tableView, {
+            scale: 2,
+            backgroundColor: '#ffffff',
+            useCORS: true,
+            logging: false
+        }).then(canvasTable => {
+            const link = document.createElement('a');
+            link.download = `Tabla_${containerId}.png`;
+            link.href = canvasTable.toDataURL('image/png');
+            link.click();
+            document.getElementById('loading-overlay').classList.remove('active');
+        });
+        return;
+    }
+
+    // 3. Caso para Gráficos de Chart.js
+    const standardCanvas = container.querySelector('canvas:not(.maplibregl-canvas)');
+    if (standardCanvas) {
+        const link = document.createElement('a');
+        link.download = `Grafico_${containerId}.png`;
+        
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = standardCanvas.width;
+        tempCanvas.height = standardCanvas.height;
+        const ctx = tempCanvas.getContext('2d');
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+        ctx.drawImage(standardCanvas, 0, 0);
+        
+        link.href = tempCanvas.toDataURL('image/png');
+        link.click();
+    }
 }

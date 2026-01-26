@@ -293,11 +293,19 @@
             </div>
 
             <div class="charts-grid-top">
+                <!-- GRÁFICO 1: EVOLUCIÓN -->
                 <div class="chart-container" id="container-timeline">
                     <div class="chart-header">
-                        <h4 data-i18n="chart_timeline">Evolución</h4>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <!-- NUEVO: BOTÓN DESCARGA -->
+                            <button class="btn-mini" onclick="downloadComponent('container-timeline')" title="Descargar Imagen" style="border:none; background:transparent; padding:0; color:var(--accent-blue); cursor:pointer;">
+                                <i class="fa-solid fa-download"></i>
+                            </button>
+                            <h4 data-i18n="chart_timeline">Evolución</h4>
+                        </div>
+                        
                         <div class="header-actions">
-                            <!-- 1. Selector de periodo (Años, Meses, etc.) -->
+                            <!-- Selector de periodo -->
                             <select id="select-temporal-view" class="btn-mini" onchange="changeTemporalView(this.value)">
                                 <option value="year" data-i18n="view_years">Vista: Años</option>
                                 <option value="month" selected data-i18n="view_months">Vista: Meses</option>
@@ -305,17 +313,17 @@
                                 <option value="day" data-i18n="view_days">Vista: Días Semanal</option>
                             </select>
                             
-                            <!-- 2. NUEVO BOTÓN: Alternar entre Barras y Líneas -->
+                            <!-- Alternar entre Barras y Líneas -->
                             <button class="btn-mini" id="btn-toggle-chart-type" onclick="toggleTimelineType()" title="Cambiar a Líneas">
                                 <i class="fa-solid fa-chart-line"></i>
                             </button>
 
-                            <!-- 3. Botón Ver Tabla de Datos -->
+                            <!-- Ver Tabla de Datos -->
                             <button class="btn-mini" id="btn-toggle-view" onclick="toggleTimelineView()" title="Ver Tabla de Datos">
                                 <i class="fa-solid fa-table"></i>
                             </button>
 
-                            <!-- 4. Botón Pantalla Completa -->
+                            <!-- Pantalla Completa -->
                             <button class="btn-maximize" onclick="toggleFullscreen('container-timeline')">
                                 <i class="fa-solid fa-maximize"></i>
                             </button>
@@ -323,16 +331,22 @@
                     </div>
                     
                     <div class="canvas-wrapper">
-                        <!-- Lienzo del Gráfico -->
                         <canvas id="chart-timeline"></canvas>
-                        <!-- Contenedor de la Tabla (Oculto por defecto) -->
                         <div id="table-timeline-view" class="table-view" style="display: none;"></div>
                     </div>
                 </div>
 
+                <!-- GRÁFICO 2: TOP TIPOS -->
                 <div class="chart-container" id="container-category">
                     <div class="chart-header">
-                        <h4 data-i18n="chart_top">Top Tipos</h4>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <!-- NUEVO: BOTÓN DESCARGA -->
+                            <button class="btn-mini" onclick="downloadComponent('container-category')" title="Descargar Imagen" style="border:none; background:transparent; padding:0; color:var(--accent-blue); cursor:pointer;">
+                                <i class="fa-solid fa-download"></i>
+                            </button>
+                            <h4 data-i18n="chart_top">Top Tipos</h4>
+                        </div>
+                        
                         <div class="header-actions">
                             <button class="btn-mini" id="btn-toggle-view-cat" onclick="toggleCategoryView()" title="Ver Tabla de Datos">
                                 <i class="fa-solid fa-table"></i>
@@ -350,9 +364,17 @@
             </div>
 
             <div class="bottom-grid">
+                <!-- GRÁFICO 3: HORAS -->
                 <div class="chart-container" id="container-hours">
                     <div class="chart-header">
-                        <h4 data-i18n="chart_hours">Horas</h4>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <!-- NUEVO: BOTÓN DESCARGA -->
+                            <button class="btn-mini" onclick="downloadComponent('container-hours')" title="Descargar Imagen" style="border:none; background:transparent; padding:0; color:var(--accent-blue); cursor:pointer;">
+                                <i class="fa-solid fa-download"></i>
+                            </button>
+                            <h4 data-i18n="chart_hours">Horas</h4>
+                        </div>
+                        
                         <div class="header-actions">
                             <!-- Botón Tabla Horas -->
                             <button class="btn-mini" id="btn-toggle-view-hours" onclick="toggleHoursView()" title="Ver Tabla de Datos">
@@ -370,76 +392,82 @@
                     </div>
                 </div>
                 
-            <!-- ... dentro de index.html, en el contenedor del mapa ... -->
-            <!-- CONTENEDOR DEL MAPA (CON LISTADO DE CALLES INTEGRADO) -->
-            <div class="map-container-wrapper" id="container-map">
-                <div class="chart-header">
-                    <h4 data-i18n="chart_map">Mapa</h4>
-                    <div class="header-actions">
-                        
-                        <!-- NUEVO: BOTÓN LISTADO DE CALLES -->
-                        <button class="btn-mini" id="btn-toggle-streets" onclick="toggleStreetsView()" title="Ver Listado de Calles">
-                            <i class="fa-solid fa-list-ol"></i>
-                        </button>
-
-                        <!-- GESTOR DE CAPAS (Dropdown) -->
-                        <div class="layer-manager-container" style="position: relative;">
-                            <button class="btn-mini" id="btn-layers-menu" onclick="toggleLayerMenu()" title="Gestor de Capas">
-                                <i class="fa-solid fa-layer-group"></i>
+                <!-- GRÁFICO 4: MAPA / LISTADO DE CALLES -->
+                <div class="map-container-wrapper" id="container-map">
+                    <div class="chart-header">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <!-- NUEVO: BOTÓN DESCARGA -->
+                            <button class="btn-mini" onclick="downloadComponent('container-map')" title="Descargar Imagen" style="border:none; background:transparent; padding:0; color:var(--accent-blue); cursor:pointer;">
+                                <i class="fa-solid fa-download"></i>
                             </button>
-                            
-                            <div id="layers-dropdown" class="layer-dropdown-content">
-                                <div class="layer-header" style="flex-direction: column; align-items: flex-start; gap: 10px;">
-                                    <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
-                                        <span data-i18n="map_layers_title">Mis Capas</span>
-                                        <button id="btn-add-layer-icon" class="btn-add-layer" onclick="document.getElementById('input-geojson').click()" title="Subir GeoJSON">
-                                            <i class="fa-solid fa-plus"></i>
-                                        </button>
+                            <h4 data-i18n="chart_map">Mapa</h4>
+                        </div>
+                        
+                        <div class="header-actions">
+                            <!-- BOTÓN LISTADO DE CALLES -->
+                            <button class="btn-mini" id="btn-toggle-streets" onclick="toggleStreetsView()" title="Ver Listado de Calles">
+                                <i class="fa-solid fa-list-ol"></i>
+                            </button>
+
+                            <!-- GESTOR DE CAPAS (Dropdown) -->
+                            <div class="layer-manager-container" style="position: relative;">
+                                <button class="btn-mini" id="btn-layers-menu" onclick="toggleLayerMenu()" title="Gestor de Capas">
+                                    <i class="fa-solid fa-layer-group"></i>
+                                </button>
+                                
+                                <div id="layers-dropdown" class="layer-dropdown-content">
+                                    <div class="layer-header" style="flex-direction: column; align-items: flex-start; gap: 10px;">
+                                        <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
+                                            <span data-i18n="map_layers_title">Mis Capas</span>
+                                            <button id="btn-add-layer-icon" class="btn-add-layer" onclick="document.getElementById('input-geojson').click()" title="Subir GeoJSON">
+                                                <i class="fa-solid fa-plus"></i>
+                                            </button>
+                                        </div>
+                                        
+                                        <div style="display:flex; align-items:center; gap:8px; font-size:0.7rem; color:#525f7f; width:100%; padding-top:5px; border-top:1px solid #eee;">
+                                            <label class="switch">
+                                                <input type="checkbox" id="chk-spatial-filter" onchange="triggerUpdateWithLoader()">
+                                                <span class="slider round"></span>
+                                            </label>
+                                            <span data-i18n="map_filter_zone">Filtrar datos por zona</span>
+                                        </div>
                                     </div>
-                                    
-                                    <div style="display:flex; align-items:center; gap:8px; font-size:0.7rem; color:#525f7f; width:100%; padding-top:5px; border-top:1px solid #eee;">
-                                        <label class="switch">
-                                            <input type="checkbox" id="chk-spatial-filter" onchange="triggerUpdateWithLoader()">
-                                            <span class="slider round"></span>
-                                        </label>
-                                        <span data-i18n="map_filter_zone">Filtrar datos por zona</span>
+                                    <div id="layers-list" class="layer-list-body">
+                                        <p class="empty-layers-msg" data-i18n="map_no_layers">Sin capas cargadas</p>
                                     </div>
-                                </div>
-                                <div id="layers-list" class="layer-list-body">
-                                    <p class="empty-layers-msg" data-i18n="map_no_layers">Sin capas cargadas</p>
                                 </div>
                             </div>
-                        </div>
 
-                        <!-- BOTONES DE HERRAMIENTAS MAPA -->
-                        <input type="file" id="input-geojson" accept=".geojson, .json" style="display: none;" onchange="handleGeojsonUpload(this)">
-                        
-                        <button class="btn-mini" id="btn-heatmap" onclick="toggleHeatmap(this)" title="Mapa de Calor">
-                            <i class="fa-solid fa-fire"></i>
-                        </button>
-                        
-                        <button class="btn-mini" onclick="toggleSatelite(this)" title="Vista Satélite">
-                            <i class="fa-solid fa-earth-americas"></i>
-                        </button>
-                        
-                        <button class="btn-mini" onclick="toggle3D()" title="Vista 3D">
-                            <i class="fa-solid fa-cube"></i>
-                        </button>
-                        
-                        <button class="btn-maximize" onclick="toggleFullscreen('container-map')" title="Pantalla Completa">
-                            <i class="fa-solid fa-expand"></i>
-                        </button>
+                            <!-- HERRAMIENTAS MAPA -->
+                            <input type="file" id="input-geojson" accept=".geojson, .json" style="display: none;" onchange="handleGeojsonUpload(this)">
+                            
+                            <button class="btn-mini" id="btn-heatmap" onclick="toggleHeatmap(this)" title="Mapa de Calor">
+                                <i class="fa-solid fa-fire"></i>
+                            </button>
+                            
+                            <button class="btn-mini" onclick="toggleSatelite(this)" title="Vista Satélite">
+                                <i class="fa-solid fa-earth-americas"></i>
+                            </button>
+                            
+                            <button class="btn-mini" onclick="toggle3D()" title="Vista 3D">
+                                <i class="fa-solid fa-cube"></i>
+                            </button>
+                            
+                            <button class="btn-maximize" onclick="toggleFullscreen('container-map')" title="Pantalla Completa">
+                                <i class="fa-solid fa-expand"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="canvas-wrapper">
+                        <!-- VISTA DE MAPA -->
+                        <div id="main-map"></div>
+                        <!-- VISTA DE TABLA DE CALLES -->
+                        <div id="table-streets-view" class="table-view" style="display: none;"></div>
                     </div>
                 </div>
-
-                <div class="canvas-wrapper">
-                    <!-- VISTA DE MAPA -->
-                    <div id="main-map"></div>
-                    
-                    <!-- VISTA DE TABLA DE CALLES (Oculta por defecto) -->
-                    <div id="table-streets-view" class="table-view" style="display: none;"></div>
-                </div>
             </div>
+
     </div>
     <div class="canvas-wrapper">
         <div id="main-map"></div>
