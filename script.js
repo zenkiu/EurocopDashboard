@@ -31,6 +31,10 @@ let isTableHoursView = false;
 let tableHoursDataCache = [];
 let currentSortHours = { col: 'hour', dir: 'asc' };
 
+let isTableStreetsView = false;
+let tableStreetsDataCache = [];
+let currentSortStreets = { col: 'count', dir: 'desc' };
+
 const yearColors = [
     { bg: 'rgba(94, 114, 228, 0.7)', border: '#5e72e4' },   
     { bg: 'rgba(45, 206, 137, 0.7)', border: '#2dce89' },   
@@ -188,7 +192,8 @@ function goToMapping() {
 function showMapping(data) {
     rawData = data;
     const headers = Object.keys(data[0]);
-    const mappingIds = ['map-expediente', 'map-fecha', 'map-hora', 'map-lat', 'map-lon', 'map-categoria'];
+    // Añadimos 'map-calle' a la lista de IDs
+    const mappingIds = ['map-expediente', 'map-fecha', 'map-hora', 'map-lat', 'map-lon', 'map-categoria', 'map-calle'];
     
     mappingIds.forEach(id => {
         const sel = document.getElementById(id);
@@ -202,7 +207,6 @@ function showMapping(data) {
             newSel.innerHTML = '<option value="">-- Sin hora (00:00) --</option>';
         } 
         else if (id === 'map-categoria') {
-            // --- OPCIÓN ESPECIAL PARA ARCHIVOS ESTADÍSTICOS ---
             newSel.innerHTML = '<option value="" disabled selected>Seleccionar...</option>';
             const optSpecial = document.createElement('option');
             optSpecial.value = "***MULTI_COLUMN***";
@@ -222,7 +226,7 @@ function showMapping(data) {
             newSel.appendChild(opt);
         });
 
-        // AUTO-SELECCIÓN
+        // AUTO-SELECCIÓN INTELIGENTE
         let match = null;
         if (id === 'map-expediente') {
             match = headers.find(h => h.toUpperCase().includes('REFNUM')) || 
@@ -244,6 +248,12 @@ function showMapping(data) {
         else if (id === 'map-categoria') {
             match = headers.find(h => h.toUpperCase().includes('TIPO') || h.toUpperCase().includes('CAT') || h.toUpperCase().includes('CAUSA'));
         }
+        // NUEVA AUTO-SELECCIÓN DE CALLE
+        else if (id === 'map-calle') {
+            match = headers.find(h => h.toUpperCase().includes('CALLE') || h.toUpperCase().includes('DIR') || 
+                                     h.toUpperCase().includes('DOMICILIO') || h.toUpperCase().includes('VIA') ||
+                                     h.toUpperCase().includes('EMPLAZAMIENTO'));
+        }
 
         if (match) newSel.value = match;
     });
@@ -252,27 +262,34 @@ function showMapping(data) {
     if(locInput) locInput.value = "";
     
     refreshMappingStatus();
-    document.getElementById('upload-view').classList.remove('active'); // Quitar activa a upload
-    document.getElementById('mapping-view').classList.add('active');   // Poner activa a mapping
+    document.getElementById('upload-view').classList.remove('active');
+    document.getElementById('mapping-view').classList.add('active');
     window.scrollTo(0, 0);
 }
 
 function refreshMappingStatus() {
-    const mappingIds = ['map-expediente', 'map-fecha', 'map-hora', 'map-lat', 'map-lon', 'map-categoria'];
+    const mappingIds = ['map-expediente', 'map-fecha', 'map-hora', 'map-lat', 'map-lon', 'map-categoria', 'map-calle'];
+    
+    // Obtenemos los valores seleccionados actualmente
     const currentSelections = mappingIds.map(id => {
         const el = document.getElementById(id);
-        return el ? el.value : "";
-    }).filter(val => val !== "");
+        return (el && el.value) ? el.value : "";
+    }).filter(val => val !== "" && val !== "***MULTI_COLUMN***");
 
     mappingIds.forEach(id => {
         const sel = document.getElementById(id);
         if(!sel) return;
+        
         Array.from(sel.options).forEach(opt => {
             if (opt.value === "" || opt.disabled || opt.value === "***MULTI_COLUMN***") return;
+            
+            // Si la columna ya está usada en OTRO selector, la marcamos
             const isUsedElsewhere = currentSelections.includes(opt.value) && sel.value !== opt.value;
-            let textoVisual = opt.value.replace('__EMPTY', 'BLANCO'); 
+            
+            let textoLimpio = opt.value.replace('__EMPTY', 'BLANCO'); 
             const symbol = isUsedElsewhere ? "✕ " : (sel.value === opt.value ? "✓ " : "• ");
-            opt.textContent = symbol + textoVisual;
+            
+            opt.textContent = symbol + textoLimpio;
             opt.style.color = isUsedElsewhere ? "#cbd5e0" : "#5e72e4";
         });
     });
@@ -282,14 +299,18 @@ function refreshMappingStatus() {
 // 5. PROCESAMIENTO
 // ============================================================
 document.getElementById('btn-visualizar').onclick = () => {
+    // 1. VALIDACIÓN INICIAL Y CAPTURA DE CONFIGURACIÓN
+    const getVal = (id) => document.getElementById(id) ? document.getElementById(id).value : "";
+
     const config = {
-        exp: document.getElementById('map-expediente').value,
-        fecha: document.getElementById('map-fecha').value,
-        hora: document.getElementById('map-hora').value,
-        lat: document.getElementById('map-lat').value,
-        lon: document.getElementById('map-lon').value,
-        cat: document.getElementById('map-categoria').value,
-        locManual: document.getElementById('map-localidad').value.trim() 
+        exp: getVal('map-expediente'),
+        fecha: getVal('map-fecha'),
+        hora: getVal('map-hora'),
+        lat: getVal('map-lat'),
+        lon: getVal('map-lon'),
+        cat: getVal('map-categoria'),
+        calle: getVal('map-calle'), // <--- IMPORTANTE: Captura la columna de calle
+        locManual: document.getElementById('map-localidad') ? document.getElementById('map-localidad').value.trim() : ""
     };
 
     if (!config.fecha) {
@@ -297,113 +318,110 @@ document.getElementById('btn-visualizar').onclick = () => {
         return;
     }
 
-    let registrosSinFecha = [];
-    finalData = [];
+    // 2. MOSTRAR PANTALLA DE CARGA
+    document.getElementById('loading-overlay').classList.add('active');
 
-    // --- LÓGICA 1: PROCESAMIENTO ESTADÍSTICO (COLUMNAS COMO CATEGORÍAS) ---
-    if (config.cat === "***MULTI_COLUMN***") {
-        rawData.forEach(row => {
-            let valFecha = row[config.fecha];
-            let d;
-            if (valFecha instanceof Date) d = new Date(valFecha);
-            else if (typeof valFecha === 'string' && valFecha.includes('/')) {
-                const parts = valFecha.split('/');
-                if (parts.length >= 3) d = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
-                else d = new Date(valFecha);
-            } else d = new Date(valFecha);
+    // Usamos un pequeño delay para que el navegador tenga tiempo de pintar el spinner
+    setTimeout(() => {
+        try {
+            let registrosSinFecha = [];
+            finalData = [];
 
-            if (isNaN(d.getTime())) return; 
+            // 3. PROCESAMIENTO DE LOS DATOS
+            finalData = rawData.map(row => {
+                let valFecha = row[config.fecha];
+                let d;
+                
+                // Tratamiento de Fecha (Date vs String)
+                if (valFecha instanceof Date) {
+                    d = new Date(valFecha);
+                } else if (typeof valFecha === 'string' && valFecha.includes('/')) {
+                    const parts = valFecha.split('/');
+                    if (parts.length >= 3) {
+                        d = new Date(parseInt(parts[2], 10), parseInt(parts[1], 10) - 1, parseInt(parts[0], 10));
+                    } else d = new Date(valFecha);
+                } else {
+                    d = new Date(valFecha);
+                }
 
-            Object.keys(row).forEach(colName => {
-                if (colName === config.fecha || colName === config.hora || colName === config.lat || colName === config.lon || colName === config.exp) return;
-                const val = row[colName];
-                const cantidad = parseInt(val);
-                if (!isNaN(cantidad) && cantidad > 0) {
-                    for (let i = 0; i < cantidad; i++) {
-                        finalData.push({
-                            exp: "AUTO-GEN", 
-                            date: d, year: d.getFullYear(), month: d.getMonth() + 1, hour: 12,
-                            lat: 0, lon: 0, hasGeo: false,
-                            cat: colName.trim().toUpperCase(),
-                            locManual: config.locManual,
-                            calle: "", numero: "", refnum: "", refanno: ""
-                        });
+                // Si la fecha es inválida, guardamos para el modal de errores
+                if (isNaN(d.getTime())) {
+                    const keyNum = Object.keys(row).find(k => k.toUpperCase().includes('REFNUM') || k.toUpperCase().includes('NUMERO'));
+                    registrosSinFecha.push(`REF: ${row[keyNum] || 'S/N'}`);
+                    return null;
+                }
+
+                // Tratamiento de Hora
+                if (config.hora && row[config.hora]) {
+                    const t = String(row[config.hora]).trim();
+                    if (t.includes(':')) {
+                        const p = t.split(':');
+                        d.setHours(parseInt(p[0]) || 0, parseInt(p[1]) || 0, 0);
                     }
                 }
-            });
-        });
-    } 
-    // --- LÓGICA 2: PROCESAMIENTO ESTÁNDAR (LISTADO) ---
-    else {
-        finalData = rawData.map(row => {
-            let valFecha = row[config.fecha];
-            let d;
-            if (valFecha instanceof Date) d = new Date(valFecha);
-            else if (typeof valFecha === 'string' && valFecha.includes('/')) {
-                const parts = valFecha.split('/');
-                if (parts.length >= 3) {
-                    d = new Date(parseInt(parts[2], 10), parseInt(parts[1], 10) - 1, parseInt(parts[0], 10));
-                } else d = new Date(valFecha);
-            } else d = new Date(valFecha);
 
-            if (isNaN(d.getTime())) {
-                const keys = Object.keys(row);
-                const keyAnno = keys.find(k => k.toUpperCase().includes('REFANNO')) || keys.find(k => k.toUpperCase().includes('ANNO'));
-                const keyNum  = keys.find(k => k.toUpperCase().includes('REFNUM')) || keys.find(k => k.toUpperCase().includes('REFEXP')) || keys.find(k => k.toUpperCase().includes('NUMERO'));
-                let valAnno = keyAnno ? row[keyAnno] : "??";
-                let valNum  = keyNum ? row[keyNum] : "??";
-                registrosSinFecha.push(`REF${valAnno}-${valNum}`);
-                return null;
-            }
-
-            if (config.hora && row[config.hora]) {
-                const t = String(row[config.hora]).trim();
-                if (t.includes(':')) { 
-                    const p = t.split(':'); 
-                    d.setHours(parseInt(p[0]) || 0, parseInt(p[1]) || 0, 0); 
+                // Tratamiento de Coordenadas (Limpieza de comas por puntos)
+                let lat = 0, lon = 0, tieneGeo = false;
+                if (config.lat && config.lon && row[config.lat] && row[config.lon]) {
+                    lat = parseFloat(String(row[config.lat]).replace(',', '.'));
+                    lon = parseFloat(String(row[config.lon]).replace(',', '.'));
+                    if (!isNaN(lat) && !isNaN(lon) && (lat !== 0 || lon !== 0)) {
+                        tieneGeo = true;
+                    }
                 }
-            }
+
+                // Retornamos el objeto normalizado
+                return {
+                    exp: row[config.exp] || "N/A",
+                    date: d, 
+                    year: d.getFullYear(), 
+                    month: d.getMonth() + 1, 
+                    hour: d.getHours(),
+                    lat, 
+                    lon, 
+                    hasGeo: tieneGeo,
+                    cat: row[config.cat] || "General",
+                    calle: row[config.calle] ? String(row[config.calle]).toUpperCase().trim() : "SIN CALLE / GPS",
+                    locManual: config.locManual,
+                    refnum: row['REFNUM'] || "", 
+                    refanno: row['REFANNO'] || ""
+                };
+            }).filter(v => v !== null);
+
+            // 4. TRANSICIÓN DE VISTAS
+            document.getElementById('mapping-view').classList.remove('active');
+            document.getElementById('dashboard-view').classList.add('active');
             
-            let lat = 0, lon = 0, tieneUbicacion = false;
-            if (config.lat && config.lon) {
-                lat = parseFloat(String(row[config.lat]).replace(',', '.'));
-                lon = parseFloat(String(row[config.lon]).replace(',', '.'));
-                if (!isNaN(lat) && !isNaN(lon) && (lat !== 0 || lon !== 0)) tieneUbicacion = true;
+            // Resetear scroll a la parte superior
+            window.scrollTo(0, 0);
+
+            // 5. INICIALIZAR COMPONENTES
+            setupFilters();
+            initMap();
+            
+            // 6. FIX CRÍTICO: CENTRADO DE MAPA Y RENDERIZADO
+            // Esperamos a que la animación de la página termine para que el mapa
+            // detecte su tamaño real y el zoom automático (fitBounds) funcione.
+            setTimeout(() => {
+                if (map) {
+                    map.resize(); // Fuerza al mapa a ocupar todo su div
+                }
+                updateUI(); // Calcula KPIs, Gráficos y activa el Zoom del mapa
+            }, 600);
+
+            // Mostrar errores de fecha si existen
+            if (registrosSinFecha.length > 0) {
+                showRejectedModal(registrosSinFecha);
             }
 
-            return {
-                exp: row[config.exp] || "N/A",
-                date: d, year: d.getFullYear(), month: d.getMonth() + 1, hour: d.getHours(),
-                lat, lon, hasGeo: tieneUbicacion,
-                cat: row[config.cat] || "General",
-                locManual: config.locManual, 
-                calle: row['CALLE'] || row['calle'] || "", numero: row['NUMERO'] || row['numero'] || "",
-                refnum: row['REFNUM'] || "", refanno: row['REFANNO'] || ""
-            };
-        }).filter(v => v !== null);
-    }
-
-    if (finalData.length === 0 && registrosSinFecha.length === 0) {
-        alert("No se han generado datos. Revisa el archivo.");
-        return;
-    }
-
-    document.getElementById('mapping-view').classList.remove('active');
-    document.getElementById('dashboard-view').classList.add('active')
-    // Resetear scroll
-    window.scrollTo(0, 0);
-    setupFilters();
-    initMap();
-    // Pequeño timeout para asegurar que el DOM está pintado antes de actualizar gráficos
-    setTimeout(() => {
-        updateUI();
-        if(map) map.resize(); // Forzar redimensionado del mapa
-    }, 500);
-
-    if (registrosSinFecha.length > 0) {
-        registrosSinFecha.sort((a, b) => b.localeCompare(a, undefined, { numeric: true, sensitivity: 'base' }));
-        showRejectedModal(registrosSinFecha);
-    }
+        } catch (err) {
+            console.error("Error en procesamiento:", err);
+            alert("Hubo un error al generar el dashboard. Revisa el formato de tus datos.");
+        } finally {
+            // Ocultar pantalla de carga
+            document.getElementById('loading-overlay').classList.remove('active');
+        }
+    }, 150);
 };
 
 function showRejectedModal(lista) {
@@ -627,6 +645,7 @@ function toggleGroup(containerId, state, event) {
 // ============================================================
 // 7. ACTUALIZAR UI
 // ============================================================
+let lastFilteredData = []; 
 function updateUI() {
     // 1. SINCRONIZAR SELECTOR DE VISTA TEMPORAL
     const temporalSelect = document.getElementById('select-temporal-view');
@@ -634,23 +653,14 @@ function updateUI() {
 
     const t = translations[currentLang];
     
-    // --- HELPER 1: Obtener valores (IDs) de los checkbox marcados ---
+    // HELPERS PARA ETIQUETAS DE FILTROS
     const getValues = (containerId) => {
         return Array.from(document.querySelectorAll(`#${containerId} input:checked`)).map(i => i.value);
     };
 
-    // --- HELPER 2: Obtener lista completa en texto (para el Tooltip) ---
-    const getFullListString = (containerId) => {
-        const checked = Array.from(document.querySelectorAll(`#${containerId} input:checked`));
-        if (checked.length === 0) return t.sel_none || "NINGUNO";
-        return checked.map(i => i.nextElementSibling.innerText).join(", ");
-    };
-
-    // --- HELPER 3: LÓGICA DE ETIQUETAS INTELIGENTE ---
     const getLabels = (containerId) => {
         const container = document.getElementById(containerId);
         if (!container) return "---";
-
         const allCount = container.querySelectorAll('input').length;
         const checkedInputs = Array.from(container.querySelectorAll('input:checked'));
         const count = checkedInputs.length;
@@ -658,82 +668,54 @@ function updateUI() {
         if (count === 0) return (t.sel_none || "NINGUNO").toUpperCase();
         if (count === allCount && allCount > 0) return (t.sel_all || "TODOS").toUpperCase();
         if (count === 1) return checkedInputs[0].nextElementSibling.innerText;
-        if (count === 2) {
-             const n1 = checkedInputs[0].nextElementSibling.innerText;
-             const n2 = checkedInputs[1].nextElementSibling.innerText;
-             const safeN1 = n1.length > 12 ? n1.substring(0,12) + '...' : n1;
-             const safeN2 = n2.length > 12 ? n2.substring(0,12) + '...' : n2;
-             return `${safeN1}, ${safeN2}`;
-        }
-        const labelSelected = currentLang === 'en' ? 'SELECTED' : 'SELECCIONADOS';
-        return `${count} ${labelSelected}`;
+        return `${count} ${(currentLang === 'en' ? 'SELECTED' : 'SELECCIONADOS')}`;
     };
 
-    // 2. OBTENER SELECCIONES ACTUALES DE FILTROS
+    // 2. OBTENER SELECCIONES ACTUALES
     const selYears = getValues('items-year').map(Number);
     const selMonths = getValues('items-month').map(Number);
     const selCats = getValues('items-category');
 
-    // 3. ACTUALIZAR TEXTOS E INDICADORES (Sidebar y Header)
-    if(document.getElementById('label-year')) {
-        document.getElementById('label-year').innerText = getLabels('items-year');
-        document.getElementById('label-year').title = getFullListString('items-year');
-    }
-    if(document.getElementById('header-year')) {
-        document.getElementById('header-year').innerText = getLabels('items-year');
-        document.getElementById('header-year').title = getFullListString('items-year');
-    }
+    // 3. ACTUALIZAR ETIQUETAS HEADER/SIDEBAR
+    if(document.getElementById('label-year')) document.getElementById('label-year').innerText = getLabels('items-year');
+    if(document.getElementById('header-year')) document.getElementById('header-year').innerText = getLabels('items-year');
+    if(document.getElementById('label-month')) document.getElementById('label-month').innerText = getLabels('items-month');
+    if(document.getElementById('header-month')) document.getElementById('header-month').innerText = getLabels('items-month');
+    if(document.getElementById('label-category')) document.getElementById('label-category').innerText = getLabels('items-category');
+    if(document.getElementById('header-category')) document.getElementById('header-category').innerText = getLabels('items-category');
 
-    if(document.getElementById('label-month')) {
-        document.getElementById('label-month').innerText = getLabels('items-month');
-        document.getElementById('label-month').title = getFullListString('items-month');
-    }
-    if(document.getElementById('header-month')) {
-        document.getElementById('header-month').innerText = getLabels('items-month');
-        document.getElementById('header-month').title = getFullListString('items-month');
-    }
-
-    if(document.getElementById('label-category')) {
-        document.getElementById('label-category').innerText = getLabels('items-category');
-        document.getElementById('label-category').title = getFullListString('items-category'); 
-    }
-    if(document.getElementById('header-category')) {
-        document.getElementById('header-category').innerText = getLabels('items-category');
-        document.getElementById('header-category').title = getFullListString('items-category');
-    }
-
-    // 4. FILTRAR DATOS (FECHA + CATEGORÍA)
-    // <--- CORRECCIÓN 1: Usamos 'let' en lugar de 'const' para poder modificar la variable después
+    // 4. FILTRADO DE DATOS (CRÍTICO)
     let filtered = finalData.filter(d => 
         selYears.includes(d.year) && 
         selMonths.includes(d.month) && 
         selCats.includes(d.cat)
     );
 
-    // --- NUEVO: 4.1. FILTRADO ESPACIAL (ZONAS) ---
-    // <--- CORRECCIÓN 2: Aquí llamamos a la función que te faltaba
-    // Si la función applySpatialFilter existe, la usamos
+    // Aplicar Filtro Espacial si existe
     if (typeof applySpatialFilter === 'function') {
         filtered = applySpatialFilter(filtered);
     }
+
+    // GUARDAR EN CACHÉ GLOBAL PARA RE-ORDENAMIENTOS
+    lastFilteredData = filtered; 
 
     // 5. ACTUALIZAR KPIS
     document.getElementById('kpi-count').innerText = filtered.length.toLocaleString();
     if(document.getElementById('kpi-total-filas')) 
         document.getElementById('kpi-total-filas').innerHTML = `${filtered.length} <span data-i18n="kpi_reg">${t.kpi_reg}</span>`;
 
-    // 6. ACTUALIZAR GRÁFICOS Y MAPA
-    updateMapData(filtered);
-    updateCharts(filtered, selYears);
-    updateLocationKPI(filtered).catch(err => console.warn("Aviso KPI Ubicación:", err));
-   // updateLocationKPI(filtered);
-
-    // 7. ACTUALIZAR TÍTULOS ESTÁTICOS
-    //const labelTitulo = document.getElementById('card-label-titulo');
-    //if (labelTitulo) labelTitulo.innerText = currentLang === 'eu' ? "IZENBURUA" : "TITULO";
-    
     const textFilename = document.getElementById('card-text-filename');
     if (textFilename) textFilename.innerText = nombreArchivoSubido || "SIN ARCHIVO";
+
+    // 6. ACTUALIZAR MAPA Y GRÁFICOS
+    updateMapData(filtered);
+    updateCharts(filtered, selYears);
+    updateLocationKPI(filtered).catch(err => console.warn(err));
+
+    // 7. NUEVA LÓGICA: RENDERIZAR TABLA DE CALLES SI ESTÁ ACTIVA
+    if (isTableStreetsView) {
+        renderStreetsTable(filtered);
+    }
 }
 // ============================================================
 // 8. GRÁFICOS
@@ -985,80 +967,79 @@ function updateMapData(data) {
     const container = document.getElementById('container-map');
     const datosConGeo = data.filter(d => d.hasGeo); 
 
-    // --- LÓGICA DE VISIBILIDAD ---
+    // 1. CONTROL DE VISIBILIDAD
     const isFilterActive = document.getElementById('chk-spatial-filter')?.checked;
     const hasLayers = (typeof mapLayers !== 'undefined' && mapLayers.length > 0);
-    const shouldKeepOpen = isFilterActive || hasLayers;
+    const shouldKeepOpen = isFilterActive || hasLayers || datosConGeo.length > 0;
 
-    if (datosConGeo.length === 0 && !shouldKeepOpen) {
-        if (container && container.classList.contains('active-map')) {
-            container.classList.remove('active-map');
-        }
+    if (!shouldKeepOpen) {
+        if (container) container.classList.remove('active-map');
         return; 
     } else {
         if (container && !container.classList.contains('active-map')) {
             container.classList.add('active-map');
-            setTimeout(() => { if (map) map.resize(); }, 650);
+            setTimeout(() => { if (map) map.resize(); }, 300);
         }
     }
 
-if (!map || !map.getSource('puntos')) return;
+    if (!map || !map.getSource('puntos')) return;
 
-// Definimos la intensidad de la dispersión (0.0002 es ideal para calles)
-const factor = 0.0002; 
-
-const geojson = { 
-    type: 'FeatureCollection', 
-    features: datosConGeo.map(d => {
-        // Si hay varios puntos iguales, les sumamos un valor aleatorio minúsculo
-        const jitterLon = (Math.random() - 0.5) * factor;
-        const jitterLat = (Math.random() - 0.5) * factor;
-
-        return { 
+    // 2. GENERAR GEOJSON CON JITTERING (HH:mm sin segundos en fullDate)
+    const factor = 0.0002; 
+    const geojson = { 
+        type: 'FeatureCollection', 
+        features: datosConGeo.map(d => ({ 
             type: 'Feature', 
             geometry: { 
                 type: 'Point', 
-                coordinates: [d.lon + jitterLon, d.lat + jitterLat] // <--- AQUÍ se aplica
+                coordinates: [d.lon + (Math.random() - 0.5) * factor, d.lat + (Math.random() - 0.5) * factor] 
             }, 
             properties: { 
-                exp: d.exp, 
                 cat: d.cat, 
                 year: d.year, 
-                fullDate: d.date.toLocaleString(), 
+                fullDate: d.date.toLocaleString([], { 
+                    day: 'numeric', month: 'numeric', year: 'numeric', 
+                    hour: '2-digit', minute: '2-digit' 
+                }), 
                 refnum: d.refnum, 
                 refanno: d.refanno 
             } 
-        };
-    })
-};
+        }))
+    };
 
-    // --- FIN JITTERING ---
-    
     map.getSource('puntos').setData(geojson);
+
+    // 3. LÓGICA DE COLORES DINÁMICOS POR AÑO
+    // Obtenemos todos los años únicos presentes en el archivo original (para mantener consistencia)
+    const allYearsMaster = [...new Set(finalData.map(d => d.year))].sort((a, b) => a - b);
     
-    // (El resto del código de colores y zoom se mantiene igual...)
-    const allY = [...new Set(finalData.map(d => d.year))].sort((a,b) => a-b);
-    const colorExpr = ['match', ['get', 'year']];
-    const localColors = window.yearColors || [
-       { border: '#5e72e4'}, { border: '#2dce89'}, { border: '#fb6340'}, 
-       { border: '#11cdef'}, { border: '#f5365c'}, { border: '#8965e0'}, { border: '#b71825ff'}
-    ];
-    allY.forEach((y, index) => {
-        colorExpr.push(y, localColors[index % localColors.length].border);
+    // Creamos la expresión: ['match', ['get', 'year'], año1, color1, año2, color2, ..., color_por_defecto]
+    const colorExpression = ['match', ['get', 'year']];
+    
+    allYearsMaster.forEach((y, index) => {
+        // Usamos la paleta de colores definida en yearColors
+        const colorIndex = index % yearColors.length;
+        colorExpression.push(y, yearColors[colorIndex].border);
     });
-    colorExpr.push('#5e72e4'); 
-    map.setPaintProperty('point-layer', 'circle-color', colorExpr);
     
+    // Color final por defecto (por si acaso)
+    colorExpression.push('#5e72e4');
+
+    // Aplicamos la expresión a la capa de puntos
+    map.setPaintProperty('point-layer', 'circle-color', colorExpression);
+
+    // 4. ENCUADRAR EL MAPA (ZOOM)
     if (datosConGeo.length > 0) {
         const bounds = new maplibregl.LngLatBounds();
-        datosConGeo.forEach(d => bounds.extend([d.lon, d.lat]));
-        if (!window.isZooming) {
-            window.isZooming = true;
-            setTimeout(() => {
-                try { map.fitBounds(bounds, { padding: 40, maxZoom: 16 }); } catch (e) {}
-                window.isZooming = false;
-            }, 700); 
-        }
+        datosConGeo.forEach(d => {
+            if (!isNaN(d.lon) && !isNaN(d.lat)) bounds.extend([d.lon, d.lat]);
+        });
+
+        setTimeout(() => {
+            try {
+                map.fitBounds(bounds, { padding: 50, maxZoom: 16, duration: 1000 });
+            } catch (e) { console.warn(e); }
+        }, 400); 
     }
 }
 
@@ -1323,6 +1304,94 @@ function updateSortIcons(activeCol, containerSelector, sortObj) {
             th.querySelector('i').className = sortObj.dir === 'asc' ? 'fa-solid fa-sort-up' : 'fa-solid fa-sort-down';
         }
     }
+}
+function toggleStreetsView() {
+    isTableStreetsView = !isTableStreetsView;
+    const btn = document.querySelector('#btn-toggle-streets i');
+    const mapDiv = document.getElementById('main-map');
+    const tableDiv = document.getElementById('table-streets-view');
+
+    // Alternar visibilidad
+    mapDiv.style.display = isTableStreetsView ? 'none' : 'block';
+    tableDiv.style.display = isTableStreetsView ? 'block' : 'none';
+
+    // Cambiar icono del botón
+    btn.className = isTableStreetsView ? 'fa-solid fa-earth-americas' : 'fa-solid fa-list-ol';
+    btn.parentElement.title = isTableStreetsView ? "Ver Mapa" : "Ver Listado de Calles";
+
+    if (isTableStreetsView) {
+        // Al activar, refrescamos con los datos actuales filtrados
+        updateUI(); 
+    }
+}
+
+function renderStreetsTable(data) {
+    const container = document.getElementById('table-streets-view');
+    if (!container) return;
+
+    // 1. Agrupar por calle
+    const streetCounts = {};
+    data.forEach(d => {
+        // d.calle ya viene procesado desde el paso anterior
+        let nombreCalle = d.calle || "SIN CALLE / GPS";
+        streetCounts[nombreCalle] = (streetCounts[nombreCalle] || 0) + 1;
+    });
+
+    // 2. Convertir a array y aplicar orden
+    tableStreetsDataCache = Object.entries(streetCounts).map(([name, count]) => ({ name, count }));
+    
+    tableStreetsDataCache.sort((a, b) => {
+        let vA = a[currentSortStreets.col];
+        let vB = b[currentSortStreets.col];
+        if (currentSortStreets.dir === 'asc') return vA > vB ? 1 : -1;
+        return vA < vB ? 1 : -1;
+    });
+
+    if (tableStreetsDataCache.length === 0) {
+        container.innerHTML = '<p style="padding:20px; text-align:center; color:#888;">Sin datos disponibles</p>';
+        return;
+    }
+
+    // 3. Generar Tabla HTML
+    let html = `
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th onclick="sortTableStreets('name')" style="cursor:pointer; text-align:left;">CALLE <i class="fa-solid fa-sort"></i></th>
+                    <th onclick="sortTableStreets('count')" style="cursor:pointer; width:90px;">REG. <i class="fa-solid fa-sort"></i></th>
+                </tr>
+            </thead>
+            <tbody>`;
+
+    tableStreetsDataCache.forEach(row => {
+    html += `
+        <tr>
+            <td style="text-align:left; font-weight:600;">${row.name}</td>
+            <td style="font-weight:800; color:var(--accent-blue); text-align:right;">${row.count.toLocaleString()}</td>
+        </tr>`;
+    });
+
+    container.innerHTML = html + `</tbody></table>`;
+    updateSortIcons(currentSortStreets.col, '#table-streets-view', currentSortStreets);
+}
+
+function sortTableStreets(col) {
+    if (currentSortStreets.col === col) {
+        currentSortStreets.dir = currentSortStreets.dir === 'asc' ? 'desc' : 'asc';
+    } else {
+        currentSortStreets.col = col;
+        currentSortStreets.dir = col === 'count' ? 'desc' : 'asc';
+    }
+    renderStreetsTable(lastFilteredData); // Necesitaremos guardar el último filtro
+}
+
+function sortDataStreets() {
+    tableStreetsDataCache.sort((a, b) => {
+        let vA = a[currentSortStreets.col];
+        let vB = b[currentSortStreets.col];
+        if (currentSortStreets.dir === 'asc') return vA > vB ? 1 : -1;
+        else return vA < vB ? 1 : -1;
+    });
 }
 
 // ============================================================

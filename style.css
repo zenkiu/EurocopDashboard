@@ -322,9 +322,23 @@ input:checked + .slider:before { transform: translateX(14px); }
     display: flex; align-items: center; justify-content: center;
     color: white; background: var(--accent-blue); font-size: 1.2rem;
 }
+.kpi-data {
+    flex: 1;        /* Ocupa el espacio disponible */
+    min-width: 0;   /* TRUCO CLAVE: permite que los hijos se encojan más que su contenido */
+    display: flex;
+    flex-direction: column;
+}
 .kpi-data h3 { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px;}
 .kpi-data span { font-size: 1.4rem; font-weight: 800; }
-
+/* Aplica el corte con puntos suspensivos al nombre del archivo */
+#card-text-filename {
+    display: block;
+    white-space: nowrap;    /* Evita que el texto salte de línea */
+    overflow: hidden;       /* Esconde lo que sobra */
+    text-overflow: ellipsis; /* Añade los "..." */
+    max-width: 100%;        /* No permite que sea más ancho que la tarjeta */
+    font-size: 1.2rem;      /* Ajuste opcional para escritorio */
+}
 /* Contenedores de Gráficos (Base) */
 .bottom-grid {
     display: flex; flex-direction: row; flex-wrap: wrap;
@@ -393,12 +407,53 @@ input:checked + .slider:before { transform: translateX(14px); }
 .brand-logo { max-width: 120px; height: auto; display: block; }
 
 /* Configuración (Mapping) */
-#mapping-view { align-items: center; justify-content: center; background: var(--bg-light); padding: 40px 0; overflow-y: auto;}
-.config-panel { background: white; width: 95%; max-width: 1100px; border-radius: 16px; margin-bottom: 40px; overflow: hidden;}
+#mapping-view.active {
+    display: flex;
+    align-items: center; 
+    justify-content: center;
+    background: var(--bg-light);
+    padding: 20px;
+    min-height: calc(100vh - var(--nav-height));
+    overflow-y: auto;
+}
+.config-panel {
+    background: white;
+    width: 100%;
+    max-width: 1200px; /* Un poco más ancho para PC */
+    border-radius: 16px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
+}
 .panel-header { background: var(--primary-dark); color: white; padding: 25px; }
-.mapping-layout { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; padding: 30px; }
+/* El Grid de 3 columnas */
+.mapping-layout {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    padding: 30px;
+    align-items: start; /* Alinea las tarjetas arriba */
+}
 .mapping-col { display: flex; flex-direction: column; gap: 20px; }
-.card { background: #f8f9fe; padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); display: flex; flex-direction: column; }
+.card {
+    background: #f8f9fe;
+    padding: 18px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    height: auto; /* Que cada tarjeta use solo lo que necesita */
+    transition: transform 0.2s;
+}
+.card:hover {
+    border-color: var(--accent-blue);
+}
+
+.card label {
+    font-size: 0.75rem;
+    color: var(--primary-dark);
+}
 .highlighted-card { background: #eef2ff; border: 2px solid var(--accent-blue); position: relative; }
 .highlight-badge { position: absolute; top: 0; right: 0; background: var(--accent-blue); color: white; padding: 4px 10px; font-size: 0.6rem; font-weight: 800; border-bottom-left-radius: 10px; }
 .styled-select { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #dcdfe6; margin-top: 5px; }
@@ -879,11 +934,46 @@ input:checked + .slider:before { transform: translateX(14px); }
 @media (max-width: 1024px) {
     .charts-grid-top { grid-template-columns: 1fr 1fr; } 
     .bottom-grid { grid-template-columns: 1fr 1fr; }
-    .mapping-layout { grid-template-columns: 1fr 1fr; }
+    .mapping-layout {
+        grid-template-columns: 1fr 1fr;
+    }
 }
 
 /* --- RESPONSIVE: MÓVIL (< 768px) --- */
 @media (max-width: 768px) {
+    /* 1. Quitamos el ancho mínimo que obliga al scroll horizontal */
+    #table-streets-view .data-table {
+        min-width: 100% !important;
+        table-layout: fixed; /* Ayuda a controlar los anchos de columna */
+        width: 100%;
+    }
+
+    /* 2. Ajustamos la columna de CALLE para que no desplace a la otra */
+    #table-streets-view th:first-child, 
+    #table-streets-view td:first-child {
+        width: 70%; /* Le damos el 70% del espacio */
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis; /* Si el nombre es muy largo, pone "..." */
+        position: static !important; /* Quitamos el modo "sticky" en móvil */
+        border-right: none !important;
+    }
+
+    /* 3. Ajustamos la columna de REG (Total) para que siempre sea visible */
+    #table-streets-view th:last-child, 
+    #table-streets-view td:last-child {
+        width: 30%; /* Le damos el 30% restante */
+        text-align: right !important;
+        padding-right: 15px !important;
+        border-left: 1px solid #eee;
+        background: #fcfcfc;
+    }
+
+    /* 4. Aseguramos que el contenedor permita scroll vertical pero no horizontal */
+    #table-streets-view {
+        overflow-x: hidden !important; 
+        overflow-y: auto;
+    }   
     body { overflow-x: hidden; overflow-y: auto; height: 100%; }
 
     .view-container.active { display: flex !important; flex-direction: column; height: auto; min-height: 100vh; }
@@ -909,10 +999,17 @@ input:checked + .slider:before { transform: translateX(14px); }
 
     /* KPIs */
     .kpi-grid { display: grid !important; grid-template-columns: repeat(3, 1fr) !important; gap: 8px; }
-    .kpi-card { padding: 8px 4px; flex-direction: column; text-align: center; min-height: 80px; }
+    .kpi-card {
+        padding: 8px 5px;            /* Un poco más de aire */
+        overflow: hidden;            /* Evita cualquier desborde */
+    }
     .kpi-icon { width: 30px; height: 30px; font-size: 0.9rem; margin-bottom: 5px; }
     .kpi-data h3 { font-size: 0.55rem; }
-    .kpi-data span { font-size: 0.85rem; }
+    .kpi-data span {
+        font-size: 0.8rem !important; /* Más pequeño en móvil */
+        width: 100%;                 /* Asegura que use todo el ancho de la tarjeta */
+        text-align: center;
+    }
 
     /* Gráficos */
     .charts-grid-top, .bottom-grid { display: flex !important; flex-direction: column !important; gap: 15px; }
@@ -932,7 +1029,14 @@ input:checked + .slider:before { transform: translateX(14px); }
     .map-container-wrapper.active-map { display: flex !important; height: 400px !important; }
     #main-map { height: 100% !important; min-height: 250px; }
 
-    .mapping-layout { grid-template-columns: 1fr; padding: 15px; }
+    .mapping-layout {
+        grid-template-columns: 1fr;
+        padding: 15px;
+    }   
+    .config-panel {
+        margin-top: 20px;
+    }
+
     .upload-card { width: 95%; padding: 20px; }
     .manual-container { flex-direction: column; gap: 10px; }
     .btn-manual-pill { width: 100%; justify-content: center; }
@@ -952,6 +1056,7 @@ input:checked + .slider:before { transform: translateX(14px); }
 
     .kpi-grid { display: grid !important; grid-template-columns: repeat(3, 1fr); gap: 10px; height: 60px; flex-shrink: 0; }
     .kpi-card { height: 100%; padding: 0 15px; justify-content: center; gap: 10px; flex-direction: row; }
+    
     .kpi-icon { width: 35px; height: 35px; font-size: 1rem; }
     .kpi-data h3 { font-size: 0.65rem; margin: 0; }
     .kpi-data span { font-size: 1.2rem; }
