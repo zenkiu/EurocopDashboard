@@ -38,9 +38,17 @@
                 <i class="fa-solid fa-bars"></i>
             </button>
             
-            <div class="logo" onclick="goToMapping()" style="cursor:pointer" title="Volver a Configuración">
+            <!-- El div principal ya no tiene onclick -->
+            <div class="logo">
+                <!-- El icono queda libre (no es clickable) -->
                 <span class="logo-icon"><i class="fa-solid fa-shield-halved"></i></span>
-                <span class="logo-text"><span data-i18n="nav_title">EUROCOP</span><span class="hide-mobile" data-i18n="nav_analytics"> ANALYTICS</span><span class="dot">.</span></span>
+                
+                <!-- Solo el texto tiene el evento y el puntero -->
+                <span class="logo-text" onclick="goToMapping()" style="cursor:pointer" title="Volver a Configuración">
+                    <span data-i18n="nav_title">EUROCOP</span>
+                    <span class="hide-mobile" data-i18n="nav_analytics"> ANALYTICS</span>
+                    <span class="dot">.</span>
+                </span>
             </div>
         </div>
 

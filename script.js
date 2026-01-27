@@ -35,14 +35,13 @@ let isTableStreetsView = false;
 let tableStreetsDataCache = [];
 let currentSortStreets = { col: 'count', dir: 'desc' };
 
+// Paleta de alta visibilidad (Neon/Bright)
 const yearColors = [
-    { bg: 'rgba(94, 114, 228, 0.7)', border: '#5e72e4' },   
-    { bg: 'rgba(45, 206, 137, 0.7)', border: '#2dce89' },   
-    { bg: 'rgba(251, 99, 64, 0.7)', border: '#fb6340' },    
-    { bg: 'rgba(17, 205, 239, 0.7)', border: '#11cdef' },   
-    { bg: 'rgba(245, 54, 92, 0.7)', border: '#f5365c' },    
-    { bg: 'rgba(137, 101, 224, 0.7)', border: '#8965e0' },  
-    { bg: 'rgba(155, 14, 14, 0.7)', border: '#b71825ff' }    
+    { bg: 'rgba(255, 49, 49, 0.8)', border: '#FF3131' },   // Rojo Neón
+    { bg: 'rgba(255, 110, 0, 0.8)', border: '#FF6E00' },   // Naranja Brillante
+    { bg: 'rgba(255, 0, 127, 0.8)', border: '#FF007F' },   // Rosa Fucsia
+    { bg: 'rgba(0, 255, 242, 0.8)', border: '#00FFF2' },   // Cian Neón
+    { bg: 'rgba(188, 0, 255, 0.8)', border: '#BC00FF' }    // Violeta Eléctrico
 ];
 
 const monthsConfig = [
@@ -862,28 +861,36 @@ function updateCharts(data, selYears) {
         if (isTableView) renderTimelineTable();
 
         if (chartTimeline) chartTimeline.destroy();
-        // ... dentro de updateCharts, en la parte de chartTimeline:
+        // Busca la creación del chartTimeline dentro de la función updateCharts
         chartTimeline = new Chart(ctxTimeline, { 
             type: chartTimelineType, 
             data: { labels, datasets }, 
             options: { 
                 ...commonOptions,
+                // --- REINSERTA ESTE BLOQUE onClick ---
                 onClick: (e, activeEls) => {
                     if (activeEls.length > 0) {
                         const dataIndex = activeEls[0].index;
                         const datasetIndex = activeEls[0].datasetIndex;
-                        
-                        const labelX = labels[dataIndex]; // Ej: "2026" o "Ene"
-                        const categoryName = datasets[datasetIndex].label; // Ej: "Investigado"
-                        
+                        const labelX = labels[dataIndex]; 
+                        const categoryName = datasets[datasetIndex].label;
                         showDetailedRecords(labelX, categoryName);
                     }
                 },
-                // Mantenemos el resto de tus opciones...
-                interaction: { mode: 'nearest', intersect: true },
+                // -------------------------------------
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        enabled: true,
+                        mode: 'index',
+                        intersect: false,
+                        itemSort: (a, b) => b.raw - a.raw,
+                        filter: (tooltipItem) => tooltipItem.raw > 0
+                    }
+                },
                 scales: {
-                    x: { stacked: chartTimelineType === 'bar' },
-                    y: { stacked: chartTimelineType === 'bar', beginAtZero: true }
+                    x: { stacked: chartTimelineType === 'bar', grid: { display: false } },
+                    y: { stacked: chartTimelineType === 'bar', beginAtZero: true, ticks: { precision: 0 } }
                 }
             } 
         });
@@ -995,9 +1002,34 @@ function initMap() {
         map.addSource('puntos', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
         map.addLayer({ id: 'heat-layer', type: 'heatmap', source: 'puntos', layout: { 'visibility': 'none' }, paint: { 'heatmap-weight': 1, 'heatmap-intensity': 3, 'heatmap-radius': 20 } });
         map.addLayer({ id: 'point-layer', type: 'circle', source: 'puntos', layout: { 'visibility': 'visible' }, paint: { 'circle-radius': 6, 'circle-stroke-width': 2, 'circle-stroke-color': '#fff', 'circle-color': '#5e72e4' } });
+        // Busca esta sección dentro de initMap:
         map.on('click', 'point-layer', (e) => {
             const p = e.features[0].properties;
-            new maplibregl.Popup({ offset: 10, maxWidth: '200px' }).setLngLat(e.features[0].geometry.coordinates).setHTML(`<div style="padding:5px; font-family:'Inter', sans-serif;"><div style="color:#5e72e4; font-weight:800; font-size:12px; margin-bottom:5px; border-bottom:1px solid #eee;">REF${p.refanno}-${p.refnum}</div><div style="font-size:11px;"><span><b>Cat:</b> ${p.cat}</span><br><span><b>Fecha:</b> ${p.fullDate}</span></div></div>`).addTo(map);
+            
+            // 1. Lógica para construir la dirección
+            let direccionHtml = "";
+            // Solo mostramos si la calle no es el valor por defecto
+            if (p.calle && p.calle !== "SIN CALLE / GPS") {
+                const num = (p.numero && p.numero !== "undefined") ? p.numero : "";
+                direccionHtml = `<br><span><b>Dirección:</b> ${p.calle} ${num}</span>`;
+            }
+
+            // 2. Generar el Popup
+            new maplibregl.Popup({ offset: 10, maxWidth: '250px' })
+                .setLngLat(e.features[0].geometry.coordinates)
+                .setHTML(`
+                    <div style="padding:5px; font-family:'Inter', sans-serif;">
+                        <div style="color:#5e72e4; font-weight:800; font-size:12px; margin-bottom:5px; border-bottom:1px solid #eee;">
+                            REF${p.refanno}-${p.refnum}
+                        </div>
+                        <div style="font-size:11px;">
+                            <span><b>Cat:</b> ${p.cat}</span>
+                            ${direccionHtml} <!-- AQUÍ SE INSERTA LA CALLE -->
+                            <br><span><b>Fecha:</b> ${p.fullDate}</span>
+                        </div>
+                    </div>
+                `)
+                .addTo(map);
         });
     });
 }
@@ -1044,7 +1076,9 @@ function updateMapData(data) {
                     hour: '2-digit', minute: '2-digit' 
                 }), 
                 refnum: d.refnum, 
-                refanno: d.refanno 
+                refanno: d.refanno,
+                calle: d.calle,
+                numero: d.numero
             } 
         }))
     };
@@ -1068,8 +1102,10 @@ function updateMapData(data) {
     colorExpression.push('#5e72e4');
 
     // Aplicamos la expresión a la capa de puntos
-    map.setPaintProperty('point-layer', 'circle-color', colorExpression);
-
+    map.setPaintProperty('point-layer', 'circle-color', '#FF3131');
+    // Añade esto debajo para que el borde blanco sea más fuerte y resalte más:
+    map.setPaintProperty('point-layer', 'circle-stroke-width', 2.5);
+    map.setPaintProperty('point-layer', 'circle-radius', 7); // Un poquito más grandes
     // 4. ENCUADRAR EL MAPA (ZOOM)
     if (datosConGeo.length > 0) {
         const bounds = new maplibregl.LngLatBounds();
@@ -2198,14 +2234,15 @@ function truncateText(str, maxLength) {
 // ============================================================
 // GENERADOR DE INFOGRAFÍA IA (Smart Brief)
 // ============================================================
-// ============================================================
-// GENERADOR DE INFOGRAFÍA IA (Smart Brief)
-// ============================================================
+/**
+ * GENERADOR DE INFOGRAFÍA SÍNTESIS (IA BRIEF)
+ * Versión: Full Multilingüe + Análisis de Ubicaciones
+ */
 function generateSmartInfographic() {
     const t = translations[currentLang];
     if (!t) return;
 
-    // 1. RECOPILAR Y FILTRAR DATOS
+    // 1. RECOPILAR DATOS FILTRADOS ACTUALES
     const selYears = Array.from(document.querySelectorAll('#items-year input:checked')).map(i => Number(i.value));
     const selMonths = Array.from(document.querySelectorAll('#items-month input:checked')).map(i => Number(i.value));
     const selCats = Array.from(document.querySelectorAll('#items-category input:checked')).map(i => i.value);
@@ -2216,15 +2253,11 @@ function generateSmartInfographic() {
         selCats.includes(d.cat)
     );
     
-    // Aplicar filtro espacial si está activo el switch de "Zonas"
+    // Aplicar filtro espacial si está activo
     if (typeof applySpatialFilter === 'function') data = applySpatialFilter(data);
 
     if (data.length === 0) {
-        let noDataMsg = "No hay datos para la síntesis";
-        if (currentLang === 'eu') noDataMsg = "Ez dago daturik";
-        if (currentLang === 'ca') noDataMsg = "No hi ha dades per a la síntesi";
-        if (currentLang === 'gl') noDataMsg = "Non hai datos para a síntese";
-        alert(noDataMsg);
+        alert(currentLang === 'eu' ? "Ez dago daturik" : "No hay datos para la síntesis");
         return;
     }
 
@@ -2232,18 +2265,16 @@ function generateSmartInfographic() {
 
     // 2. CÁLCULOS ESTADÍSTICOS
     const total = data.length;
-    
-    // 2.1 Categorías
+
+    // 2.1. Categorías
     const catCounts = {};
     data.forEach(d => catCounts[d.cat] = (catCounts[d.cat] || 0) + 1);
     const sortedCats = Object.entries(catCounts).sort((a, b) => b[1] - a[1]);
-    
     const topCatName = sortedCats.length > 0 ? sortedCats[0][0] : "N/A"; 
     const topCatVal = sortedCats.length > 0 ? sortedCats[0][1] : 0;  
-    const percent = total > 0 ? (topCatVal / total) * 100 : 0;
-    const percentRounded = Math.round(percent);
+    const percent = total > 0 ? Math.round((topCatVal / total) * 100) : 0;
 
-    // 2.2 Calles / Direcciones (Ignorando "SIN CALLE / GPS")
+    // 2.2. Ubicaciones (Calles) - Excluyendo "SIN CALLE / GPS"
     const streetCounts = {};
     data.forEach(d => {
         if (d.calle && d.calle !== "SIN CALLE / GPS") {
@@ -2252,7 +2283,7 @@ function generateSmartInfographic() {
     });
     const sortedStreets = Object.entries(streetCounts).sort((a, b) => b[1] - a[1]);
 
-    // 2.3 Temporalidad (Horas y Días)
+    // 2.3. Tiempos (Horas y Días)
     const hourCounts = Array(24).fill(0);
     data.forEach(d => hourCounts[d.hour]++);
     const maxHourIdx = hourCounts.indexOf(Math.max(...hourCounts));
@@ -2263,7 +2294,7 @@ function generateSmartInfographic() {
     const maxDayIdx = dayCounts.indexOf(Math.max(...dayCounts));
     const busiestDay = t.days_full ? t.days_full[maxDayIdx] : "---";
 
-    // 3. FUNCIÓN AUXILIAR PARA LLENAR DATOS
+    // 3. FUNCIÓN AUXILIAR PARA INYECTAR DATOS
     const setSafeInner = (id, value, isHTML = false) => {
         const el = document.getElementById(id);
         if (el) {
@@ -2272,117 +2303,115 @@ function generateSmartInfographic() {
         }
     };
 
-    // 4. RELLENAR TEXTOS E INDICADORES
-    // Título y fecha
-    let multiYearText = "Multi-Periodo";
-    if (currentLang === 'eu') multiYearText = "Anitzak";
-    if (currentLang === 'ca') multiYearText = "Multi-Període";
-    if (currentLang === 'gl') multiYearText = "Multi-Período";
-    
-    const yearsText = selYears.length > 3 ? multiYearText : selYears.join(', ');
+    // 4. RELLENAR TEXTOS CABECERA Y KPI
+    const yearsText = selYears.length > 2 ? (currentLang === 'eu' ? "Anitzak" : "Multi-Periodo") : selYears.join(', ');
     setSafeInner('info-title', `${t.info_report_title || 'Informe'} ${yearsText}`);
     setSafeInner('info-date', new Date().toLocaleDateString());
 
-    // Insight Principal (Categoría líder)
     const insightHTML = (t.info_insight_text || "Categoría: {cat} ({percent}%)")
         .replace('{cat}', `<span style="color:#ffd600">${truncateText(topCatName, 60)}</span>`)
-        .replace('{percent}', percentRounded);
+        .replace('{percent}', percent);
     setSafeInner('info-insight-main', insightHTML, true);
 
-    // KPIs Generales
     setSafeInner('info-stat-total', total.toLocaleString());
     setSafeInner('info-stat-peak', peakTime);
     setSafeInner('info-stat-day', busiestDay);
 
-    // Tendencia Horaria
+    // 5. TENDENCIA Y CALLES
     let trendText = t.info_trend_night;
     if (maxHourIdx >= 6 && maxHourIdx < 14) trendText = t.info_trend_morning;
     else if (maxHourIdx >= 14 && maxHourIdx < 22) trendText = t.info_trend_afternoon;
+    
+    // Si hay una calle líder, añadir el insight narrativo
+    if (sortedStreets.length > 0) {
+        const streetInsight = t.info_street_insight.replace('{street}', sortedStreets[0][0]);
+        trendText += " " + streetInsight;
+    }
     setSafeInner('info-text-trend', trendText);
 
-    // 4.1. RELLENAR LISTA DE CALLES Y COMPLETAR INSIGHT
+    // 6. RELLENAR LISTADOS (TOP 3)
+    
+    // 6.1 Categorías (Tarjeta Azul)
+    const listCatContainer = document.getElementById('info-top-list');
+    if (listCatContainer) {
+        listCatContainer.innerHTML = '';
+        sortedCats.slice(0, 3).forEach(item => {
+            const li = document.createElement('li');
+            li.innerHTML = `<span>${truncateText(item[0], 45)}</span> <span>${item[1].toLocaleString()}</span>`;
+            listCatContainer.appendChild(li);
+        });
+    }
+
+    // 6.2 Ubicaciones Críticas (Tarjeta Blanca)
     const streetListContainer = document.getElementById('info-street-list');
     if (streetListContainer) {
         streetListContainer.innerHTML = '';
-        // Cogemos solo el Top 2 para mantener el diseño limpio
-        const topStreets = sortedStreets.slice(0, 2);
+        const topStreets = sortedStreets.slice(0, 3);
         
         if (topStreets.length > 0) {
             topStreets.forEach(item => {
                 const li = document.createElement('li');
-                li.style.borderBottom = "1px solid #f3f4f6"; // Línea sutil
+                // Estilo para evitar que se separe el texto corto
+                li.style.display = "flex";
+                li.style.justifyContent = "space-between";
+                li.style.borderBottom = "1px solid #f3f4f6";
+                li.style.paddingBottom = "5px";
+                li.style.marginBottom = "8px";
                 li.style.color = "#374151";
-                li.innerHTML = `<span>${truncateText(item[0], 40)}</span> <span style="font-weight:800">${item[1]}</span>`;
+                li.innerHTML = `<span style="text-align:left; flex:1;">${truncateText(item[0], 45)}</span> <span style="font-weight:800; margin-left:10px;">${item[1]}</span>`;
                 streetListContainer.appendChild(li);
             });
-            
-            // Añadir el insight geográfico al párrafo de tendencia
-            const streetTextBase = t.info_street_insight || "La mayor concentración de registros se localiza en {street}.";
-            const mainStreetInsight = streetTextBase.replace('{street}', topStreets[0][0]);
-            const trendEl = document.getElementById('info-text-trend');
-            if (trendEl) trendEl.innerText += " " + mainStreetInsight;
         } else {
-            // Traducción dinámica del aviso de vacío
+            // FIX: "Sin datos" centrado y sin space-between
             let noDataMsg = "Sin datos de vía";
             if (currentLang === 'eu') noDataMsg = "Ez dago kale daturik";
             if (currentLang === 'gl') noDataMsg = "Sen datos de vía";
             if (currentLang === 'ca') noDataMsg = "Sense dades de via";
-            streetListContainer.innerHTML = `<li style="color:#9ca3af; font-style:italic;">${noDataMsg}</li>`;
+            
+            const li = document.createElement('li');
+            li.style.display = "block";
+            li.style.textAlign = "center";
+            li.style.color = "#9ca3af";
+            li.style.fontStyle = "italic";
+            li.style.padding = "10px 0";
+            li.innerText = noDataMsg;
+            streetListContainer.appendChild(li);
         }
     }
-    
-    // 4.2. Lista Top 3 Categorías
-    const listContainer = document.getElementById('info-top-list');
-    if (listContainer) {
-        listContainer.innerHTML = '';
-        sortedCats.slice(0, 3).forEach(item => {
-            const li = document.createElement('li');
-            li.innerHTML = `<span>${truncateText(item[0], 45)}</span> <span>${item[1].toLocaleString()}</span>`;
-            listContainer.appendChild(li);
-        });
-    }
 
-    // 4.3. SECCIÓN DOMINANCIA (Gráfico Circular SVG)
-    setSafeInner('info-pie-percent', `${percentRounded}%`);
+    // 7. GRÁFICO CIRCULAR (DOMINANCIA)
+    setSafeInner('info-pie-percent', `${percent}%`);
     const circle = document.getElementById('svg-pie-progress');
     if (circle) {
         const radius = circle.r.baseVal.value;
         const circumference = 2 * Math.PI * radius;
         const offset = circumference - (percent / 100) * circumference;
-        circle.style.strokeDasharray = circumference; 
+        circle.style.strokeDasharray = circumference;
         circle.style.strokeDashoffset = offset;
     }
-
     setSafeInner('info-lbl-leader', truncateText(topCatName, 40));
     
-    // Traducción de la etiqueta "Resto"
-    let lblRestoText = 'Resto';
-    if (currentLang === 'eu') lblRestoText = 'Gainerakoak';
-    if (currentLang === 'ca') lblRestoText = 'Resta';
-    setSafeInner('info-lbl-resto', lblRestoText);
+    // Traducir "Resto"
+    const restLabels = { es: 'Resto', eu: 'Gainerakoak', ca: 'Resta', gl: 'Resto' };
+    setSafeInner('info-lbl-resto', restLabels[currentLang] || 'Resto');
+    setSafeInner('info-pie-subtext', `${topCatVal.toLocaleString()} vs ${(total - topCatVal).toLocaleString()}`);
 
-    const restVal = total - topCatVal;
-    setSafeInner('info-pie-subtext', `${topCatVal.toLocaleString()} vs ${restVal.toLocaleString()}`);
-
-    // Aplicar i18n a las etiquetas estáticas del lienzo
+    // Aplicar i18n a etiquetas estáticas
     document.querySelectorAll('#ai-infographic-container [data-i18n]').forEach(el => {
         const key = el.getAttribute('data-i18n');
         if (t[key]) el.textContent = t[key];
     });
 
-    // 5. EXPORTACIÓN A IMAGEN PNG
+    // 8. EXPORTACIÓN A IMAGEN
     const container = document.getElementById('ai-infographic-container');
-
-    // Esperamos 800ms para asegurar que el SVG y los estilos se han renderizado
     setTimeout(() => {
         const contentHeight = container.scrollHeight;
-
         html2canvas(container, {
-            scale: 2, // Calidad retina
+            scale: 2,
             useCORS: true,
             backgroundColor: '#f3f4f6',
-            width: 800, // Ancho fijo estilo póster A4
-            height: contentHeight, // Altura dinámica según contenido
+            width: 800,
+            height: contentHeight,
             windowWidth: 800,
             windowHeight: contentHeight,
             onclone: (clonedDoc) => {
@@ -2390,26 +2419,20 @@ function generateSmartInfographic() {
                 clonedEl.style.display = 'flex';
                 clonedEl.style.position = 'relative';
                 clonedEl.style.left = '0';
-                clonedEl.style.top = '0';
                 clonedEl.style.height = 'auto';
             }
         }).then(canvas => {
             const link = document.createElement('a');
-            let fileNamePrefix = 'Sintesis';
-            if (currentLang === 'eu') fileNamePrefix = 'Sintesia';
-            if (currentLang === 'ca') fileNamePrefix = 'Sintesi';
-            if (currentLang === 'gl') fileNamePrefix = 'Sintese';
-
+            const fileNamePrefix = { es:'Sintesis', eu:'Sintesia', ca:'Sintesi', gl:'Sintese' }[currentLang];
             link.download = `Eurocop_${fileNamePrefix}_${new Date().getTime()}.png`;
             link.href = canvas.toDataURL('image/png');
             link.click();
         }).catch(err => {
-            console.error("Error en captura:", err);
-            alert("Error al generar la imagen. Inténtelo de nuevo.");
+            console.error("Error capturando sintesis:", err);
         }).finally(() => {
             document.getElementById('loading-overlay').classList.remove('active');
         });
-    }, 800); 
+    }, 800);
 }
 /**
  * Descarga el contenido actual de un contenedor (Gráfico, Mapa o Tabla) como imagen
@@ -2531,12 +2554,9 @@ function focusStreetOnMap(streetName) {
 function showDetailedRecords(periodLabel, categoryName) {
     const t = translations[currentLang];
     
-    // 1. Filtrar los datos de lastFilteredData según el clic en el gráfico
+    // 1. Filtrar los datos
     const filtered = lastFilteredData.filter(d => {
-        // Coincidencia de categoría
         if (d.cat !== categoryName) return false;
-        
-        // Coincidencia de periodo según la vista actual
         if (temporalView === 'year') return d.year.toString() === periodLabel;
         if (temporalView === 'month') return t.months_abbr[d.month - 1] === periodLabel;
         if (temporalView === 'quarter') {
@@ -2553,47 +2573,33 @@ function showDetailedRecords(periodLabel, categoryName) {
 
     if (filtered.length === 0) return;
 
-    // 2. Traducción de etiquetas básicas para la tabla
-    const labelReg = currentLang === 'eu' ? 'Erregistro' : 'Registros';
-    const labelCat = currentLang === 'eu' ? 'KATEGORIA' : 'CATEGORÍA';
-    const labelDate = currentLang === 'eu' ? 'DATA' : 'FECHA';
+    // 2. Traducciones rápidas
+    const labelReg = { es: 'Registros', eu: 'Erregistro', ca: 'Registres', gl: 'Rexistros' }[currentLang];
+    const labelCat = { es: 'CATEGORÍA', eu: 'KATEGORIA', ca: 'CATEGORIA', gl: 'CATEGORÍA' }[currentLang];
+    const labelDate = { es: 'FECHA', eu: 'DATA', ca: 'DATA', gl: 'DATA' }[currentLang];
 
-    // 3. Título del Modal
     document.getElementById('records-modal-title').innerText = `${categoryName} (${periodLabel}): ${filtered.length} ${labelReg}`;
 
-    // 4. Construir la Tabla (Cambio de CALLE por CATEGORÍA)
-    let html = `
-        <table class="data-table" style="width:100%; border-collapse: collapse;">
-            <thead style="position: sticky; top: 0; background: #f8f9fe; z-index: 10;">
-                <tr>
-                    <th style="text-align:left;">REF/EXP</th>
-                    <th>${labelDate}</th>
-                    <th style="text-align:left;">${labelCat}</th>
-                </tr>
-            </thead>
-            <tbody>`;
+    // 3. Crear Tabla
+    let html = `<table class="data-table" style="width:100%;">
+        <thead><tr><th style="text-align:left;">REF/EXP</th><th>${labelDate}</th><th style="text-align:left;">${labelCat}</th></tr></thead>
+        <tbody>`;
 
     filtered.forEach(d => {
-        const dateStr = d.date.toLocaleString([], { 
-            day:'2-digit', 
-            month:'2-digit', 
-            year:'numeric', 
-            hour:'2-digit', 
-            minute:'2-digit' 
-        });
-
-        html += `
-            <tr>
-                <td style="color:var(--accent-blue); font-weight:bold; text-align:left;">REF${d.refanno}-${d.refnum}</td>
-                <td style="font-size:0.85rem;">${dateStr}</td>
-                <td style="text-align:left; font-size:0.85rem; font-weight:600; color:#32325d;">${d.cat}</td>
-            </tr>`;
+        const dateStr = d.date.toLocaleString([], { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+        html += `<tr>
+            <td style="color:var(--accent-blue); font-weight:bold; text-align:left;">REF${d.refanno}-${d.refnum}</td>
+            <td style="font-size:0.85rem;">${dateStr}</td>
+            <td style="text-align:left; font-size:0.85rem; font-weight:600; color:#32325d;">${d.cat}</td>
+        </tr>`;
     });
 
-    html += `</tbody></table>`;
-    
-    document.getElementById('records-table-container').innerHTML = html;
+    document.getElementById('records-table-container').innerHTML = html + `</tbody></table>`;
     document.getElementById('records-modal').classList.add('active');
+}
+
+function closeRecordsModal() {
+    document.getElementById('records-modal').classList.remove('active');
 }
 
 function closeRecordsModal() {

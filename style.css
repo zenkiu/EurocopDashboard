@@ -67,8 +67,10 @@ body {
     border: none;
 }
 
-.logo { display: flex; align-items: center; gap: 10px; cursor: pointer; }
-
+.logo { display: flex; align-items: center; gap: 10px; cursor: default; }
+.logo-text:hover {
+    filter: brightness(1.2);
+}
 .logo-icon { 
     background: var(--accent-blue); color: white; 
     width: 28px; height: 28px; border-radius: 6px; 
@@ -659,7 +661,11 @@ input:checked + .slider:before { transform: translateX(14px); }
 }
 .layer-item:hover { background: #f6f9fc; }
 .layer-item input[type="checkbox"] { cursor: pointer; }
-.layer-name { flex-grow: 1; font-size: 0.75rem; color: #525f7f; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.layer-name { flex-grow: 1; font-size: 0.7rem; color: #525f7f; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.layer-header span {
+    font-size: 0.7rem !important;
+}
 
 .btn-remove-layer {
     background: transparent; border: none; color: #f5365c;
@@ -1021,8 +1027,12 @@ input:checked + .slider:before { transform: translateX(14px); }
 
     /* Fix Layer Menu Móvil */
     .layer-dropdown-content {
-        position: absolute; top: 35px; right: 0 !important; left: auto !important;
-        width: 200px !important; max-width: 75vw; z-index: 9999;
+        /* Cambiamos el anclaje: en vez de crecer a la izquierda, 
+           hacemos que se desplace hacia la derecha */
+        right: auto !important; 
+        left: -50px !important; /* Lo movemos hacia la derecha para centrarlo mejor */
+        width: 210px !important; /* Un poco más estrecho para evitar bordes */
+        max-width: 75vw; /* Aseguramos que nunca sea más ancho que el 75% de la pantalla */
     }
 
     /* Mapa Móvil */
@@ -1129,8 +1139,8 @@ input:checked + .slider:before { transform: translateX(14px); }
     border-radius: 50%;
     position: absolute;
     top: 0; left: 0;
-    border: 3px solid #5e72e4; /* Azul corporativo */
-    box-shadow: 0 0 10px rgba(94, 114, 228, 0.5);
+    border: 3px solid #FF3131; /* Rojo Neón */
+    box-shadow: 0 0 15px rgba(255, 49, 49, 0.7);
     animation: marker-pulse 2s ease-out infinite;
     opacity: 0;
 }
