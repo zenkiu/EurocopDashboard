@@ -123,57 +123,52 @@ function showToast(message, duration = 6000) {
 function processFile(file) {
     if (!file) return;
 
-    // --- NUEVO: COMPROBACIÓN DE TAMAÑO (4MB) ---
-    const FILE_SIZE_LIMIT = 4 * 1024 * 1024; // 4 MB en bytes
-    
-    if (file.size > FILE_SIZE_LIMIT) {
-        showToast("⚠️ Archivo grande detectado. Para un mejor rendimiento, se recomienda filtrar previamente por años en Eurocop.");
-    }
-    // --------------------------------------------
-
+    // Mostrar el loader inmediatamente
     document.getElementById('loading-overlay').classList.add('active');
 
+    // Usar un pequeño retardo para dejar que el navegador dibuje el "Spinner"
+    // antes de empezar la carga pesada del Excel
     setTimeout(() => {
-        try {
-            nombreArchivoSubido = file.name.replace(/\.[^/.]+$/, "").toUpperCase();
-            const displayEl = document.getElementById('display-filename');
-            if (displayEl) displayEl.textContent = nombreArchivoSubido;
+        const reader = new FileReader();
 
-            if (file.name.endsWith('.csv')) {
-                // ... (código existente del CSV) ...
-                Papa.parse(file, {
-                    header: true, skipEmptyLines: true, encoding: "UTF-8",
-                    complete: (res) => {
-                        showMapping(res.data);
-                        document.getElementById('loading-overlay').classList.remove('active');
-                    },
-                    error: (err) => {
-                        console.error(err); alert("Error al leer CSV");
-                        document.getElementById('loading-overlay').classList.remove('active');
-                    }
+        reader.onload = (e) => {
+            try {
+                nombreArchivoSubido = file.name.replace(/\.[^/.]+$/, "").toUpperCase();
+                const dataArr = new Uint8Array(e.target.result);
+                
+                // Carga del libro con optimización de memoria
+                const wb = XLSX.read(dataArr, {
+                    type: 'array', 
+                    cellDates: true, 
+                    cellNF: false, 
+                    cellText: false 
                 });
-            } else {
-                // ... (código existente del Excel) ...
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    try {
-                        const dataArr = new Uint8Array(e.target.result);
-                        const wb = XLSX.read(dataArr, {type: 'array', cellDates: true});
-                        const data = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: "" });
-                        showMapping(data);
-                    } catch (error) {
-                        console.error(error); alert("El archivo Excel parece dañado.");
-                    } finally {
-                        document.getElementById('loading-overlay').classList.remove('active');
-                    }
-                };
-                reader.readAsArrayBuffer(file);
+
+                const firstSheet = wb.SheetNames[0];
+                const data = XLSX.utils.sheet_to_json(wb.Sheets[firstSheet], { defval: "" });
+
+                if (data.length === 0) {
+                    throw new Error("El archivo está vacío");
+                }
+
+                showMapping(data);
+                console.log("Archivo cargado con éxito:", nombreArchivoSubido);
+
+            } catch (error) {
+                console.error("Error procesando Excel:", error);
+                alert("Error: No se pudo leer el archivo. Asegúrate de que es un Excel o CSV válido.");
+            } finally {
+                document.getElementById('loading-overlay').classList.remove('active');
             }
-        } catch (e) {
-            console.error(e);
+        };
+
+        reader.onerror = () => {
+            alert("Error de lectura del archivo.");
             document.getElementById('loading-overlay').classList.remove('active');
-        }
-    }, 500); // Aumentamos un poco el timeout inicial para que dé tiempo a ver el Toast empezar a bajar
+        };
+
+        reader.readAsArrayBuffer(file);
+    }, 200);
 }
 
 function goToMapping() {
@@ -547,39 +542,77 @@ function toggleGroup(containerId, state, event) {
 let searchTimeout = null;
 
 document.addEventListener('DOMContentLoaded', () => {
-    // ... tu código existente ...
+    // 1. INDICADOR DE VERSIÓN
+    const versionBadge = document.getElementById('app-version-badge');
+    if (versionBadge && typeof EUROCOP_VERSION !== 'undefined') {
+        versionBadge.textContent = 'v' + EUROCOP_VERSION;
+    }
 
-    // LÓGICA DEL BUSCADOR DE CATEGORÍAS
-// ... dentro de document.addEventListener ...
+    // 2. INICIALIZACIÓN DE IDIOMA
+    const langSelect = document.getElementById('lang-selector');
+    if(langSelect) {
+        langSelect.value = currentLang;
+        applyLanguage(currentLang);
+    }
 
-    // LÓGICA DEL BUSCADOR DE CATEGORÍAS (MULTITERMINO / AND)
+    // 3. GESTIÓN DE CARGA DE ARCHIVOS (DROP ZONE & INPUT)
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+
+    if (dropZone && fileInput) {
+        // Abrir selector al hacer clic en el área
+        dropZone.onclick = () => fileInput.click();
+
+        // Listener cuando se selecciona un archivo por el explorador
+        fileInput.onchange = (e) => { 
+            if (e.target.files.length > 0) {
+                processFile(e.target.files[0]);
+                // LIMPIEZA CRÍTICA: Permite volver a subir el mismo archivo si el usuario lo corrige
+                e.target.value = ""; 
+            }
+        };
+
+        // Configuración de Drag & Drop
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            }, false);
+        });
+
+        // Efectos visuales de arrastre
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => dropZone.classList.add('dragover'), false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => dropZone.classList.remove('dragover'), false);
+        });
+        
+        // Listener cuando se suelta un archivo
+        dropZone.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            if (files.length > 0) processFile(files[0]);
+        });
+    }
+
+    // 4. LÓGICA DEL BUSCADOR DE CATEGORÍAS (MULTITÉRMINO / AND)
     const searchInput = document.getElementById('cat-search-input');
-    
     if (searchInput) {
         searchInput.addEventListener('input', function(e) {
-            // 1. Obtener lo que escribe el usuario en minúsculas
-            const rawText = e.target.value.toLowerCase();
-            
-            // 2. Dividir por espacios para obtener las "palabras clave"
-            // .trim() quita espacios al inicio/final
-            // .split(' ') separa por espacios
-            // .filter(...) elimina huecos vacíos si el usuario pone doble espacio
-            const terms = rawText.split(' ').map(t => t.trim()).filter(t => t.length > 0);
-
+            // Dividir por espacios para buscar todas las palabras (lógica AND)
+            const terms = e.target.value.toLowerCase().split(' ').map(t => t.trim()).filter(t => t.length > 0);
             const container = document.getElementById('items-category');
             if (!container) return;
             
             const items = container.querySelectorAll('.checkbox-item');
 
-            // 3. FILTRADO VISUAL
+            // Filtrado visual instantáneo
             items.forEach(div => {
                 const labelText = div.querySelector('span').textContent.toLowerCase();
-                
-                // LÓGICA CLAVE: Verificamos si el texto de la categoría incluye TODAS las palabras escritas
-                // 'every' devuelve true solo si todas las condiciones se cumplen
                 const isMatch = terms.every(term => labelText.includes(term));
                 
-                // Si no hay términos escritos (input vacío), mostramos todo (isMatch será true por defecto en arrays vacíos con every, pero forzamos validación)
                 if (terms.length === 0) {
                     div.style.display = 'flex';
                 } else {
@@ -587,19 +620,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            // 4. AUTO-SELECCIÓN (Con Debounce)
+            // Auto-selección inteligente (Debounce de 600ms para no saturar procesos)
             clearTimeout(searchTimeout); 
-            
             searchTimeout = setTimeout(() => {
-                // Solo ejecutar si el usuario ha escrito algo
                 if (terms.length > 0) {
                     let hasChanges = false;
-                    
                     items.forEach(div => {
                         const isVisible = div.style.display !== 'none';
                         const checkbox = div.querySelector('input');
                         
-                        // Seleccionar lo visible, Deseleccionar lo oculto
+                        // Seleccionar lo que el usuario ha filtrado y deseleccionar lo que ha ocultado
                         if (isVisible && !checkbox.checked) {
                             checkbox.checked = true;
                             hasChanges = true;
@@ -832,23 +862,28 @@ function updateCharts(data, selYears) {
         if (isTableView) renderTimelineTable();
 
         if (chartTimeline) chartTimeline.destroy();
+        // ... dentro de updateCharts, en la parte de chartTimeline:
         chartTimeline = new Chart(ctxTimeline, { 
             type: chartTimelineType, 
             data: { labels, datasets }, 
             options: { 
                 ...commonOptions,
-                interaction: {
-                    mode: 'nearest',   
-                    axis: 'xy',        
-                    intersect: true    
+                onClick: (e, activeEls) => {
+                    if (activeEls.length > 0) {
+                        const dataIndex = activeEls[0].index;
+                        const datasetIndex = activeEls[0].datasetIndex;
+                        
+                        const labelX = labels[dataIndex]; // Ej: "2026" o "Ene"
+                        const categoryName = datasets[datasetIndex].label; // Ej: "Investigado"
+                        
+                        showDetailedRecords(labelX, categoryName);
+                    }
                 },
+                // Mantenemos el resto de tus opciones...
+                interaction: { mode: 'nearest', intersect: true },
                 scales: {
-                    x: { stacked: chartTimelineType === 'bar', grid: { display: false } },
-                    y: { stacked: chartTimelineType === 'bar', beginAtZero: true, ticks: { precision: 0 } }
-                },
-                plugins: {
-                    legend: { display: false }, // Ocultar leyenda (bolas de colores)
-                    tooltip: {}
+                    x: { stacked: chartTimelineType === 'bar' },
+                    y: { stacked: chartTimelineType === 'bar', beginAtZero: true }
                 }
             } 
         });
@@ -1370,13 +1405,18 @@ function renderStreetsTable(data) {
             </thead>
             <tbody>`;
 
-    tableStreetsDataCache.forEach(row => {
-    html += `
-        <tr>
-            <td style="text-align:left; font-weight:600;">${row.name}</td>
-            <td style="font-weight:800; color:var(--accent-blue); text-align:right;">${row.count.toLocaleString()}</td>
-        </tr>`;
-    });
+        tableStreetsDataCache.forEach(row => {
+            // Escapamos comillas simples por si el nombre de la calle las tiene (ej: CL' ARTUNDUAGA)
+            const safeName = row.name.replace(/'/g, "\\'");
+            
+            html += `
+                <tr ondblclick="focusStreetOnMap('${safeName}')" 
+                    style="cursor:pointer;" 
+                    title="Doble clic para situar en mapa">
+                    <td style="text-align:left; font-weight:600;">${row.name}</td>
+                    <td style="font-weight:800; color:var(--accent-blue); text-align:right;">${row.count.toLocaleString()}</td>
+                </tr>`;
+        });
 
     container.innerHTML = html + `</tbody></table>`;
     updateSortIcons(currentSortStreets.col, '#table-streets-view', currentSortStreets);
@@ -2158,11 +2198,14 @@ function truncateText(str, maxLength) {
 // ============================================================
 // GENERADOR DE INFOGRAFÍA IA (Smart Brief)
 // ============================================================
+// ============================================================
+// GENERADOR DE INFOGRAFÍA IA (Smart Brief)
+// ============================================================
 function generateSmartInfographic() {
     const t = translations[currentLang];
     if (!t) return;
 
-    // 1. RECOPILAR DATOS
+    // 1. RECOPILAR Y FILTRAR DATOS
     const selYears = Array.from(document.querySelectorAll('#items-year input:checked')).map(i => Number(i.value));
     const selMonths = Array.from(document.querySelectorAll('#items-month input:checked')).map(i => Number(i.value));
     const selCats = Array.from(document.querySelectorAll('#items-category input:checked')).map(i => i.value);
@@ -2173,17 +2216,24 @@ function generateSmartInfographic() {
         selCats.includes(d.cat)
     );
     
+    // Aplicar filtro espacial si está activo el switch de "Zonas"
     if (typeof applySpatialFilter === 'function') data = applySpatialFilter(data);
 
     if (data.length === 0) {
-        alert(currentLang === 'eu' ? "Ez dago daturik" : "No hay datos para la síntesis");
+        let noDataMsg = "No hay datos para la síntesis";
+        if (currentLang === 'eu') noDataMsg = "Ez dago daturik";
+        if (currentLang === 'ca') noDataMsg = "No hi ha dades per a la síntesi";
+        if (currentLang === 'gl') noDataMsg = "Non hai datos para a síntese";
+        alert(noDataMsg);
         return;
     }
 
     document.getElementById('loading-overlay').classList.add('active');
 
-    // 2. CÁLCULOS
+    // 2. CÁLCULOS ESTADÍSTICOS
     const total = data.length;
+    
+    // 2.1 Categorías
     const catCounts = {};
     data.forEach(d => catCounts[d.cat] = (catCounts[d.cat] || 0) + 1);
     const sortedCats = Object.entries(catCounts).sort((a, b) => b[1] - a[1]);
@@ -2193,6 +2243,16 @@ function generateSmartInfographic() {
     const percent = total > 0 ? (topCatVal / total) * 100 : 0;
     const percentRounded = Math.round(percent);
 
+    // 2.2 Calles / Direcciones (Ignorando "SIN CALLE / GPS")
+    const streetCounts = {};
+    data.forEach(d => {
+        if (d.calle && d.calle !== "SIN CALLE / GPS") {
+            streetCounts[d.calle] = (streetCounts[d.calle] || 0) + 1;
+        }
+    });
+    const sortedStreets = Object.entries(streetCounts).sort((a, b) => b[1] - a[1]);
+
+    // 2.3 Temporalidad (Horas y Días)
     const hourCounts = Array(24).fill(0);
     data.forEach(d => hourCounts[d.hour]++);
     const maxHourIdx = hourCounts.indexOf(Math.max(...hourCounts));
@@ -2212,26 +2272,66 @@ function generateSmartInfographic() {
         }
     };
 
-    // 4. RELLENAR TEXTOS
-    const yearsText = selYears.length > 3 ? (currentLang === 'eu' ? "Anitzak" : "Multi-Periodo") : selYears.join(', ');
+    // 4. RELLENAR TEXTOS E INDICADORES
+    // Título y fecha
+    let multiYearText = "Multi-Periodo";
+    if (currentLang === 'eu') multiYearText = "Anitzak";
+    if (currentLang === 'ca') multiYearText = "Multi-Període";
+    if (currentLang === 'gl') multiYearText = "Multi-Período";
+    
+    const yearsText = selYears.length > 3 ? multiYearText : selYears.join(', ');
     setSafeInner('info-title', `${t.info_report_title || 'Informe'} ${yearsText}`);
     setSafeInner('info-date', new Date().toLocaleDateString());
 
+    // Insight Principal (Categoría líder)
     const insightHTML = (t.info_insight_text || "Categoría: {cat} ({percent}%)")
         .replace('{cat}', `<span style="color:#ffd600">${truncateText(topCatName, 60)}</span>`)
         .replace('{percent}', percentRounded);
     setSafeInner('info-insight-main', insightHTML, true);
 
+    // KPIs Generales
     setSafeInner('info-stat-total', total.toLocaleString());
     setSafeInner('info-stat-peak', peakTime);
     setSafeInner('info-stat-day', busiestDay);
 
+    // Tendencia Horaria
     let trendText = t.info_trend_night;
     if (maxHourIdx >= 6 && maxHourIdx < 14) trendText = t.info_trend_morning;
     else if (maxHourIdx >= 14 && maxHourIdx < 22) trendText = t.info_trend_afternoon;
     setSafeInner('info-text-trend', trendText);
+
+    // 4.1. RELLENAR LISTA DE CALLES Y COMPLETAR INSIGHT
+    const streetListContainer = document.getElementById('info-street-list');
+    if (streetListContainer) {
+        streetListContainer.innerHTML = '';
+        // Cogemos solo el Top 2 para mantener el diseño limpio
+        const topStreets = sortedStreets.slice(0, 2);
+        
+        if (topStreets.length > 0) {
+            topStreets.forEach(item => {
+                const li = document.createElement('li');
+                li.style.borderBottom = "1px solid #f3f4f6"; // Línea sutil
+                li.style.color = "#374151";
+                li.innerHTML = `<span>${truncateText(item[0], 40)}</span> <span style="font-weight:800">${item[1]}</span>`;
+                streetListContainer.appendChild(li);
+            });
+            
+            // Añadir el insight geográfico al párrafo de tendencia
+            const streetTextBase = t.info_street_insight || "La mayor concentración de registros se localiza en {street}.";
+            const mainStreetInsight = streetTextBase.replace('{street}', topStreets[0][0]);
+            const trendEl = document.getElementById('info-text-trend');
+            if (trendEl) trendEl.innerText += " " + mainStreetInsight;
+        } else {
+            // Traducción dinámica del aviso de vacío
+            let noDataMsg = "Sin datos de vía";
+            if (currentLang === 'eu') noDataMsg = "Ez dago kale daturik";
+            if (currentLang === 'gl') noDataMsg = "Sen datos de vía";
+            if (currentLang === 'ca') noDataMsg = "Sense dades de via";
+            streetListContainer.innerHTML = `<li style="color:#9ca3af; font-style:italic;">${noDataMsg}</li>`;
+        }
+    }
     
-    // Lista Top 3
+    // 4.2. Lista Top 3 Categorías
     const listContainer = document.getElementById('info-top-list');
     if (listContainer) {
         listContainer.innerHTML = '';
@@ -2242,48 +2342,47 @@ function generateSmartInfographic() {
         });
     }
 
-    // --- SECCIÓN DOMINANCIA (CORREGIDA) ---
+    // 4.3. SECCIÓN DOMINANCIA (Gráfico Circular SVG)
     setSafeInner('info-pie-percent', `${percentRounded}%`);
     const circle = document.getElementById('svg-pie-progress');
     if (circle) {
         const radius = circle.r.baseVal.value;
         const circumference = 2 * Math.PI * radius;
         const offset = circumference - (percent / 100) * circumference;
-        circle.style.strokeDasharray = circumference; // Asegurar que el total es correcto
+        circle.style.strokeDasharray = circumference; 
         circle.style.strokeDashoffset = offset;
     }
 
     setSafeInner('info-lbl-leader', truncateText(topCatName, 40));
     
-    const lblRestoText = currentLang === 'es' ? 'Resto' : (currentLang === 'eu' ? 'Gainerakoak' : (currentLang === 'ca' ? 'Resta' : 'Resto'));
+    // Traducción de la etiqueta "Resto"
+    let lblRestoText = 'Resto';
+    if (currentLang === 'eu') lblRestoText = 'Gainerakoak';
+    if (currentLang === 'ca') lblRestoText = 'Resta';
     setSafeInner('info-lbl-resto', lblRestoText);
 
     const restVal = total - topCatVal;
     setSafeInner('info-pie-subtext', `${topCatVal.toLocaleString()} vs ${restVal.toLocaleString()}`);
 
-    // Aplicar i18n final
+    // Aplicar i18n a las etiquetas estáticas del lienzo
     document.querySelectorAll('#ai-infographic-container [data-i18n]').forEach(el => {
         const key = el.getAttribute('data-i18n');
         if (t[key]) el.textContent = t[key];
     });
 
-    // 5. EXPORTACIÓN
-// ... (Cálculos y llenado de datos igual que antes) ...
-
-    // 5. EXPORTACIÓN (AJUSTADA AL CUADRO COMPLETO)
+    // 5. EXPORTACIÓN A IMAGEN PNG
     const container = document.getElementById('ai-infographic-container');
 
+    // Esperamos 800ms para asegurar que el SVG y los estilos se han renderizado
     setTimeout(() => {
-        // Calculamos dimensiones reales del contenido
         const contentHeight = container.scrollHeight;
-        const contentWidth = container.scrollWidth;
 
         html2canvas(container, {
             scale: 2, // Calidad retina
             useCORS: true,
             backgroundColor: '#f3f4f6',
-            width: 800, // Forzamos el ancho de diseño
-            height: contentHeight, // Capturamos TODA la altura calculada
+            width: 800, // Ancho fijo estilo póster A4
+            height: contentHeight, // Altura dinámica según contenido
             windowWidth: 800,
             windowHeight: contentHeight,
             onclone: (clonedDoc) => {
@@ -2296,17 +2395,21 @@ function generateSmartInfographic() {
             }
         }).then(canvas => {
             const link = document.createElement('a');
-            const fileNamePrefix = currentLang === 'eu' ? 'Sintesia' : (currentLang === 'ca' ? 'Sintesi' : 'Sintesis');
+            let fileNamePrefix = 'Sintesis';
+            if (currentLang === 'eu') fileNamePrefix = 'Sintesia';
+            if (currentLang === 'ca') fileNamePrefix = 'Sintesi';
+            if (currentLang === 'gl') fileNamePrefix = 'Sintese';
+
             link.download = `Eurocop_${fileNamePrefix}_${new Date().getTime()}.png`;
             link.href = canvas.toDataURL('image/png');
             link.click();
         }).catch(err => {
             console.error("Error en captura:", err);
-            alert("Error al generar la imagen.");
+            alert("Error al generar la imagen. Inténtelo de nuevo.");
         }).finally(() => {
             document.getElementById('loading-overlay').classList.remove('active');
         });
-    }, 800); // Un poco más de tiempo para renderizar el SVG completo
+    }, 800); 
 }
 /**
  * Descarga el contenido actual de un contenedor (Gráfico, Mapa o Tabla) como imagen
@@ -2377,4 +2480,122 @@ function downloadComponent(containerId) {
         link.href = tempCanvas.toDataURL('image/png');
         link.click();
     }
+}
+/**
+ * Al hacer doble clic en una calle, vuelve al mapa, hace zoom 
+ * y genera un efecto visual temporal (flash).
+ */
+function focusStreetOnMap(streetName) {
+    const points = lastFilteredData.filter(d => d.calle === streetName && d.hasGeo);
+
+    if (points.length === 0) {
+        alert("Esta calle no tiene coordenadas GPS.");
+        return;
+    }
+
+    // 1. Cambiar vista
+    isTableStreetsView = false;
+    document.getElementById('main-map').style.display = 'block';
+    document.getElementById('table-streets-view').style.display = 'none';
+    
+    const btnIcon = document.querySelector('#btn-toggle-streets i');
+    if (btnIcon) btnIcon.className = 'fa-solid fa-list-ol';
+
+    // 2. Calcular límites y centro
+    const bounds = new maplibregl.LngLatBounds();
+    points.forEach(p => bounds.extend([p.lon, p.lat]));
+    const center = bounds.getCenter();
+
+    // 3. Zoom y efecto
+    setTimeout(() => {
+        map.resize();
+        map.fitBounds(bounds, { padding: 100, maxZoom: 17, duration: 1200 });
+
+        // Crear contenedor para las ondas
+        const el = document.createElement('div');
+        el.className = 'marker-focus-ring';
+
+        const flashMarker = new maplibregl.Marker({ element: el })
+            .setLngLat(center)
+            .addTo(map);
+
+        // Eliminar el efecto tras 4 segundos para limpiar el mapa
+        setTimeout(() => {
+            el.style.transition = "opacity 1s";
+            el.style.opacity = "0";
+            setTimeout(() => flashMarker.remove(), 1000);
+        }, 4000);
+
+    }, 100);
+}
+function showDetailedRecords(periodLabel, categoryName) {
+    const t = translations[currentLang];
+    
+    // 1. Filtrar los datos de lastFilteredData según el clic en el gráfico
+    const filtered = lastFilteredData.filter(d => {
+        // Coincidencia de categoría
+        if (d.cat !== categoryName) return false;
+        
+        // Coincidencia de periodo según la vista actual
+        if (temporalView === 'year') return d.year.toString() === periodLabel;
+        if (temporalView === 'month') return t.months_abbr[d.month - 1] === periodLabel;
+        if (temporalView === 'quarter') {
+            const qIndex = Math.floor((d.month - 1) / 3);
+            return t.quarters[qIndex] === periodLabel;
+        }
+        if (temporalView === 'day') {
+            let idx = d.date.getDay();
+            let dayName = t.days_abbr[idx === 0 ? 6 : idx - 1].substring(0,3);
+            return dayName === periodLabel;
+        }
+        return false;
+    });
+
+    if (filtered.length === 0) return;
+
+    // 2. Traducción de etiquetas básicas para la tabla
+    const labelReg = currentLang === 'eu' ? 'Erregistro' : 'Registros';
+    const labelCat = currentLang === 'eu' ? 'KATEGORIA' : 'CATEGORÍA';
+    const labelDate = currentLang === 'eu' ? 'DATA' : 'FECHA';
+
+    // 3. Título del Modal
+    document.getElementById('records-modal-title').innerText = `${categoryName} (${periodLabel}): ${filtered.length} ${labelReg}`;
+
+    // 4. Construir la Tabla (Cambio de CALLE por CATEGORÍA)
+    let html = `
+        <table class="data-table" style="width:100%; border-collapse: collapse;">
+            <thead style="position: sticky; top: 0; background: #f8f9fe; z-index: 10;">
+                <tr>
+                    <th style="text-align:left;">REF/EXP</th>
+                    <th>${labelDate}</th>
+                    <th style="text-align:left;">${labelCat}</th>
+                </tr>
+            </thead>
+            <tbody>`;
+
+    filtered.forEach(d => {
+        const dateStr = d.date.toLocaleString([], { 
+            day:'2-digit', 
+            month:'2-digit', 
+            year:'numeric', 
+            hour:'2-digit', 
+            minute:'2-digit' 
+        });
+
+        html += `
+            <tr>
+                <td style="color:var(--accent-blue); font-weight:bold; text-align:left;">REF${d.refanno}-${d.refnum}</td>
+                <td style="font-size:0.85rem;">${dateStr}</td>
+                <td style="text-align:left; font-size:0.85rem; font-weight:600; color:#32325d;">${d.cat}</td>
+            </tr>`;
+    });
+
+    html += `</tbody></table>`;
+    
+    document.getElementById('records-table-container').innerHTML = html;
+    document.getElementById('records-modal').classList.add('active');
+}
+
+function closeRecordsModal() {
+    document.getElementById('records-modal').classList.remove('active');
 }

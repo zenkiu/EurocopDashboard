@@ -571,8 +571,11 @@
 
         <div class="info-card">
             <h3 data-i18n="info_lbl_trend">Tendencia Temporal</h3>
-            <p id="info-text-trend" class="info-text-body">...</p>
-            <div class="mini-chart-bar" id="info-visual-bar"></div>
+            <p id="info-text-trend" class="info-text-body" style="margin-bottom:15px;">...</p>
+            
+            <!-- NUEVA SECCIÓN DE CALLES -->
+            <h3 data-i18n="info_lbl_streets" style="border-top: 1px solid #eee; padding-top: 15px; margin-top: 5px;">Ubicaciones Críticas</h3>
+            <ul id="info-street-list" class="info-list" style="color: #4b5563;"></ul>
         </div>
 
         <div class="info-card dark-card">
@@ -637,5 +640,17 @@
     <script>
         document.write('<script src="script.js?v=' + EUROCOP_VERSION + '"><\/script>');
     </script>
+<!-- MODAL PARA VER REGISTROS DETALLADOS -->
+<div id="records-modal" class="pdf-modal-overlay">
+    <div class="pdf-modal-content" style="max-width: 900px; width: 95%; height: 80vh;">
+        <div class="pdf-header">
+            <h3 id="records-modal-title">Registros Detallados</h3>
+            <button onclick="closeRecordsModal()" class="btn-close-pdf"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="pdf-body" style="overflow: auto; background: white; padding: 0;">
+            <div id="records-table-container"></div>
+        </div>
+    </div>
+</div>
 </body>
 </html>

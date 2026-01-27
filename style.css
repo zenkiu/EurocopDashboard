@@ -1112,3 +1112,75 @@ input:checked + .slider:before { transform: translateX(14px); }
 .fullscreen .chart-header { margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #eee; flex-shrink: 0; }
 .fullscreen .data-table td { font-size: 0.95rem; padding: 15px 10px; }
 .fullscreen .data-table th { font-size: 0.85rem; padding: 15px 10px; }
+/* EFECTO DE ONDAS RADAR (SIN MARCADOR SÓLIDO) */
+.marker-focus-ring {
+    width: 20px;
+    height: 20px;
+    position: relative;
+    pointer-events: none;
+}
+
+/* Las dos ondas circulares */
+.marker-focus-ring::after, 
+.marker-focus-ring::before {
+    content: '';
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    position: absolute;
+    top: 0; left: 0;
+    border: 3px solid #5e72e4; /* Azul corporativo */
+    box-shadow: 0 0 10px rgba(94, 114, 228, 0.5);
+    animation: marker-pulse 2s ease-out infinite;
+    opacity: 0;
+}
+
+/* Retraso de la segunda onda para que se sigan una a otra */
+.marker-focus-ring::before {
+    animation-delay: 1s;
+}
+
+@keyframes marker-pulse {
+    0% { transform: scale(0.5); opacity: 0; }
+    20% { opacity: 1; }
+    100% { transform: scale(4); opacity: 0; }
+}
+/* Ajuste para que las tablas de widgets pequeños no tengan scroll horizontal */
+#table-category-view .data-table,
+#table-hours-view .data-table,
+#table-streets-view .data-table {
+    min-width: 100% !important; /* Eliminamos los 600px */
+    width: 100% !important;
+    table-layout: fixed; /* Esto obliga a respetar el ancho del contenedor */
+}
+
+/* Control de las columnas para que el texto largo no las empuje */
+#table-category-view td:first-child,
+#table-hours-view td:first-child,
+#table-streets-view td:first-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: left;
+}
+
+/* Definir anchos fijos para las columnas de números (CANT / %) */
+/* Así dejamos la mayor parte del espacio para el nombre de la categoría o calle */
+#table-category-view th:not(:first-child), 
+#table-category-view td:not(:first-child),
+#table-hours-view th:not(:first-child), 
+#table-hours-view td:not(:first-child) {
+    width: 70px; /* Ancho suficiente para números */
+    text-align: right !important;
+    padding-right: 10px;
+}
+
+/* Eliminar el modo "sticky" en la primera columna para estos widgets 
+   ya que no habrá scroll horizontal */
+#table-category-view th:first-child, 
+#table-category-view td:first-child,
+#table-hours-view th:first-child, 
+#table-hours-view td:first-child {
+    position: static !important;
+    border-right: none !important;
+}
