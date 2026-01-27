@@ -1632,48 +1632,41 @@ function handleGeojsonUpload(input) {
     const file = input.files[0];
     if (!file) return;
 
-    // Mostrar loader
     document.getElementById('loading-overlay').classList.add('active');
 
     const reader = new FileReader();
     reader.onload = (e) => {
         try {
-            // 1. Parsear el archivo GeoJSON
             const geojson = JSON.parse(e.target.result);
-            
-            // 2. Generar metadatos (ID único y Color)
             const layerId = 'layer-' + Date.now(); 
             const color = getRandomColor(); 
             
-            // 3. Añadir visualmente al mapa (Pintar)
-            addLayerToMap(layerId, geojson, color);
+            // Extraer nombre del archivo sin extensión
+            const fileNameClean = file.name.replace(/\.[^/.]+$/, "");
+
+            // PASAMOS EL NOMBRE LIMPIO A LA FUNCIÓN
+            addLayerToMap(layerId, geojson, color, fileNameClean);
             
-            // 4. Guardar en el registro global
             mapLayers.push({
                 id: layerId,
-                name: file.name.replace('.geojson', '').replace('.json', ''),
+                name: fileNameClean,
                 visible: true,
                 color: color,
-                geojson: geojson // <--- IMPORTANTE: Guardamos los datos crudos para el filtro espacial (Turf.js)
+                geojson: geojson 
             });
             
-            // 5. Actualizar la lista visual en el menú
             renderLayerList();
 
-            // 6. Si el interruptor "Filtrar datos por zona" ya estaba encendido,
-            // forzamos una actualización de los KPIs y gráficos inmediatamente.
-            const isFilterActive = document.getElementById('chk-spatial-filter')?.checked;
-            if (isFilterActive) {
+            if (document.getElementById('chk-spatial-filter')?.checked) {
                 triggerUpdateWithLoader();
             }
 
         } catch (err) {
             console.error(err);
-            alert("Error: El archivo no es un GeoJSON válido.");
+            alert("Error: Archivo GeoJSON inválido.");
         } finally {
-            // Limpieza final
             document.getElementById('loading-overlay').classList.remove('active');
-            input.value = ''; // Resetear input para permitir subir el mismo archivo de nuevo si se desea
+            input.value = ''; 
         }
     };
     reader.readAsText(file);
@@ -1811,122 +1804,92 @@ function handleGeojsonUpload(input) {
 
 // 3. Función técnica para pintar en MapLibre
 // 3. Función técnica para pintar en MapLibre (VERSION UNIVERSAL)
-function addLayerToMap(id, geojson, color) {
+function addLayerToMap(id, geojson, color, layerName) { // Añadido layerName
     if (!map) return;
 
-    // Agregar Fuente
     map.addSource(id, { type: 'geojson', data: geojson });
-
-    // Asegurar que se pinte DEBAJO de los puntos (point-layer)
     const beforeLayer = map.getLayer('point-layer') ? 'point-layer' : null;
 
-    // 1. CAPA DE RELLENO (Solo para Polígonos)
+    // Capas visuales (Relleno, Línea y Círculo)
     map.addLayer({
         'id': id + '-fill',
         'type': 'fill',
         'source': id,
         'layout': { 'visibility': 'visible' },
-        'paint': {
-            'fill-color': color,
-            'fill-opacity': 0.3, // Aumentado a 0.3 para que se vea mejor
-            'fill-outline-color': color
-        },
-        'filter': ['==', '$type', 'Polygon'] // Solo aplica a polígonos
+        'paint': { 'fill-color': color, 'fill-opacity': 0.3 },
+        'filter': ['==', '$type', 'Polygon']
     }, beforeLayer);
 
-    // 2. CAPA DE LÍNEAS (Para Polígonos y LineStrings/Rutas)
     map.addLayer({
         'id': id + '-line',
         'type': 'line',
         'source': id,
-        'layout': { 
-            'visibility': 'visible',
-            'line-join': 'round',
-            'line-cap': 'round'
-        },
-        'paint': {
-            'line-color': color,
-            'line-width': 3
-        },
-        // Aplica a Polígonos (borde) y LineStrings (rutas)
-        'filter': ['in', '$type', 'Polygon', 'LineString'] 
+        'layout': { 'visibility': 'visible', 'line-join': 'round', 'line-cap': 'round' },
+        'paint': { 'line-color': color, 'line-width': 3 },
+        'filter': ['in', '$type', 'Polygon', 'LineString']
     }, beforeLayer);
 
-    // 3. CAPA DE PUNTOS (Por si el GeoJSON trae marcadores)
-    map.addLayer({
-        'id': id + '-circle',
-        'type': 'circle',
-        'source': id,
-        'layout': { 'visibility': 'visible' },
-        'paint': {
-            'circle-radius': 6,
-            'circle-color': color,
-            'circle-stroke-width': 2,
-            'circle-stroke-color': '#ffffff'
-        },
-        'filter': ['==', '$type', 'Point'] // Solo aplica a puntos
-    }, beforeLayer);
-    
-    // POPUP AL HACER CLICK (Detecta cualquier geometría)
-    const layerIds = [id + '-fill', id + '-line', id + '-circle'];
-    
-    // Evento Click
-    map.on('click', (e) => {
-        // Verificar si el click fue sobre alguna de nuestras capas
-        const features = map.queryRenderedFeatures(e.point, { layers: layerIds });
-        if (!features.length) return;
+    const layerIds = [id + '-fill', id + '-line'];
 
-        const p = features[0].properties;
-        // Intentar buscar el nombre en varias propiedades comunes
-        const name = p.Name || p.NAME || p.Name || p.nombre || p.label || p.title || p.BARRIO || p.DISTRITO || "Sin nombre";
-        const desc = p.description || p.Description || "";
-        
-        let htmlContent = `<div style="padding:5px; color:#333;"><b>${name}</b>`;
-        if(desc) htmlContent += `<br><span style="font-size:0.8em; color:#666;">${desc}</span>`;
-        htmlContent += `</div>`;
+    // --- LÓGICA DE CLIC UNIFICADA PARA ZONAS ---
+// Dentro de addLayerToMap...
 
-        new maplibregl.Popup()
-            .setLngLat(e.lngLat)
-            .setHTML(htmlContent)
-            .addTo(map);
+map.on('click', (e) => {
+    // 1. PRIORIDAD: Si hay un punto de incidente debajo, no mostramos el de la zona
+    const points = map.queryRenderedFeatures(e.point, { layers: ['point-layer'] });
+    if (points.length > 0) return;
+
+    // 2. Detectar si se ha pinchado en la zona
+    const features = map.queryRenderedFeatures(e.point, { layers: layerIds });
+    if (!features.length) return;
+
+    const p = features[0].properties;
+
+    // 3. Extraer "nombre" y "descripcion" (usamos alternativas por si vienen en mayúsculas)
+    const nombre = p.nombre || p.Nombre || "Sin nombre";
+    const descripcion = p.descripcion || p.Descripcion || "";
+
+    // 4. Construir el HTML del Popup
+    let htmlContent = `
+        <div style="padding:8px; font-family:'Inter', sans-serif; color:#32325d; min-width:120px;">
+            <b style="text-transform: uppercase; font-size: 13px; display: block; margin-bottom: 4px; border-bottom: 1px solid #eee; padding-bottom: 4px;">
+                ${nombre}
+            </b>`;
+    
+    if (descripcion) {
+        htmlContent += `
+            <span style="font-size: 11px; color: #525f7f; display: block; line-height: 1.4;">
+                ${descripcion}
+            </span>`;
+    }
+
+    htmlContent += `</div>`;
+
+    // 5. Lanzar el popup
+    new maplibregl.Popup({ offset: 10 })
+        .setLngLat(e.lngLat)
+        .setHTML(htmlContent)
+        .addTo(map);
+});
+
+    // Cursores
+    map.on('mouseenter', id + '-fill', () => {
+        // Solo poner cursor pointer si no hay un punto encima
+        const points = map.queryRenderedFeatures(map.project(map.getCenter()), { layers: ['point-layer'] });
+        if(points.length === 0) map.getCanvas().style.cursor = 'pointer';
     });
-
-    // Cambiar cursor al pasar por encima
-    map.on('mouseenter', id + '-fill', () => map.getCanvas().style.cursor = 'pointer');
-    map.on('mouseenter', id + '-line', () => map.getCanvas().style.cursor = 'pointer');
-    map.on('mouseenter', id + '-circle', () => map.getCanvas().style.cursor = 'pointer');
-    
     map.on('mouseleave', id + '-fill', () => map.getCanvas().style.cursor = '');
-    map.on('mouseleave', id + '-line', () => map.getCanvas().style.cursor = '');
-    map.on('mouseleave', id + '-circle', () => map.getCanvas().style.cursor = '');
 
-    // 4. ZOOM AUTOMÁTICO MEJORADO (Detecta todas las coordenadas)
+    // Zoom automático
     try {
         const bounds = new maplibregl.LngLatBounds();
-        
-        // Función recursiva para extraer coordenadas de cualquier estructura GeoJSON
         const extractCoords = (coords) => {
-            if (typeof coords[0] === 'number') {
-                bounds.extend(coords);
-            } else {
-                coords.forEach(extractCoords);
-            }
+            if (typeof coords[0] === 'number') bounds.extend(coords);
+            else coords.forEach(extractCoords);
         };
-
-        geojson.features.forEach(feature => {
-            if (feature.geometry && feature.geometry.coordinates) {
-                extractCoords(feature.geometry.coordinates);
-            }
-        });
-
-        if (!bounds.isEmpty()) {
-            map.fitBounds(bounds, { padding: 50, maxZoom: 14 });
-        }
-    } catch (e) { 
-        console.log("No se pudo centrar mapa en la capa", e); 
-    }
-    // Disparar efecto visual para localizar la capa
-    flashLayerEffect(id);
+        geojson.features.forEach(f => { if(f.geometry) extractCoords(f.geometry.coordinates); });
+        if (!bounds.isEmpty()) map.fitBounds(bounds, { padding: 50, maxZoom: 14 });
+    } catch (e) {}
 }
 
 // 4. Renderizar la lista en el HTML
@@ -2604,4 +2567,83 @@ function closeRecordsModal() {
 
 function closeRecordsModal() {
     document.getElementById('records-modal').classList.remove('active');
+}
+/**
+ * Análisis Inteligente de Hotspots:
+ * Detecta automáticamente la mayor concentración de delitos/incidentes
+ * y hace zoom sobre ella.
+ */
+/**
+ * Análisis Inteligente de Hotspots V2: 
+ * Busca el "Epicentro": el punto que más vecinos tiene en un radio de 150m.
+ */
+function focusIntelligentHotspot() {
+    const pointsWithGeo = lastFilteredData.filter(d => d.hasGeo);
+
+    if (pointsWithGeo.length < 3) {
+        showToast(currentLang === 'es' ? "Faltan datos GPS" : "Missing GPS data");
+        return;
+    }
+
+    // Convertir a GeoJSON para Turf
+    const collection = pointsWithGeo.map(p => turf.point([p.lon, p.lat]));
+
+    let maxNeighbors = -1;
+    let epicenterCoords = null;
+    
+    // Radio de búsqueda más fino (0.15 km = 150 metros)
+    const searchRadius = 0.15; 
+
+    // 1. ANALIZAR CADA PUNTO PARA VER CUÁNTOS VECINOS TIENE CERCA
+    collection.forEach((point, i) => {
+        let count = 0;
+        collection.forEach((otherPoint, j) => {
+            if (i === j) return;
+            // Calculamos distancia entre puntos
+            const dist = turf.distance(point, otherPoint, { units: 'kilometers' });
+            if (dist <= searchRadius) count++;
+        });
+
+        // Si este punto tiene más vecinos que el récord actual, es nuestro nuevo epicentro
+        if (count > maxNeighbors) {
+            maxNeighbors = count;
+            epicenterCoords = point.geometry.coordinates;
+        }
+    });
+
+    if (epicenterCoords) {
+        // 2. HACER ZOOM AL EPICENTRO REAL
+        map.flyTo({
+            center: epicenterCoords,
+            zoom: 17, // Zoom más cercano para ver el detalle de la zona
+            speed: 1.2,
+            curve: 1.5,
+            essential: true
+        });
+
+        // 3. EFECTO RADAR EN EL PUNTO EXACTO DE MÁXIMA CONFLUENCIA
+        createRadarEffect(epicenterCoords);
+
+        const msg = currentLang === 'es' 
+            ? `Detectado epicentro con ${maxNeighbors + 1} incidentes cercanos.` 
+            : `Detected epicenter with ${maxNeighbors + 1} nearby incidents.`;
+        showToast(msg);
+    }
+}
+
+/**
+ * Crea un efecto visual temporal para marcar el hotspot detectado
+ */
+function createRadarEffect(coords) {
+    const el = document.createElement('div');
+    el.className = 'marker-focus-ring'; // Usamos la clase que ya tienes en CSS
+    
+    const marker = new maplibregl.Marker({ element: el })
+        .setLngLat(coords)
+        .addTo(map);
+
+    setTimeout(() => {
+        el.style.opacity = "0";
+        setTimeout(() => marker.remove(), 1000);
+    }, 4000);
 }
