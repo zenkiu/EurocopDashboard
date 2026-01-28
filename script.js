@@ -181,6 +181,72 @@ function goToMapping() {
 }
 
 // ============================================================
+// TOGGLE DE CAMPOS CONFIGURADOS
+// ============================================================
+let configuredFieldsVisible = false;
+
+function toggleConfiguredFields() {
+    const sections = document.querySelectorAll('.configured-fields-section');
+    const button = document.getElementById('toggle-configured-fields');
+    const toggleText = document.getElementById('toggle-text');
+    const icon = button.querySelector('i');
+    const mappingGrid = document.getElementById('mapping-grid');
+    
+    configuredFieldsVisible = !configuredFieldsVisible;
+    
+    sections.forEach(section => {
+        section.style.display = configuredFieldsVisible ? 'flex' : 'none';
+    });
+    
+    // Detectar si estamos en móvil
+    const isMobile = window.innerWidth <= 768;
+    
+    if (configuredFieldsVisible) {
+        // Mostrar todos los campos
+        if (isMobile) {
+            // En móvil: mantener diseño vertical
+            mappingGrid.style.display = 'flex';
+            mappingGrid.style.flexDirection = 'column';
+            mappingGrid.style.gridTemplateColumns = '';
+            mappingGrid.style.justifyContent = 'flex-start';
+        } else {
+            // En desktop: grid de 3 columnas
+            mappingGrid.style.display = 'grid';
+            mappingGrid.style.flexDirection = '';
+            mappingGrid.style.gridTemplateColumns = 'repeat(3, 1fr)';
+            mappingGrid.style.justifyContent = 'start';
+        }
+        
+        // Usar traducción del archivo de idiomas
+        const hideText = translations[currentLang]?.btn_hide_configured || 'Ocultar campos configurados';
+        toggleText.textContent = hideText;
+        icon.className = 'fa-solid fa-eye-slash';
+        button.style.background = '#edf2f7';
+    } else {
+        // Ocultar campos configurados
+        if (isMobile) {
+            // En móvil: mantener diseño vertical
+            mappingGrid.style.display = 'flex';
+            mappingGrid.style.flexDirection = 'column';
+            mappingGrid.style.gridTemplateColumns = '';
+            mappingGrid.style.justifyContent = 'flex-start';
+        } else {
+            // En desktop: centrar la única columna visible
+            mappingGrid.style.display = 'flex';
+            mappingGrid.style.flexDirection = '';
+            mappingGrid.style.gridTemplateColumns = '';
+            mappingGrid.style.justifyContent = 'center';
+        }
+        
+        // Usar traducción del archivo de idiomas
+        const showText = translations[currentLang]?.btn_show_configured || 'Mostrar campos configurados';
+        toggleText.textContent = showText;
+        icon.className = 'fa-solid fa-eye';
+        button.style.background = '#f7fafc';
+    }
+}
+
+// ============================================================
 // 4. MAPEO
 // ============================================================
 function showMapping(data) {
@@ -882,8 +948,8 @@ function updateCharts(data, selYears) {
                     legend: { display: false },
                     tooltip: {
                         enabled: true,
-                        mode: 'index',
-                        intersect: false,
+                        mode: 'nearest',
+                        intersect: true,
                         itemSort: (a, b) => b.raw - a.raw,
                         filter: (tooltipItem) => tooltipItem.raw > 0
                     }
@@ -2272,6 +2338,7 @@ function generateSmartInfographic() {
     setSafeInner('info-date', new Date().toLocaleDateString());
 
     const insightHTML = (t.info_insight_text || "Categoría: {cat} ({percent}%)")
+        .replace('{archivo}', `${truncateText(nombreArchivoSubido, 40)}`)
         .replace('{cat}', `<span style="color:#ffd600">${truncateText(topCatName, 60)}</span>`)
         .replace('{percent}', percent);
     setSafeInner('info-insight-main', insightHTML, true);
@@ -2569,13 +2636,9 @@ function closeRecordsModal() {
     document.getElementById('records-modal').classList.remove('active');
 }
 /**
- * Análisis Inteligente de Hotspots:
- * Detecta automáticamente la mayor concentración de delitos/incidentes
- * y hace zoom sobre ella.
- */
-/**
- * Análisis Inteligente de Hotspots V2: 
- * Busca el "Epicentro": el punto que más vecinos tiene en un radio de 150m.
+ * Análisis Inteligente de Hotspots V3: 
+ * Usa un enfoque de grid para encontrar la zona de mayor densidad real.
+ * Divide el área en celdas y busca la celda con más puntos.
  */
 function focusIntelligentHotspot() {
     const pointsWithGeo = lastFilteredData.filter(d => d.hasGeo);
@@ -2585,26 +2648,93 @@ function focusIntelligentHotspot() {
         return;
     }
 
-    // Convertir a GeoJSON para Turf
+    // Tamaño de celda en grados (~100 metros)
+    const cellSize = 0.001;
+    const gridCells = {};
+
+    // 1. CREAR GRID Y CONTAR PUNTOS POR CELDA
+    pointsWithGeo.forEach(p => {
+        // Calcular en qué celda cae este punto
+        const cellX = Math.floor(p.lon / cellSize);
+        const cellY = Math.floor(p.lat / cellSize);
+        const cellKey = `${cellX},${cellY}`;
+
+        if (!gridCells[cellKey]) {
+            gridCells[cellKey] = {
+                count: 0,
+                centerLon: (cellX + 0.5) * cellSize,
+                centerLat: (cellY + 0.5) * cellSize,
+                points: []
+            };
+        }
+        gridCells[cellKey].count++;
+        gridCells[cellKey].points.push(p);
+    });
+
+    // 2. ENCONTRAR LA CELDA CON MÁS PUNTOS
+    let maxCell = null;
+    let maxCount = 0;
+
+    Object.entries(gridCells).forEach(([key, cell]) => {
+        if (cell.count > maxCount) {
+            maxCount = cell.count;
+            maxCell = cell;
+        }
+    });
+
+    if (maxCell && maxCount >= 3) {
+        // 3. CALCULAR EL CENTROIDE REAL DE LOS PUNTOS EN ESA CELDA
+        let sumLon = 0, sumLat = 0;
+        maxCell.points.forEach(p => {
+            sumLon += p.lon;
+            sumLat += p.lat;
+        });
+        const epicenterCoords = [
+            sumLon / maxCell.points.length,
+            sumLat / maxCell.points.length
+        ];
+
+        // 4. HACER ZOOM AL EPICENTRO REAL
+        map.flyTo({
+            center: epicenterCoords,
+            zoom: 17,
+            speed: 1.2,
+            curve: 1.5,
+            essential: true
+        });
+
+        // 5. EFECTO RADAR EN EL PUNTO DE MÁXIMA CONCENTRACIÓN
+        createRadarEffect(epicenterCoords);
+
+        const msg = currentLang === 'es' 
+            ? `Zona crítica detectada: ${maxCount} incidentes concentrados.` 
+            : `Critical zone detected: ${maxCount} concentrated incidents.`;
+        showToast(msg);
+    } else {
+        // Si no hay concentración clara, buscar usando el método original
+        focusIntelligentHotspotLegacy();
+    }
+}
+
+/**
+ * Método alternativo (legacy): busca el punto con más vecinos cercanos
+ */
+function focusIntelligentHotspotLegacy() {
+    const pointsWithGeo = lastFilteredData.filter(d => d.hasGeo);
     const collection = pointsWithGeo.map(p => turf.point([p.lon, p.lat]));
 
     let maxNeighbors = -1;
     let epicenterCoords = null;
-    
-    // Radio de búsqueda más fino (0.15 km = 150 metros)
     const searchRadius = 0.15; 
 
-    // 1. ANALIZAR CADA PUNTO PARA VER CUÁNTOS VECINOS TIENE CERCA
     collection.forEach((point, i) => {
         let count = 0;
         collection.forEach((otherPoint, j) => {
             if (i === j) return;
-            // Calculamos distancia entre puntos
             const dist = turf.distance(point, otherPoint, { units: 'kilometers' });
             if (dist <= searchRadius) count++;
         });
 
-        // Si este punto tiene más vecinos que el récord actual, es nuestro nuevo epicentro
         if (count > maxNeighbors) {
             maxNeighbors = count;
             epicenterCoords = point.geometry.coordinates;
@@ -2612,16 +2742,14 @@ function focusIntelligentHotspot() {
     });
 
     if (epicenterCoords) {
-        // 2. HACER ZOOM AL EPICENTRO REAL
         map.flyTo({
             center: epicenterCoords,
-            zoom: 17, // Zoom más cercano para ver el detalle de la zona
+            zoom: 17,
             speed: 1.2,
             curve: 1.5,
             essential: true
         });
 
-        // 3. EFECTO RADAR EN EL PUNTO EXACTO DE MÁXIMA CONFLUENCIA
         createRadarEffect(epicenterCoords);
 
         const msg = currentLang === 'es' 

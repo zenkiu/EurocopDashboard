@@ -135,43 +135,58 @@
                 <h2 data-i18n="config_title"><i class="fa-solid fa-sliders"></i> CONFIGURACIÓN</h2>
                 <p data-i18n="config_desc">Vincula las columnas de tu archivo.</p>
             </div>
+
+            <!-- Botón para mostrar/ocultar campos configurados -->
+            <div style="margin-bottom: 15px; text-align: center;">
+                <button id="toggle-configured-fields" onclick="toggleConfiguredFields()" class="btn-toggle-fields" style="
+                    background: #f7fafc; 
+                    border: 1px solid #e2e8f0; 
+                    padding: 10px 20px; 
+                    border-radius: 8px; 
+                    cursor: pointer; 
+                    font-size: 14px; 
+                    font-weight: 600;
+                    color: #4a5568;
+                    transition: all 0.2s;">
+                    <i class="fa-solid fa-eye"></i> <span id="toggle-text" data-i18n="btn_show_configured">Mostrar campos configurados</span>
+                </button>
+            </div>
             
-            <div class="cards-grid mapping-layout">
-                <!-- COLUMNA 1: Identificación y GPS -->
-                <div class="mapping-col">
+            <div class="cards-grid mapping-layout" id="mapping-grid">
+                <!-- SECCIÓN CAMPOS CONFIGURADOS (OCULTOS POR DEFECTO) -->
+                <div class="mapping-col configured-fields-section" style="display: none;">
                     <div class="card">
                         <label><strong data-i18n="col_id">CONTADOR / ID</strong></label>
-                        <select id="map-expediente" class="styled-select"></select>
+                        <select id="map-expediente" class="styled-select configured-field"></select>
                     </div>
                     <div class="card">
                         <label><strong>LATITUD (Y) <small style="font-weight:400; color:#888;">(Opcional)</small></strong></label>
-                        <select id="map-lat" class="styled-select"></select>
+                        <select id="map-lat" class="styled-select configured-field"></select>
                     </div>
                     <div class="card">
                         <label><strong>LONGITUD (X) <small style="font-weight:400; color:#888;">(Opcional)</small></strong></label>
-                        <select id="map-lon" class="styled-select"></select>
+                        <select id="map-lon" class="styled-select configured-field"></select>
                     </div>
                 </div>
 
-                <!-- COLUMNA 2: Tiempo y Dirección -->
-                <div class="mapping-col">
+                <div class="mapping-col configured-fields-section" style="display: none;">
                     <div class="card">
                         <label><strong data-i18n="col_date">FECHA (Obligatorio)</strong></label>
-                        <select id="map-fecha" class="styled-select"></select>
+                        <select id="map-fecha" class="styled-select configured-field"></select>
                     </div>
                     <div class="card">
                         <label><strong data-i18n="col_time">HORA (Opcional)</strong></label>
-                        <select id="map-hora" class="styled-select"></select>
+                        <select id="map-hora" class="styled-select configured-field"></select>
                     </div>
                     <!-- En la columna 2 de mapping-view -->
                     <div class="card">
                         <label><strong data-i18n="col_street">CALLE / DIRECCIÓN (Opcional)</strong></label>
-                        <select id="map-calle" class="styled-select"></select>
+                        <select id="map-calle" class="styled-select configured-field"></select>
                     </div>
                 </div>
 
-                <!-- COLUMNA 3: Análisis -->
-                <div class="mapping-col">
+                <!-- COLUMNA ANÁLISIS - SIEMPRE VISIBLE Y CENTRADA -->
+                <div class="mapping-col visible-fields-section">
                     <div class="card highlighted-card">
                         <div class="highlight-badge">ANÁLISIS</div>
                         <label><strong data-i18n="col_cat">CATEGORÍA / TIPO</strong></label>

@@ -435,6 +435,13 @@ input:checked + .slider:before { transform: translateX(14px); }
     gap: 20px;
     padding: 30px;
     align-items: start; /* Alinea las tarjetas arriba */
+    justify-content: center; /* Centra el contenido */
+}
+
+/* Cuando solo hay una columna visible, centrarla */
+.mapping-layout:has(.mapping-col:not(.configured-fields-section)) {
+    grid-template-columns: minmax(auto, 400px);
+    justify-content: center;
 }
 .mapping-col { display: flex; flex-direction: column; gap: 20px; }
 .card {
@@ -460,6 +467,37 @@ input:checked + .slider:before { transform: translateX(14px); }
 .highlight-badge { position: absolute; top: 0; right: 0; background: var(--accent-blue); color: white; padding: 4px 10px; font-size: 0.6rem; font-weight: 800; border-bottom-left-radius: 10px; }
 .styled-select { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #dcdfe6; margin-top: 5px; }
 .action-footer { padding: 20px 30px; background: #f4f6f9; display: flex; justify-content: flex-end; gap: 15px; border-top: 1px solid var(--border-color); }
+
+/* Botón de toggle para campos configurados */
+.btn-toggle-fields {
+    transition: all 0.3s ease;
+}
+
+.btn-toggle-fields:hover {
+    background: #e2e8f0 !important;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.btn-toggle-fields:active {
+    transform: translateY(0);
+}
+
+/* Estilos para campos visibles cuando los configurados están ocultos */
+.visible-fields-section {
+    max-width: 500px;
+    width: 100%;
+}
+
+/* Cuando el layout está en modo flex (campos ocultos) */
+.mapping-layout[style*="display: flex"] {
+    align-items: flex-start;
+    padding: 50px 30px;
+}
+
+.mapping-layout[style*="display: flex"] .visible-fields-section {
+    margin: 0 auto;
+}
 
 /* =========================================
    7. TABLA DE DATOS
@@ -1040,9 +1078,20 @@ input:checked + .slider:before { transform: translateX(14px); }
     #main-map { height: 100% !important; min-height: 250px; }
 
     .mapping-layout {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr !important;
         padding: 15px;
-    }   
+        display: flex !important;
+        flex-direction: column;
+        justify-content: flex-start;
+        align-items: stretch;
+    }
+    
+    .mapping-layout .visible-fields-section,
+    .mapping-layout .configured-fields-section {
+        max-width: 100%;
+        width: 100%;
+    }
+    
     .config-panel {
         margin-top: 20px;
     }
