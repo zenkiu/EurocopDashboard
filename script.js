@@ -387,8 +387,27 @@ document.getElementById('btn-visualizar').onclick = () => {
             let registrosSinFecha = [];
             finalData = [];
 
-            // 3. PROCESAMIENTO DE LOS DATOS
-            finalData = rawData.map(row => {
+            // 3. VERIFICAR SI SE USARÁ MULTI-COLUMNA
+            const useMultiColumn = (config.cat === "***MULTI_COLUMN***");
+            
+            // Obtener las columnas a usar como categorías (excluyendo las ya mapeadas)
+            let columnsForCategories = [];
+            if (useMultiColumn) {
+                const headers = Object.keys(rawData[0]);
+                const mappedColumns = [config.exp, config.fecha, config.hora, config.lat, config.lon, config.calle].filter(v => v);
+                columnsForCategories = headers.filter(h => {
+                    // Solo incluir columnas que no estén ya mapeadas
+                    if (mappedColumns.includes(h)) return false;
+                    // Solo incluir columnas que tengan al menos un valor numérico
+                    return rawData.some(row => {
+                        const val = row[h];
+                        return val !== "" && val !== null && val !== undefined && !isNaN(Number(val)) && Number(val) > 0;
+                    });
+                });
+            }
+
+            // 4. PROCESAMIENTO DE LOS DATOS
+            rawData.forEach(row => {
                 let valFecha = row[config.fecha];
                 let d;
                 
@@ -408,7 +427,7 @@ document.getElementById('btn-visualizar').onclick = () => {
                 if (isNaN(d.getTime())) {
                     const keyNum = Object.keys(row).find(k => k.toUpperCase().includes('REFNUM') || k.toUpperCase().includes('NUMERO'));
                     registrosSinFecha.push(`REF: ${row[keyNum] || 'S/N'}`);
-                    return null;
+                    return;
                 }
 
                 // Tratamiento de Hora
@@ -430,36 +449,66 @@ document.getElementById('btn-visualizar').onclick = () => {
                     }
                 }
 
-                // Retornamos el objeto normalizado
-                return {
-                    exp: row[config.exp] || "N/A",
-                    date: d, 
-                    year: d.getFullYear(), 
-                    month: d.getMonth() + 1, 
-                    hour: d.getHours(),
-                    lat, 
-                    lon, 
-                    hasGeo: tieneGeo,
-                    cat: row[config.cat] || "General",
-                    calle: row[config.calle] ? String(row[config.calle]).toUpperCase().trim() : "SIN CALLE / GPS",
-                    locManual: config.locManual,
-                    refnum: row['REFNUM'] || "", 
-                    refanno: row['REFANNO'] || ""
-                };
-            }).filter(v => v !== null);
+                // MULTI-COLUMNA: Crear un registro por cada columna con valor
+                if (useMultiColumn) {
+                    columnsForCategories.forEach(colName => {
+                        const value = row[colName];
+                        const numValue = Number(value);
+                        
+                        // Solo crear registros si el valor es un número mayor que 0
+                        if (!isNaN(numValue) && numValue > 0) {
+                            // Crear tantos registros como indique el valor numérico
+                            for (let i = 0; i < numValue; i++) {
+                                finalData.push({
+                                    exp: row[config.exp] || "N/A",
+                                    date: new Date(d), 
+                                    year: d.getFullYear(), 
+                                    month: d.getMonth() + 1, 
+                                    hour: d.getHours(),
+                                    lat, 
+                                    lon, 
+                                    hasGeo: tieneGeo,
+                                    cat: colName, // El nombre de la columna es la categoría
+                                    calle: row[config.calle] ? String(row[config.calle]).toUpperCase().trim() : "SIN CALLE / GPS",
+                                    locManual: config.locManual,
+                                    refnum: row['REFNUM'] || "", 
+                                    refanno: row['REFANNO'] || ""
+                                });
+                            }
+                        }
+                    });
+                } else {
+                    // MODO NORMAL: Una sola categoría por fila
+                    finalData.push({
+                        exp: row[config.exp] || "N/A",
+                        date: d, 
+                        year: d.getFullYear(), 
+                        month: d.getMonth() + 1, 
+                        hour: d.getHours(),
+                        lat, 
+                        lon, 
+                        hasGeo: tieneGeo,
+                        cat: row[config.cat] || "General",
+                        calle: row[config.calle] ? String(row[config.calle]).toUpperCase().trim() : "SIN CALLE / GPS",
+                        locManual: config.locManual,
+                        refnum: row['REFNUM'] || "", 
+                        refanno: row['REFANNO'] || ""
+                    });
+                }
+            });
 
-            // 4. TRANSICIÓN DE VISTAS
+            // 5. TRANSICIÓN DE VISTAS
             document.getElementById('mapping-view').classList.remove('active');
             document.getElementById('dashboard-view').classList.add('active');
             
             // Resetear scroll a la parte superior
             window.scrollTo(0, 0);
 
-            // 5. INICIALIZAR COMPONENTES
+            // 6. INICIALIZAR COMPONENTES
             setupFilters();
             initMap();
             
-            // 6. FIX CRÍTICO: CENTRADO DE MAPA Y RENDERIZADO
+            // 7. FIX CRÍTICO: CENTRADO DE MAPA Y RENDERIZADO
             // Esperamos a que la animación de la página termine para que el mapa
             // detecte su tamaño real y el zoom automático (fitBounds) funcione.
             setTimeout(() => {
@@ -526,6 +575,30 @@ function renderCheckboxes(containerId, items, defaultValue) {
         const isChecked = (defaultValue === 'all' || val == defaultValue) ? 'checked' : '';
         div.innerHTML = `<input type="checkbox" value="${val}" ${isChecked} onchange="triggerUpdateWithLoader()"> <span>${label}</span>`;
         container.appendChild(div);
+    });
+}
+
+// Función para actualizar solo los labels de los meses cuando cambia el idioma
+function updateMonthLabels() {
+    const container = document.getElementById('items-month');
+    if (!container) return;
+    
+    const t = translations[currentLang];
+    if (!t || !t.months_abbr) return;
+    
+    // Recorrer todos los checkbox items de meses
+    const checkboxItems = container.querySelectorAll('.checkbox-item');
+    checkboxItems.forEach((item, index) => {
+        const input = item.querySelector('input');
+        const span = item.querySelector('span');
+        
+        if (input && span) {
+            const monthValue = parseInt(input.value);
+            if (monthValue >= 1 && monthValue <= 12) {
+                // Actualizar el texto del label con la traducción correspondiente
+                span.textContent = t.months_abbr[monthValue - 1];
+            }
+        }
     });
 }
 
@@ -1573,6 +1646,9 @@ function applyLanguage(lang) {
     if(typeof renderLayerList === 'function') {
         renderLayerList();
     }
+
+    // 4. NUEVO: Actualizar los labels de los meses en el filtro
+    updateMonthLabels();
 
     if(finalData.length > 0) updateUI();
 }
