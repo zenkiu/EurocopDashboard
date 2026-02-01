@@ -349,7 +349,8 @@ input:checked + .slider:before { transform: translateX(14px); }
 }
 #container-hours {
     flex: 1 1 400px; min-width: 0; min-height: 300px;
-    transition: flex 0.5s ease;
+    transition: all 0.3s ease;
+    max-height: 450px;
 }
 
 /* Contenedores Comunes */
@@ -389,6 +390,20 @@ input:checked + .slider:before { transform: translateX(14px); }
 }
 .map-container-wrapper .canvas-wrapper { min-height: 300px; border-radius: 8px; }
 #main-map { position: absolute; top: 0; left: 0; width: 100% !important; height: 100% !important; border-radius: 8px; }
+
+/* Toast interno del mapa */
+.map-toast {
+    position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(60px);
+    background: rgba(30, 33, 40, 0.82); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    color: #fff; padding: 8px 16px; border-radius: 20px;
+    font-size: 0.78rem; font-weight: 600; font-family: 'Inter', sans-serif;
+    white-space: nowrap; pointer-events: none; z-index: 100;
+    opacity: 0; transition: opacity 0.3s ease, transform 0.3s ease;
+    letter-spacing: 0.2px;
+}
+.map-toast.active {
+    opacity: 1; transform: translateX(-50%) translateY(0);
+}
 
 /* =========================================
    6. VISTAS DE CARGA Y CONFIGURACIÓN
@@ -682,6 +697,15 @@ input:checked + .slider:before { transform: translateX(14px); }
     font-weight: 800; color: #32325d; border-bottom: 1px solid #e9ecef;
     display: flex; justify-content: space-between; align-items: center; text-transform: uppercase;
 }
+
+.layer-search-input {
+    width: 100%; padding: 7px 10px; border: none; border-bottom: 1px solid #e9ecef;
+    font-size: 0.7rem; font-family: 'Inter', sans-serif; color: #32325d;
+    background: #fafbfd; outline: none; box-sizing: border-box;
+    transition: background 0.2s;
+}
+.layer-search-input:focus { background: #fff; }
+.layer-search-input::placeholder { color: #aab5c3; }
 
 .btn-add-layer {
     background: #5e72e4; color: white; border: none;
@@ -1248,4 +1272,67 @@ input:checked + .slider:before { transform: translateX(14px); }
     color: white !important;
     border-color: transparent !important;
     transform: scale(1.1);
+}
+/* Ajuste específico para el gráfico de horas */
+#container-hours .canvas-wrapper {
+    height: 100%;
+    min-height: 250px;
+}
+#container-hours canvas {
+    height: 100% !important;
+}
+
+/* Ajuste adicional para el contenedor de horas en fullscreen */
+#container-hours.fullscreen {
+    position: fixed;
+    top: 60px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1100;
+    flex: none !important;
+    max-height: none !important;
+    height: calc(100vh - 60px) !important;
+}
+
+#container-hours.fullscreen .canvas-wrapper {
+    height: 100%;
+    min-height: auto;
+}
+/* Añadir al final de style.css */
+
+/* Indica que la fila es interactiva */
+#table-streets-view .data-table tbody tr:hover {
+    background-color: #f0f4ff !important;
+}
+
+/* Efecto visual específico para el toque en móviles */
+#table-streets-view .data-table tbody tr:active {
+    background-color: #e2e8f0 !important;
+    transition: background 0.1s;
+}
+
+/* Resaltar un poco el texto de la calle para que parezca un link */
+#table-streets-view td:first-child {
+    color: #4361ee; /* Un azul ligeramente más oscuro */
+    transition: color 0.2s;
+}
+/* Estado activo del botón de análisis */
+.btn-active-pulse {
+    background: linear-gradient(135deg, #f5365c 0%, #fb6340 100%) !important;
+    color: white !important;
+    border-color: transparent !important;
+    animation: hotspot-pulse 1.5s infinite;
+    box-shadow: 0 0 15px rgba(245, 54, 92, 0.6);
+}
+
+@keyframes hotspot-pulse {
+    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(245, 54, 92, 0.7); }
+    70% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(245, 54, 92, 0); }
+    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(245, 54, 92, 0); }
+}
+
+/* Opcional: Asegurar que el icono STOP se vea bien */
+.btn-active-pulse i {
+    font-size: 1.1rem;
 }

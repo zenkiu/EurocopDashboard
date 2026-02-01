@@ -110,7 +110,13 @@
                         <span data-i18n="btn_updates">Actualizaciones</span>
                     </button>
 
-                    <!-- NUEVO BOTÓN: DESCARGA DE MEMORIAS -->
+                    <!-- NUEVO BOTÓN: VÍDEOS -->
+                    <a href="https://www.youtube.com/playlist?list=PL0ocQ3pHMwQsPcyIqnI7D1H6NIwqwsoyZ" target="_blank" class="btn-manual-pill" style="text-decoration: none;">
+                        <i class="fa-brands fa-youtube"></i>
+                        <span data-i18n="btn_videos">VideoTutoriales</span>
+                    </a>
+
+                    <!-- BOTÓN: DESCARGA DE MEMORIAS -->
                     <a href="./EurocopMemorias/EurocopMemorias.zip" download class="btn-manual-pill" style="text-decoration: none;">
                         <i class="fa-solid fa-file-zipper"></i>
                         <span data-i18n="btn_memorias">Memorias</span>
@@ -224,6 +230,24 @@
 
             <div class="filter-header"><i class="fa-solid fa-filter"></i> <span data-i18n="filter_header">FILTROS AVANZADOS</span></div>
             
+            <!-- Toggle para modo de filtro de fechas -->
+            <div style="margin-bottom: 15px; text-align: center;">
+                <button id="toggle-date-mode" onclick="toggleDateFilterMode()" style="
+                    background: #f7fafc; 
+                    border: 1px solid #e2e8f0; 
+                    padding: 8px 16px; 
+                    border-radius: 6px; 
+                    cursor: pointer; 
+                    font-size: 13px; 
+                    font-weight: 600;
+                    color: #4a5568;
+                    transition: all 0.2s;
+                    width: 100%;">
+                    <i class="fa-solid fa-calendar-days"></i> <span id="date-mode-text" data-i18n="btn_date_range_mode">Modo: Desde - Hasta</span>
+                </button>
+            </div>
+
+            <!-- Filtro de Años (siempre visible) -->
             <div class="filter-group">
                 <label data-i18n="filter_years">Años</label>
                 <div class="custom-dropdown" id="drop-year">
@@ -241,19 +265,55 @@
                 </div>
             </div>
 
-            <div class="filter-group">
-                <label data-i18n="filter_months">Meses</label>
-                <div class="custom-dropdown" id="drop-month">
-                    <div class="dropdown-header" onclick="toggleDropdown('list-month')">
-                        <span id="label-month" data-i18n="sel_select">Seleccionar...</span>
-                        <i class="fa-solid fa-chevron-down"></i>
-                    </div>
-                    <div id="list-month" class="dropdown-content">
-                        <div class="dropdown-controls">
-                            <button class="btn-mini" onclick="toggleGroup('items-month', true, event)" data-i18n="sel_all">Todos</button>
-                            <button class="btn-mini" onclick="toggleGroup('items-month', false, event)" data-i18n="sel_none">Ninguno</button>
+            <!-- Modo 1: Filtro tradicional de Meses -->
+            <div id="filter-month-mode">
+                <div class="filter-group">
+                    <label data-i18n="filter_months">Meses</label>
+                    <div class="custom-dropdown" id="drop-month">
+                        <div class="dropdown-header" onclick="toggleDropdown('list-month')">
+                            <span id="label-month" data-i18n="sel_select">Seleccionar...</span>
+                            <i class="fa-solid fa-chevron-down"></i>
                         </div>
-                        <div class="dropdown-items" id="items-month"></div>
+                        <div id="list-month" class="dropdown-content">
+                            <div class="dropdown-controls">
+                                <button class="btn-mini" onclick="toggleGroup('items-month', true, event)" data-i18n="sel_all">Todos</button>
+                                <button class="btn-mini" onclick="toggleGroup('items-month', false, event)" data-i18n="sel_none">Ninguno</button>
+                            </div>
+                            <div class="dropdown-items" id="items-month"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modo 2: Filtro de rango día/mes (oculto por defecto) -->
+            <div id="filter-daymonth-mode" style="display: none;">
+                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                    <div style="flex: 1;">
+                        <label data-i18n="filter_daymonth_from" style="font-size: 0.75rem; font-weight: 600; color: #4a5568; margin-bottom: 5px; display: block;">Desde</label>
+                        <input type="text" id="daymonth-from-input" class="daymonth-input" placeholder="DD/MM" maxlength="5" 
+                            pattern="[0-3][0-9]/[0-1][0-9]"
+                            onchange="triggerUpdateWithLoader()" style="
+                            width: 100%;
+                            padding: 10px;
+                            border: 1px solid #e2e8f0;
+                            border-radius: 6px;
+                            font-size: 14px;
+                            color: #4a5568;
+                            background: white;">
+                    </div>
+
+                    <div style="flex: 1;">
+                        <label data-i18n="filter_daymonth_to" style="font-size: 0.75rem; font-weight: 600; color: #4a5568; margin-bottom: 5px; display: block;">Hasta</label>
+                        <input type="text" id="daymonth-to-input" class="daymonth-input" placeholder="DD/MM" maxlength="5"
+                            pattern="[0-3][0-9]/[0-1][0-9]"
+                            onchange="triggerUpdateWithLoader()" style="
+                            width: 100%;
+                            padding: 10px;
+                            border: 1px solid #e2e8f0;
+                            border-radius: 6px;
+                            font-size: 14px;
+                            color: #4a5568;
+                            background: white;">
                     </div>
                 </div>
             </div>
@@ -278,6 +338,7 @@
                         <div class="dropdown-controls">
                             <button class="btn-mini" onclick="toggleGroup('items-category', true, event)" data-i18n="sel_all">Todos</button>
                             <button class="btn-mini" onclick="toggleGroup('items-category', false, event)" data-i18n="sel_none">Ninguno</button>
+                            <button class="btn-mini" onclick="clearCategorySearch(event)" data-i18n="sel_clear" style="margin-left: auto;">Limpiar</button>
                         </div>
                         <div class="dropdown-items" id="items-category"></div>
                     </div>
@@ -455,6 +516,7 @@
                                             <span data-i18n="map_filter_zone">Filtrar datos por zona</span>
                                         </div>
                                     </div>
+                                    <input type="text" id="layer-search" class="layer-search-input" placeholder="Buscar zona..." oninput="filterLayers(this.value)" style="display:none;">
                                     <div id="layers-list" class="layer-list-body">
                                         <p class="empty-layers-msg" data-i18n="map_no_layers">Sin capas cargadas</p>
                                     </div>
@@ -488,6 +550,8 @@
                     <div class="canvas-wrapper">
                         <!-- VISTA DE MAPA -->
                         <div id="main-map"></div>
+                        <!-- TOAST INTERNO DEL MAPA -->
+                        <div id="map-toast" class="map-toast"></div>
                         <!-- VISTA DE TABLA DE CALLES -->
                         <div id="table-streets-view" class="table-view" style="display: none;"></div>
                     </div>
@@ -662,9 +726,28 @@
     
 <!-- LÓGICA Y SCRIPTS version-->
     <script src="languages.js"></script>
-    <script src="FncConvertirPdf.js"></script>
     <script>
-        document.write('<script src="script.js?v=' + EUROCOP_VERSION + '"><\/script>');
+        // Carga modular con cache-busting usando EUROCOP_VERSION
+        var v = EUROCOP_VERSION;
+        var modules = [
+            'FncFunciones/FncGlobales.js',
+            'FncFunciones/FncUtilidades.js',
+            'FncFunciones/FncCargaArchivo.js',
+            'FncFunciones/FncMapeo.js',
+            'FncFunciones/FncGeolocalizacion.js',
+            'FncFunciones/FncGraficos.js',
+            'FncFunciones/FncMapa.js',
+            'FncFunciones/FncTablas.js',
+            'FncFunciones/FncFiltros.js',
+            'FncFunciones/FncProcesamiento.js',
+            'FncFunciones/FncIdioma.js',
+            'FncFunciones/FncInfografia.js',
+            'FncFunciones/FncConvertirPdf.js',
+            'script.js'
+        ];
+        modules.forEach(function(m) {
+            document.write('<script src="' + m + '?v=' + v + '"><\/script>');
+        });
     </script>
 <!-- MODAL PARA VER REGISTROS DETALLADOS -->
 <div id="records-modal" class="pdf-modal-overlay">

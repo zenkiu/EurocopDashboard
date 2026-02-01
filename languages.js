@@ -40,6 +40,7 @@ const translations = {
         filter_cats: "Categorías",
         sel_all: "Todos",
         sel_none: "Ninguno",
+        sel_clear: "Limpiar",
         sel_select: "Seleccionar...",
         kpi_expedientes: "Expedientes",
         kpi_zona: "Zona",
@@ -64,8 +65,7 @@ const translations = {
         map_filter_zone: "Filtrar datos por zona",
         map_no_layers: "Sin capas cargadas",
         btn_add_layer_title: "Subir GeoJSON",
-        // PDF Sintesis
-        info_tag: "EUROCOP ANALYTICS • SÍNTESIS",
+        map_search_layers: "Buscar zona...",
         info_subtitle: "Análisis de datos filtrados",
         info_card_sintesis: "SÍNTESIS PRINCIPAL",
         info_lbl_total: "TOTAL REGISTROS",
@@ -84,7 +84,20 @@ const translations = {
         days_full: ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'],
         info_report_title: "Informe",
         btn_ai_infographic: "SÍNTESIS",
-        btn_download_tip: "Descargar Imagen"
+        btn_download_tip: "Descargar Imagen",
+        btn_date_range_mode: "Modo: Desde - Hasta",
+        btn_year_month_mode: "Modo: Año / Mes",
+        filter_date_from: "Fecha Desde",
+        filter_date_to: "Fecha Hasta",
+        filter_daymonth_from: "Desde",
+        filter_daymonth_to: "Hasta",
+        // Hotspot / Zona Crítica
+        hotspot_no_gps: "Sin coordenadas GPS",
+        hotspot_insufficient: "Datos insuficientes",
+        hotspot_no_clusters: "No se detectan grupos",
+        hotspot_focus: "Foco de Actividad",
+        hotspot_points: "puntos",
+        hotspot_epicenter: "Detectado epicentro con {count} incidentes cercanos."
     },
     eu: {
         nav_title: "EUROCOP",
@@ -127,6 +140,7 @@ const translations = {
         filter_cats: "Kategoriak",
         sel_all: "Denak",
         sel_none: "Bat ere ez",
+        sel_clear: "Garbitu",
         sel_select: "Hautatu...",
         kpi_expedientes: "Espedienteak",
         kpi_zona: "Eremua",
@@ -150,8 +164,8 @@ const translations = {
         map_filter_zone: "Datuak eremuka iragazi",
         map_no_layers: "Kargatutako geruzarik ez",
         btn_add_layer_title: "Igo GeoJSON",
+        map_search_layers: "Bilatu eremua...",
         // PDF Sintesis
-        info_tag: "EUROCOP ANALYTICS • SINTESIA",
         info_subtitle: "Filtratutako datuen analisia",
         info_card_sintesis: "SINTESI NAGUSIA",
         info_lbl_total: "ERREGISTROAK GUZTIRA",
@@ -170,7 +184,20 @@ const translations = {
         days_full: ['Igandea', 'Astelehena', 'Asteartea', 'Asteazkena', 'Osteguna', 'Ostirala', 'Larunbata'],
         info_report_title: "Txostena",
         btn_ai_infographic: "SINTESIA",
-        btn_download_tip: "Irudia Deskargatu"
+        btn_download_tip: "Irudia Deskargatu",
+        btn_date_range_mode: "Modua: Noiztik - Noiz arte",
+        btn_year_month_mode: "Modua: Urtea / Hila",
+        filter_date_from: "Data Noiztik",
+        filter_date_to: "Data Noiz arte",
+        filter_daymonth_from: "Noiztik",
+        filter_daymonth_to: "Noiz arte",
+        // Hotspot / Zona Crítica
+        hotspot_no_gps: "GPS koordenatuak ez dituen",
+        hotspot_insufficient: "Datu gutxiak",
+        hotspot_no_clusters: "Taldeak ez ikusten",
+        hotspot_focus: "Jarduera Gunea",
+        hotspot_points: "puntuak",
+        hotspot_epicenter: "Epicentro hautematen da {count} inguruko gertakariekin."
     },
     ca: {
         nav_title: "EUROCOP",
@@ -212,6 +239,7 @@ const translations = {
         filter_cats: "Categories",
         sel_all: "Tots",
         sel_none: "Cap",
+        sel_clear: "Netejar",
         sel_select: "Seleccionar...",
         kpi_expedientes: "Expedients",
         kpi_zona: "Zona",
@@ -235,8 +263,8 @@ const translations = {
         map_filter_zone: "Filtrar dades per zona",
         map_no_layers: "Sense capes carregades",
         btn_add_layer_title: "Pujar GeoJSON",
+        map_search_layers: "Cercar zona...",
         // PDF Sintesis
-        info_tag: "EUROCOP ANALYTICS • SÍNTESI",
         info_subtitle: "Anàlisi de dades filtrades",
         info_card_sintesis: "SÍNTESI PRINCIPAL",
         info_lbl_total: "TOTAL REGISTRES",
@@ -255,7 +283,20 @@ const translations = {
         days_full: ['Diumenge', 'Dilluns', 'Dimarts', 'Dimecres', 'Dijous', 'Divendres', 'Dissabte'],
         info_report_title: "Informe",
         btn_ai_infographic: "SÍNTESI",
-        btn_download_tip: "Descarregar Imatge"
+        btn_download_tip: "Descarregar Imatge",
+        btn_date_range_mode: "Mode: Des de - Fins a",
+        btn_year_month_mode: "Mode: Any / Mes",
+        filter_date_from: "Data Des de",
+        filter_date_to: "Data Fins a",
+        filter_daymonth_from: "Des de",
+        filter_daymonth_to: "Fins a",
+        // Hotspot / Zona Crítica
+        hotspot_no_gps: "Sense coordenades GPS",
+        hotspot_insufficient: "Dades insuficients",
+        hotspot_no_clusters: "No es detecten grups",
+        hotspot_focus: "Focus d'Activitat",
+        hotspot_points: "punts",
+        hotspot_epicenter: "Epicentre detectat amb {count} incidents propellers."
     },
     gl: {
         nav_title: "EUROCOP",
@@ -297,6 +338,7 @@ const translations = {
         filter_cats: "Categorías",
         sel_all: "Todos",
         sel_none: "Ningún",
+        sel_clear: "Limpar",
         sel_select: "Seleccionar...",
         kpi_expedientes: "Expedientes",
         kpi_zona: "Zona",
@@ -320,8 +362,8 @@ const translations = {
         map_filter_zone: "Filtrar datos por zona",
         map_no_layers: "Sen capas cargadas",
         btn_add_layer_title: "Subir GeoJSON",
+        map_search_layers: "Buscar zona...",
         // PDF Sintesis
-        info_tag: "EUROCOP ANALYTICS • SÍNTESE",
         info_subtitle: "Análise de datos filtrados",
         info_card_sintesis: "SÍNTESE PRINCIPAL",
         info_lbl_total: "TOTAL REXISTROS",
@@ -340,6 +382,19 @@ const translations = {
         days_full: ['Domingo', 'Luns', 'Martes', 'Mércores', 'Xoves', 'Venres', 'Sábado'],
         info_report_title: "Informe",
         btn_ai_infographic: "SÍNTESE",
-        btn_download_tip: "Descargar Imaxe"
+        btn_download_tip: "Descargar Imaxe",
+        btn_date_range_mode: "Modo: Desde - Ata",
+        btn_year_month_mode: "Modo: Ano / Mes",
+        filter_date_from: "Data Desde",
+        filter_date_to: "Data Ata",
+        filter_daymonth_from: "Desde",
+        filter_daymonth_to: "Ata",
+        // Hotspot / Zona Crítica
+        hotspot_no_gps: "Sen coordenadas GPS",
+        hotspot_insufficient: "Datos insuficientes",
+        hotspot_no_clusters: "Non se detectan grupos",
+        hotspot_focus: "Foco de Actividade",
+        hotspot_points: "puntos",
+        hotspot_epicenter: "Epicentro detectado con {count} incidentes cercanos."
     }
 };
