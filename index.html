@@ -387,14 +387,21 @@
                             </button>
                             <h4 data-i18n="chart_timeline">Evolución</h4>
                         </div>
-                        
+                        <!-- <div class="header-title-group">
+                            <div style="display:flex; align-items:center; gap:8px">
+                                <button class="btn-mini" onclick="downloadComponent('container-map')">
+                                    <i class="fa-solid fa-download"></i>
+                                </button>
+                                <h4 data-i18n="chart_map">MAPA</h4>
+                            </div>
+                        </div> -->
                         <div class="header-actions">
                             <!-- Selector de periodo -->
                             <select id="select-temporal-view" class="btn-mini" onchange="changeTemporalView(this.value)">
-                                <option value="year" data-i18n="view_years">Vista: Años</option>
-                                <option value="month" selected data-i18n="view_months">Vista: Meses</option>
-                                <option value="quarter" data-i18n="view_quarters">Vista: Trimestral</option>
-                                <option value="day" data-i18n="view_days">Vista: Días Semanal</option>
+                                <option value="year" data-i18n="view_years">Años</option>
+                                <option value="month" selected data-i18n="view_months">Meses</option>
+                                <option value="quarter" data-i18n="view_quarters">Trimestral</option>
+                                <option value="day" data-i18n="view_days">Días Semanal</option>
                             </select>
                             
                             <!-- Alternar entre Barras y Líneas -->
@@ -516,7 +523,7 @@
                                             <span data-i18n="map_filter_zone">Filtrar datos por zona</span>
                                         </div>
                                     </div>
-                                    <input type="text" id="layer-search" class="layer-search-input" placeholder="Buscar zona..." oninput="filterLayers(this.value)" style="display:none;">
+                                    <input type="text" id="layer-search" class="layer-search-input" placeholder="Buscar zona..." oninput="searchAndFlyToLayer(this.value)" style="display:none;">
                                     <div id="layers-list" class="layer-list-body">
                                         <p class="empty-layers-msg" data-i18n="map_no_layers">Sin capas cargadas</p>
                                     </div>

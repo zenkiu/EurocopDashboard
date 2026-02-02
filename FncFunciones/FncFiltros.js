@@ -439,11 +439,25 @@ function updateUI() {
     const textFilename = document.getElementById('card-text-filename');
     if (textFilename) textFilename.innerText = nombreArchivoSubido || "SIN ARCHIVO";
 
-    // 6. ACTUALIZAR MAPA Y GRÁFICOS
+// 6. ACTUALIZAR MAPA Y GRÁFICOS
     updateMapData(filtered);
     updateCharts(filtered, selYears);
     updateLocationKPI(filtered).catch(err => console.warn(err));
 
     // 7. TABLA DE CALLES (si está activa)
     if (isTableStreetsView) renderStreetsTable(filtered);
+        if (isTableView) { // Evolución Temporal
+        document.getElementById('chart-timeline').style.display = 'none';
+        document.getElementById('table-timeline-view').style.display = 'block';
+    }
+
+    if (isTableCatView) { // Top Tipos
+        document.getElementById('chart-category').style.display = 'none';
+        document.getElementById('table-category-view').style.display = 'block';
+    }
+
+    if (isTableHoursView) { // Horas
+        document.getElementById('chart-hours').style.display = 'none';
+        document.getElementById('table-hours-view').style.display = 'block';
+    }
 }

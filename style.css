@@ -1009,6 +1009,38 @@ input:checked + .slider:before { transform: translateX(14px); }
 
 /* --- RESPONSIVE: MÓVIL (< 768px) --- */
 @media (max-width: 768px) {
+    /* 1. Permitir que la cabecera del gráfico crezca y se envuelva */
+    .chart-header {
+        flex-direction: column; /* Cambiamos a columna para que los botones vayan debajo del título */
+        align-items: flex-start !important;
+        gap: 10px;
+        height: auto;
+    }
+
+    /* 2. Hacer que el contenedor de botones permita varias filas */
+    .header-actions {
+        flex-wrap: wrap; /* CLAVE: Permite que los botones bajen a la siguiente línea si no caben */
+        justify-content: flex-start;
+        width: 100%;
+        gap: 6px; /* Reducimos un poco el espacio entre botones */
+    }
+
+    /* 3. Reducir un poco más el tamaño de los botones en móvil para que quepan más */
+    .btn-mini {
+        padding: 6px 10px !important;
+        font-size: 0.7rem !important;
+        min-width: 34px; /* Asegura que sean cuadrados/rectangulares cómodos */
+    }
+
+    /* 4. Ajustar el contenedor del título para que no empuje demasiado */
+    .header-title-group {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+
     /* 1. Quitamos el ancho mínimo que obliga al scroll horizontal */
     #table-streets-view .data-table {
         min-width: 100% !important;

@@ -8,6 +8,11 @@
 // ============================================================
 // INICIALIZAR MAPA
 // ============================================================
+let currentSearchPopup = null; // Para controlar que solo haya un popup de búsqueda a la vez
+let layerSearchTimeout = null;
+let lastSearchQuery = '';
+let isSearchInputFocused = false;
+
 function initMap() {
     if (map) map.remove();
 
@@ -75,6 +80,33 @@ function initMap() {
                 .addTo(map);
         });
     });
+
+    // Inicializar el buscador de capas después de un breve retraso
+    setTimeout(() => {
+        const searchInput = document.getElementById('layer-search');
+        if (searchInput) {
+            // Limpiar eventos anteriores
+            searchInput.removeEventListener('input', handleSearchInput);
+            searchInput.addEventListener('input', handleSearchInput);
+            
+            // Configurar para mantener el foco
+            setupLayerSearchInput();
+        }
+    }, 500);
+    
+    // Añadir listener para evitar cierre del menú cuando se escribe
+    document.addEventListener('click', function(e) {
+        const searchInput = document.getElementById('layer-search');
+        if (searchInput && (searchInput === e.target || searchInput.contains(e.target))) {
+            // Prevenir que otros eventos cierren el menú
+            e.stopPropagation();
+        }
+    });
+}
+
+// Manejador específico para el input
+function handleSearchInput(e) {
+    searchAndFlyToLayer(this.value);
 }
 
 // ============================================================
@@ -183,6 +215,20 @@ function toggleLayerMenu() {
     menu.classList.toggle('active');
     const btn = document.getElementById('btn-layers-menu');
     btn.style.background = menu.classList.contains('active') ? '#e9ecef' : '';
+    
+    // Si se abre el menú, enfocar el campo de búsqueda
+    if (menu.classList.contains('active')) {
+        setTimeout(() => {
+            const searchInput = document.getElementById('layer-search');
+            if (searchInput && searchInput.style.display !== 'none') {
+                searchInput.focus();
+                // Marcar que estamos en modo de búsqueda
+                isSearchInputFocused = true;
+            }
+        }, 50);
+    } else {
+        isSearchInputFocused = false;
+    }
 }
 
 // Subida de archivo GeoJSON (versión final con geojson guardado)
@@ -308,7 +354,10 @@ function renderLayerList() {
 
     if (mapLayers.length === 0) {
         container.innerHTML = `<p class="empty-layers-msg">${t.map_no_layers}</p>`;
-        if (searchInput) { searchInput.style.display = 'none'; searchInput.value = ''; }
+        if (searchInput) { 
+            searchInput.style.display = 'none'; 
+            searchInput.value = ''; 
+        }
         return;
     }
 
@@ -316,41 +365,392 @@ function renderLayerList() {
     if (searchInput) {
         searchInput.style.display = 'block';
         searchInput.placeholder = t.map_search_layers;
+        // Restaurar valor si ya había una búsqueda
+        if (lastSearchQuery) {
+            searchInput.value = lastSearchQuery;
+        }
     }
-
-    paintLayerList(mapLayers);
-}
-
-// Pintar los items de la lista (se reutiliza desde renderLayerList y filterLayers)
-function paintLayerList(layers) {
-    const container = document.getElementById('layers-list');
-    const t = translations[currentLang];
 
     container.innerHTML = '';
-
-    if (layers.length === 0) {
-        container.innerHTML = `<p class="empty-layers-msg">${t.map_no_layers}</p>`;
-        return;
-    }
-
-    layers.forEach(layer => {
+    mapLayers.forEach(layer => {
         const div = document.createElement('div');
         div.className = 'layer-item';
         div.innerHTML = `
             <span class="layer-color-indicator" style="background:${layer.color}"></span>
-            <input type="checkbox" ${layer.visible ? 'checked' : ''} onchange="toggleLayer('${layer.id}')">
+            <input type="checkbox" ${layer.visible ? 'checked' : ''} onchange="toggleLayer('${layer.id}')" class="layer-checkbox">
             <span class="layer-name" title="${layer.name}">${layer.name}</span>
             <button class="btn-remove-layer" onclick="removeLayer('${layer.id}')"><i class="fa-solid fa-trash"></i></button>
         `;
         container.appendChild(div);
     });
+    
+    // Configurar el input para mantener el foco
+    setupLayerSearchInput();
+    
+    // Si hay texto en el buscador, enfocarlo automáticamente
+    if (searchInput && searchInput.value) {
+        setTimeout(() => {
+            searchInput.focus();
+            // Colocar el cursor al final del texto
+            searchInput.selectionStart = searchInput.selectionEnd = searchInput.value.length;
+        }, 100);
+    }
+}
+//********************* */
+// Buscar zona por nombre/descripción dentro de features y navegar con flyTo + flash + popup
+function searchAndFlyToLayer(query) {
+    if (!map) return;
+    
+    const q = query.trim().toLowerCase();
+    lastSearchQuery = q;
+    
+    // Limpiar búsqueda anterior inmediatamente
+    if (q === '') {
+        if (currentSearchPopup) currentSearchPopup.remove();
+        // También limpiar cualquier efecto de resaltado anterior
+        clearAllHighlights();
+        return;
+    }
+    
+    // Cancelar timeout anterior
+    clearTimeout(layerSearchTimeout);
+    
+    // Usar un timeout más corto para mejor respuesta
+    layerSearchTimeout = setTimeout(() => {
+        // Verificar que la consulta no haya cambiado durante el timeout
+        if (query.trim().toLowerCase() !== lastSearchQuery) return;
+        
+        performLayerSearch(q);
+    }, 200);
 }
 
-// Filtrar capas por texto (se llama desde oninput del input)
-function filterLayers(query) {
-    const q = query.trim().toLowerCase();
-    const filtered = q === '' ? mapLayers : mapLayers.filter(l => l.name.toLowerCase().includes(q));
-    paintLayerList(filtered);
+function performLayerSearch(query) {
+    if (!map) return;
+    
+    let foundFeatures = []; // Ahora almacenamos todas las features encontradas
+    let foundLayer = null;
+    
+    for (const layer of mapLayers) {
+        if (!layer.geojson || !layer.geojson.features) continue;
+        
+        for (const feature of layer.geojson.features) {
+            const props = feature.properties || {};
+            const nombre = (props.nombre || props.Nombre || '').toLowerCase();
+            const descripcion = (props.descripcion || props.Descripcion || '').toLowerCase();
+            
+            // BÚSQUEDA EXACTA O PARCIAL PERO MÁS PRECISA
+            // Buscar coincidencias exactas o que comiencen con la búsqueda
+            const searchTerms = query.split(' ').filter(term => term.length > 0);
+            let matches = false;
+            
+            if (searchTerms.length === 1) {
+                // Para una sola palabra: buscar coincidencia exacta o que comience con
+                matches = nombre === query || 
+                         nombre.startsWith(query) || 
+                         descripcion === query ||
+                         descripcion.startsWith(query);
+            } else {
+                // Para múltiples palabras: buscar todas las palabras en el nombre o descripción
+                matches = searchTerms.every(term => 
+                    nombre.includes(term) || descripcion.includes(term)
+                );
+            }
+            
+            if (matches) {
+                foundFeatures.push({
+                    feature: feature,
+                    layer: layer,
+                    nombre: nombre,
+                    descripcion: descripcion
+                });
+            }
+        }
+        if (foundFeatures.length > 0 && !foundLayer) {
+            foundLayer = layer; // Guardar la primera capa con resultados
+        }
+    }
+    
+    if (foundFeatures.length === 0) return;
+    
+    // Cerrar popup anterior antes de abrir los nuevos
+    if (currentSearchPopup) currentSearchPopup.remove();
+    
+    // Limpiar resaltados anteriores
+    clearAllHighlights();
+    
+    try {
+        const bounds = new maplibregl.LngLatBounds();
+        
+        // Calcular bounds para TODAS las features encontradas
+        foundFeatures.forEach(item => {
+            const extractCoords = (coords) => {
+                if (typeof coords[0] === 'number') bounds.extend(coords);
+                else coords.forEach(extractCoords);
+            };
+            if (item.feature.geometry) extractCoords(item.feature.geometry.coordinates);
+        });
+        
+        if (!bounds.isEmpty()) {
+            const center = bounds.getCenter();
+            
+            map.flyTo({
+                center: center,
+                zoom: 17.5,
+                duration: 1200,
+                essential: true
+            });
+            
+            // Resaltar TODAS las features encontradas
+            flashAllFoundFeatures(foundFeatures);
+            
+            // Crear popup con todas las coincidencias
+            let htmlContent = `
+                <div style="padding:8px; font-family:'Inter', sans-serif; color:#32325d; min-width:180px; max-height:300px; overflow-y:auto;">
+                    <b style="text-transform:uppercase; font-size:13px; display:block; margin-bottom:8px; border-bottom:1px solid #eee; padding-bottom:4px;">
+                        Coincidencias encontradas: ${foundFeatures.length}
+                    </b>`;
+            
+            foundFeatures.forEach((item, index) => {
+                const nombre = item.nombre || "Sin nombre";
+                const descripcion = item.descripcion || "";
+                
+                htmlContent += `
+                    <div style="margin-bottom:8px; padding-bottom:8px; border-bottom: ${index < foundFeatures.length - 1 ? '1px solid #f0f0f0' : 'none'}">
+                        <div style="font-weight:600; font-size:12px; color:#5e72e4;">${nombre}</div>
+                        ${descripcion ? `<div style="font-size:11px; color:#525f7f; margin-top:2px;">${descripcion}</div>` : ''}
+                    </div>`;
+            });
+            
+            htmlContent += `</div>`;
+            
+            currentSearchPopup = new maplibregl.Popup({ offset: 10, maxWidth: '250px' })
+                .setLngLat(center)
+                .setHTML(htmlContent)
+                .addTo(map);
+        }
+    } catch (e) {
+        console.warn('Error al navegar a la zona:', e);
+    }
+}
+
+// Limpiar todos los resaltados anteriores
+function clearAllHighlights() {
+    if (!map) return;
+    
+    mapLayers.forEach(layer => {
+        const fillLayer = layer.id + '-fill';
+        const lineLayer = layer.id + '-line';
+        
+        if (map.getLayer(fillLayer)) {
+            // Restaurar filtro original
+            map.setFilter(fillLayer, ["all"]);
+            // Restaurar color original
+            map.setPaintProperty(fillLayer, 'fill-color', layer.color);
+            map.setPaintProperty(fillLayer, 'fill-opacity', 0.3);
+        }
+        
+        if (map.getLayer(lineLayer)) {
+            map.setPaintProperty(lineLayer, 'line-color', layer.color);
+            map.setPaintProperty(lineLayer, 'line-width', 3);
+        }
+    });
+}
+
+// Resaltar todas las features encontradas
+function flashAllFoundFeatures(foundItems) {
+    if (!map || !foundItems.length) return;
+    
+    // Agrupar por capa para optimizar
+    const groupedByLayer = {};
+    foundItems.forEach(item => {
+        if (!groupedByLayer[item.layer.id]) {
+            groupedByLayer[item.layer.id] = [];
+        }
+        groupedByLayer[item.layer.id].push(item);
+    });
+    
+    // Aplicar resaltado a cada grupo
+    Object.keys(groupedByLayer).forEach(layerId => {
+        const items = groupedByLayer[layerId];
+        const layerObj = mapLayers.find(l => l.id === layerId);
+        
+        if (!layerObj) return;
+        
+        const fillLayer = layerId + '-fill';
+        const lineLayer = layerId + '-line';
+        
+        if (!map.getLayer(fillLayer)) return;
+        
+        // Crear filtro para resaltar SOLO las features encontradas
+        const featureConditions = items.map(item => {
+            const featureName = item.feature.properties.nombre || item.feature.properties.Nombre;
+            return ["any", 
+                ["==", ["get", "nombre"], featureName],
+                ["==", ["get", "Nombre"], featureName]
+            ];
+        });
+        
+        // Si hay múltiples condiciones, combinarlas con "any"
+        const highlightFilter = featureConditions.length > 1 
+            ? ["all", ["any", ...featureConditions]] 
+            : ["all", featureConditions[0]];
+        
+        // Aplicar resaltado
+        map.setPaintProperty(fillLayer, 'fill-color', '#FFD700');
+        map.setPaintProperty(fillLayer, 'fill-opacity', 0.8);
+        map.setFilter(fillLayer, highlightFilter);
+        
+        // También resaltar las líneas si existen
+        if (map.getLayer(lineLayer)) {
+            map.setPaintProperty(lineLayer, 'line-color', '#FFD700');
+            map.setPaintProperty(lineLayer, 'line-width', 5);
+        }
+        
+        // Configurar para restaurar después de un tiempo
+        setTimeout(() => {
+            if (map.getLayer(fillLayer)) {
+                map.setFilter(fillLayer, ["all"]);
+                map.setPaintProperty(fillLayer, 'fill-color', layerObj.color);
+                map.setPaintProperty(fillLayer, 'fill-opacity', 0.3);
+            }
+            
+            if (map.getLayer(lineLayer)) {
+                map.setPaintProperty(lineLayer, 'line-color', layerObj.color);
+                map.setPaintProperty(lineLayer, 'line-width', 3);
+            }
+        }, 5000); // Restaurar después de 5 segundos
+    });
+}
+
+// Asegurar que el input mantenga el foco - VERSIÓN ROBUSTA
+function setupLayerSearchInput() {
+    const searchInput = document.getElementById('layer-search');
+    if (!searchInput) return;
+    
+    // Limpiar cualquier evento duplicado
+    const newSearchInput = searchInput.cloneNode(true);
+    searchInput.parentNode.replaceChild(newSearchInput, searchInput);
+    
+    // Obtener la nueva referencia
+    const freshSearchInput = document.getElementById('layer-search');
+    
+    // Configurar eventos desde cero
+    freshSearchInput.addEventListener('input', function(e) {
+        searchAndFlyToLayer(this.value);
+    });
+    
+    freshSearchInput.addEventListener('focus', function() {
+        isSearchInputFocused = true;
+        // Asegurar que el menú esté abierto
+        const menu = document.getElementById('layers-dropdown');
+        if (menu && !menu.classList.contains('active')) {
+            menu.classList.add('active');
+            const btn = document.getElementById('btn-layers-menu');
+            if (btn) btn.style.background = '#e9ecef';
+        }
+    });
+    
+    freshSearchInput.addEventListener('blur', function(e) {
+        // Pequeño retraso para verificar si realmente debemos perder el foco
+        setTimeout(() => {
+            const menu = document.getElementById('layers-dropdown');
+            // Solo perder foco si el menú está cerrado
+            if (menu && !menu.classList.contains('active')) {
+                isSearchInputFocused = false;
+            } else if (document.activeElement !== freshSearchInput && 
+                      !(e.relatedTarget && e.relatedTarget.classList.contains('layer-checkbox'))) {
+                // Si no estamos enfocando otro elemento del menú, recuperar el foco
+                freshSearchInput.focus();
+            }
+        }, 10);
+    });
+    
+    freshSearchInput.addEventListener('click', function(e) {
+        e.stopPropagation();
+    });
+    
+    freshSearchInput.addEventListener('mousedown', function(e) {
+        e.stopPropagation();
+    });
+    
+    // Prevenir que Escape cierre el menú
+    freshSearchInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            // Solo limpiar el texto
+            this.value = '';
+            searchAndFlyToLayer('');
+            e.stopPropagation();
+        }
+    });
+    
+    // Restaurar el valor si existía
+    if (lastSearchQuery) {
+        freshSearchInput.value = lastSearchQuery;
+    }
+}
+
+// Función antigua modificada para uso específico (si aún se usa en otro lugar)
+function flashSpecificFeature(layerId, featureName) {
+    if (!map) return;
+    
+    const fillLayer = layerId + '-fill';
+    const lineLayer = layerId + '-line';
+    
+    // Guardamos los filtros originales para restaurarlos luego
+    const originalFilter = map.getFilter(fillLayer) || ["all"];
+    
+    let count = 0;
+    const maxFlashes = 8;
+    
+    const interval = setInterval(() => {
+        const isHigh = count % 2 === 0;
+        
+        if (isHigh) {
+            // Aplicamos un filtro temporal para que la capa SOLO pinte el elemento buscado
+            const highlightFilter = ["all", originalFilter, ["any", 
+                ["==", ["get", "nombre"], featureName], 
+                ["==", ["get", "Nombre"], featureName]
+            ]];
+            
+            map.setPaintProperty(fillLayer, 'fill-color', '#FFD700');
+            map.setPaintProperty(fillLayer, 'fill-opacity', 0.8);
+            map.setFilter(fillLayer, highlightFilter);
+            
+            if (map.getLayer(lineLayer)) {
+                map.setPaintProperty(lineLayer, 'line-color', '#FFD700');
+                map.setPaintProperty(lineLayer, 'line-width', 5);
+            }
+        } else {
+            // Restauramos color y filtro original en el parpadeo
+            const layerObj = mapLayers.find(l => l.id === layerId);
+            map.setPaintProperty(fillLayer, 'fill-color', layerObj ? layerObj.color : '#5e72e4');
+            map.setPaintProperty(fillLayer, 'fill-opacity', 0.3);
+            map.setFilter(fillLayer, originalFilter);
+            
+            if (map.getLayer(lineLayer)) {
+                map.setPaintProperty(lineLayer, 'line-color', layerObj ? layerObj.color : '#5e72e4');
+                map.setPaintProperty(lineLayer, 'line-width', 3);
+            }
+        }
+        
+        count++;
+        if (count >= maxFlashes) {
+            clearInterval(interval);
+            // Restauración final
+            const layerObj = mapLayers.find(l => l.id === layerId);
+            map.setFilter(fillLayer, originalFilter);
+            if (layerObj) {
+                map.setPaintProperty(fillLayer, 'fill-color', layerObj.color);
+                if (map.getLayer(lineLayer)) {
+                    map.setPaintProperty(lineLayer, 'line-color', layerObj.color);
+                }
+            }
+            map.setPaintProperty(fillLayer, 'fill-opacity', 0.3);
+            if (map.getLayer(lineLayer)) {
+                map.setPaintProperty(lineLayer, 'line-width', 3);
+            }
+        }
+    }, 250);
 }
 
 // Alternar visibilidad de una capa

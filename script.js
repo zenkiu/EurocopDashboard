@@ -18,7 +18,6 @@
  *   FncInfografia.js      → Generador de síntesis + exportación PNG
  *   FncConvertirPdf.js    → Exportación a PDF
  */
-
 // ============================================================
 // LÓGICA RESPONSIVE / MENU MÓVIL
 // ============================================================
@@ -78,6 +77,9 @@ document.addEventListener('DOMContentLoaded', () => {
 // ============================================================
 // CLICK GLOBAL (cerrar dropdowns, sidebar móvil, menú capas)
 // ============================================================
+// ============================================================
+// CLICK GLOBAL (cerrar dropdowns, sidebar móvil, menú capas)
+// ============================================================
 window.onclick = (e) => {
     // 1. CERRAR FILTROS (Años, Meses, Categorías)
     if (!e.target.closest('.custom-dropdown')) {
@@ -94,11 +96,16 @@ window.onclick = (e) => {
         }
     }
 
-    // 3. CERRAR GESTOR DE CAPAS DEL MAPA
+    // 3. CERRAR GESTOR DE CAPAS DEL MAPA - CON EXCEPCIÓN PARA EL INPUT DE BÚSQUEDA
     const layerMenu = document.getElementById('layers-dropdown');
     const layerBtn  = document.getElementById('btn-layers-menu');
+    const searchInput = document.getElementById('layer-search');
+    
     if (layerMenu && layerMenu.classList.contains('active')) {
-        if (!layerMenu.contains(e.target) && !layerBtn.contains(e.target)) {
+        // NO cerrar si el clic fue en el input de búsqueda o en sus elementos hijos
+        const isClickOnSearchInput = searchInput && (searchInput.contains(e.target) || searchInput === e.target);
+        
+        if (!isClickOnSearchInput && !layerMenu.contains(e.target) && !layerBtn.contains(e.target)) {
             layerMenu.classList.remove('active');
             if (layerBtn) layerBtn.style.background = '';
         }
