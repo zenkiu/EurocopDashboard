@@ -112,6 +112,9 @@ function handleSearchInput(e) {
 // ============================================================
 // ACTUALIZAR DATOS DEL MAPA
 // ============================================================
+// ============================================================
+// ACTUALIZAR DATOS DEL MAPA (CON COLORES POR AÑO)
+// ============================================================
 function updateMapData(data) {
     const container = document.getElementById('container-map');
     const datosConGeo = data.filter(d => d.hasGeo);
@@ -148,7 +151,7 @@ function updateMapData(data) {
             },
             properties: {
                 cat:      d.cat,
-                year:     d.year,
+                year:     d.year, // Importante: MapLibre usará esto para el color
                 fullDate: d.date.toLocaleString([], {
                     day: 'numeric', month: 'numeric', year: 'numeric',
                     hour: '2-digit', minute: '2-digit'
@@ -163,10 +166,46 @@ function updateMapData(data) {
 
     map.getSource('puntos').setData(geojson);
 
-    // Color sólido rojo para los puntos
-    map.setPaintProperty('point-layer', 'circle-color', '#FF3131');
+    // --- NUEVO: LÓGICA DE COLORES POR AÑO ---
+    
+    // 1. Obtener años únicos y ordenarlos
+    const uniqueYears = [...new Set(datosConGeo.map(d => d.year))].sort();
+
+    // 2. Definir paleta de colores (Estilo Dashboard)
+    const yearPalette = [
+        '#5e72e4', // Azul (Principal)
+        '#fb6340', // Naranja
+        '#2dce89', // Verde Esmeralda
+        '#11cdef', // Cyan
+        '#f5365c', // Rojo
+        '#8965e0', // Púrpura
+        '#ffd600', // Amarillo
+        '#32325d', // Azul Oscuro
+        '#e74c3c', // Terracota
+        '#2ecc71'  // Verde Claro
+    ];
+
+    // 3. Construir la expresión 'match' para MapLibre
+    // Sintaxis: ['match', ['get', 'year'], año1, color1, año2, color2, color_default]
+    let colorExpression = ['match', ['get', 'year']];
+
+    uniqueYears.forEach((year, index) => {
+        colorExpression.push(year);
+        // Asignar color ciclando la paleta si hay más años que colores
+        colorExpression.push(yearPalette[index % yearPalette.length]);
+    });
+
+    // Color por defecto (si el año no está en la lista o es null)
+    colorExpression.push('#8898aa'); // Gris
+
+    // 4. Aplicar el color dinámico
+    map.setPaintProperty('point-layer', 'circle-color', colorExpression);
+    
+    // Mantener el resto de propiedades estéticas
     map.setPaintProperty('point-layer', 'circle-stroke-width', 2.5);
     map.setPaintProperty('point-layer', 'circle-radius', 7);
+
+    // --- FIN NUEVO ---
 
     // Encuadrar mapa en los datos
     if (datosConGeo.length > 0) {
@@ -180,7 +219,6 @@ function updateMapData(data) {
         }, 400);
     }
 }
-
 // ============================================================
 // TOGGLES DE MAPA
 // ============================================================
