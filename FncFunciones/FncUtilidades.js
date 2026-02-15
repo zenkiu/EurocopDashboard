@@ -166,6 +166,7 @@ function closeRecordsModal() {
 // ============================================================
 // FULLSCREEN (contenedores: gráficos y mapa)
 // ============================================================
+// --- SUSTITUYE TU FUNCIÓN toggleFullscreen POR ESTA ---
 function toggleFullscreen(containerId) {
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -184,10 +185,16 @@ function toggleFullscreen(containerId) {
         document.body.style.overflow = '';
     }
 
+    // El tiempo debe ser suficiente para que la animación CSS termine
     setTimeout(() => {
         if (map) map.resize();
-        updateUI();
-        // Si hay tabla activa en ese contenedor, forzar su visibilidad
+        
+        // FORZAR REDIBUJADO DE GRÁFICOS AL NUEVO TAMAÑO
+        if (chartHours) chartHours.resize();
+        if (chartTimeline) chartTimeline.resize();
+        if (chartCategory) chartCategory.resize();
+
+        // Si hay tablas, se mantienen las lógicas de visibilidad que ya tenías
         if (containerId === 'container-category' && isTableCatView) {
             document.getElementById('chart-category').style.display = 'none';
             document.getElementById('table-category-view').style.display = 'block';
@@ -200,7 +207,7 @@ function toggleFullscreen(containerId) {
             document.getElementById('chart-timeline').style.display = 'none';
             document.getElementById('table-timeline-view').style.display = 'block';
         }
-    }, 300);
+    }, 350); // 350ms es el tiempo ideal para transiciones CSS
 }
 
 // ============================================================

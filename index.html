@@ -724,6 +724,36 @@
         <span data-i18n="info_lbl_footer">Generado por Eurocop Analytics AI</span>
         <span id="info-date">--/--/----</span>
     </div>
+    <!-- index.html -->
+
+    <!-- MODAL PARA ARCHIVOS GRANDES (>1MB) -->
+<!-- MODAL PARA ARCHIVOS GRANDES (>1MB) -->
+<div id="large-file-modal" class="pdf-modal-overlay" style="z-index: 6000;">
+    <div class="pdf-modal-content" style="max-width: 400px; height: auto; overflow: visible;">
+        <div class="pdf-header" style="background: var(--accent-blue); color: white;">
+            <h3><i class="fa-solid fa-weight-hanging"></i> <span data-i18n="modal_large_title">Archivo Grande Detectado</span></h3>
+        </div>
+        <div class="pdf-body" style="padding: 25px; text-align: center;">
+            <p style="margin-bottom: 20px; color: #525f7f; font-size: 0.9rem;" data-i18n="modal_large_desc">
+                El archivo es superior a 1 MB. Para optimizar la velocidad, selecciona a partir de qué año quieres cargar los datos.
+            </p>
+            
+            <div style="margin-bottom: 25px; text-align: left;">
+                <label style="font-size: 0.75rem; font-weight: 800; color: #32325d; text-transform: uppercase;" data-i18n="modal_large_label">CARGAR DESDE EL AÑO:</label>
+                <div class="custom-dropdown" style="margin-top: 5px;">
+                    <select id="large-file-year-select" class="styled-select" style="width: 100%; padding: 10px; border: 1px solid #e9ecef; border-radius: 6px; font-weight: bold;">
+                        <!-- Se llena dinámicamente -->
+                    </select>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 10px; justify-content: center; margin-top: 10px;">
+                <button onclick="cancelLargeFileLoad()" class="btn-mini" style="border-color: #f5365c; color: #f5365c; padding: 10px 20px;" data-i18n="btn_cancel">CANCELAR</button>
+                <button onclick="confirmLargeFileYear()" class="btn-primary" style="padding: 10px 20px;" data-i18n="btn_continue">CONTINUAR</button>
+            </div>
+        </div>
+    </div>
+</div>
 </div>
     <!-- LIBRERÍAS EXTERNAS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>

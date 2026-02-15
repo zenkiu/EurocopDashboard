@@ -348,11 +348,16 @@ input:checked + .slider:before { transform: translateX(14px); }
     align-items: stretch; margin-bottom: 20px;
 }
 #container-hours {
-    flex: 1 1 400px; min-width: 0; min-height: 300px;
-    transition: all 0.3s ease;
-    max-height: 450px;
+    flex: 1; 
+    min-height: 350px; /* Asegura un tamaño mínimo digno */
+    max-height: none !important; /* QUITA cualquier límite de altura */
 }
 
+/* El canvas debe ser capaz de estirarse al 100% de su padre */
+#chart-hours {
+    width: 100% !important;
+    height: 100% !important;
+}
 /* Contenedores Comunes */
 .chart-container, .map-container-wrapper { 
     background: white; border-radius: 12px; padding: 15px; 
@@ -373,7 +378,13 @@ input:checked + .slider:before { transform: translateX(14px); }
 }
 .btn-maximize:hover { background: var(--text-dark); color: #fff; border-color: var(--text-dark); }
 
-.canvas-wrapper { flex-grow: 1; position: relative; width: 100%; height: 100%; min-height: 0; }
+.canvas-wrapper {
+    flex: 1;
+    position: relative;
+    width: 100%;
+    height: 100%; /* Asegura que ocupe el 100% del padre */
+    min-height: 0;
+}
 
 /* Contenedor del Mapa */
 .map-container-wrapper {
@@ -1328,8 +1339,8 @@ input:checked + .slider:before { transform: translateX(14px); }
 }
 
 #container-hours.fullscreen .canvas-wrapper {
-    height: 100%;
-    min-height: auto;
+    height: 85vh !important; /* Da espacio para el header del gráfico */
+    width: 100%;
 }
 /* Añadir al final de style.css */
 
@@ -1367,4 +1378,9 @@ input:checked + .slider:before { transform: translateX(14px); }
 /* Opcional: Asegurar que el icono STOP se vea bien */
 .btn-active-pulse i {
     font-size: 1.1rem;
+}
+/* style.css */
+
+#large-file-modal {
+    z-index: 6000; /* Mayor que el loading overlay */
 }

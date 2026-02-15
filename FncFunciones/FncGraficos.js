@@ -230,6 +230,9 @@ function updateCharts(data, selYears) {
     // --------------------------------------------------------
     // GRÁFICO HORAS (Line 24h)
     // --------------------------------------------------------
+// --------------------------------------------------------
+    // GRÁFICO HORAS (Line 24h) - CORREGIDO
+    // --------------------------------------------------------
     const ctxHours = document.getElementById('chart-hours');
     if (ctxHours) {
         const hC = Array(24).fill(0);
@@ -249,22 +252,41 @@ function updateCharts(data, selYears) {
         chartHours = new Chart(ctxHours, {
             type: 'line',
             data: {
-                labels: Array.from({ length: 24 }, (_, i) => i),
+                labels: Array.from({ length: 24 }, (_, i) => i), // Genera 0, 1, 2... 23
                 datasets: [{
                     label: 'Actividad',
-                    data: hC,
+                    data: hC, // Los datos que calculamos arriba
                     borderColor: '#11cdef',
                     fill: true,
                     backgroundColor: 'rgba(17,205,239,0.1)',
-                    tension: 0.4
+                    tension: 0.4,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#11cdef'
                 }]
             },
             options: {
-                ...commonOptions,
-                plugins: { legend: { display: false } },
+                responsive: true,
+                maintainAspectRatio: false, // CLAVE para que se estire
+                plugins: { 
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            title: (items) => `Hora: ${items[0].label}:00`
+                        }
+                    }
+                },
+                layout: {
+                    padding: { bottom: 10, left: 10, right: 15, top: 10 }
+                },
                 scales: {
-                    x: { ticks: { maxTicksLimit: 8 } },
-                    y: { beginAtZero: true, ticks: { precision: 0 } }
+                    x: { 
+                        ticks: { maxTicksLimit: 12 },
+                        grid: { display: false } 
+                    },
+                    y: { 
+                        beginAtZero: true, 
+                        ticks: { precision: 0 }
+                    }
                 }
             }
         });

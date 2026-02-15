@@ -97,7 +97,15 @@ const translations = {
         hotspot_no_clusters: "No se detectan grupos",
         hotspot_focus: "Foco de Actividad",
         hotspot_points: "puntos",
-        hotspot_epicenter: "Detectado epicentro con {count} incidentes cercanos."
+        hotspot_epicenter: "Detectado epicentro con {count} incidentes cercanos.",
+                // --- NUEVAS TRADUCCIONES MODAL ARCHIVO GRANDE ---
+        modal_large_title: "Archivo Grande Detectado",
+        modal_large_desc: "El archivo es superior a 1 MB. Para optimizar la velocidad, selecciona a partir de qué año quieres cargar los datos.",
+        modal_large_label: "CARGAR DESDE EL AÑO:",
+        modal_large_opt_from: "Desde",
+        modal_large_opt_all: "Cargar todo el histórico (Más lento)",
+        btn_continue: "CONTINUAR",
+        alert_no_records: "No se encontraron registros para el año seleccionado."
     },
     eu: {
         nav_title: "EUROCOP",
@@ -197,7 +205,15 @@ const translations = {
         hotspot_no_clusters: "Taldeak ez ikusten",
         hotspot_focus: "Jarduera Gunea",
         hotspot_points: "puntuak",
-        hotspot_epicenter: "Epicentro hautematen da {count} inguruko gertakariekin."
+        hotspot_epicenter: "Epicentro hautematen da {count} inguruko gertakariekin.",
+        // --- NUEVAS TRADUCCIONES MODAL ARCHIVO GRANDE ---
+        modal_large_title: "Fitxategi Handia Atzeman Da",
+        modal_large_desc: "Fitxategia 1 MB baino handiagoa da. Abiadura optimizatzeko, hautatu zein urtetatik aurrera kargatu nahi dituzun datuak.",
+        modal_large_label: "KARGATU URTE HONETATIK:",
+        modal_large_opt_from: "Noiztik:",
+        modal_large_opt_all: "Kargatu historiko osoa (Motelagoa)",
+        btn_continue: "JARRAITU",
+        alert_no_records: "Ez da erregistrorik aurkitu hautatutako urterako."
     },
     ca: {
         nav_title: "EUROCOP",
@@ -296,7 +312,15 @@ const translations = {
         hotspot_no_clusters: "No es detecten grups",
         hotspot_focus: "Focus d'Activitat",
         hotspot_points: "punts",
-        hotspot_epicenter: "Epicentre detectat amb {count} incidents propellers."
+        hotspot_epicenter: "Epicentre detectat amb {count} incidents propellers.",
+        // --- NUEVAS TRADUCCIONES MODAL ARCHIVO GRANDE ---
+        modal_large_title: "Arxiu Gran Detectat",
+        modal_large_desc: "L'arxiu és superior a 1 MB. Per optimitzar la velocitat, selecciona a partir de quin any vols carregar les dades.",
+        modal_large_label: "CARREGAR DES DE L'ANY:",
+        modal_large_opt_from: "Des de",
+        modal_large_opt_all: "Carregar tot l'històric (Més lent)",
+        btn_continue: "CONTINUAR",
+        alert_no_records: "No s'han trobat registres per a l'any seleccionat."
     },
     gl: {
         nav_title: "EUROCOP",
@@ -395,6 +419,14 @@ const translations = {
         hotspot_no_clusters: "Non se detectan grupos",
         hotspot_focus: "Foco de Actividade",
         hotspot_points: "puntos",
-        hotspot_epicenter: "Epicentro detectado con {count} incidentes cercanos."
+        hotspot_epicenter: "Epicentro detectado con {count} incidentes cercanos.",
+        // --- NUEVAS TRADUCCIONES MODAL ARCHIVO GRANDE ---
+        modal_large_title: "Arquivo Grande Detectado",
+        modal_large_desc: "O arquivo é superior a 1 MB. Para optimizar a velocidade, selecciona a partir de que ano queres cargar os datos.",
+        modal_large_label: "CARGAR DESDE O ANO:",
+        modal_large_opt_from: "Desde",
+        modal_large_opt_all: "Cargar todo o histórico (Máis lento)",
+        btn_continue: "CONTINUAR",
+        alert_no_records: "Non se atoparon rexistros para o ano seleccionado."
     }
 };
