@@ -292,3 +292,113 @@ function updateCharts(data, selYears) {
         });
     }
 }
+/**
+ * Genera el relato narrativo basado en el gráfico de evolución actual
+ */
+function generateTimelineNarrative() {
+    // 1. Obtener la instancia del gráfico
+    const chart = Chart.getChart("chart-timeline");
+    if (!chart) {
+        console.error("Gráfico no encontrado");
+        return;
+    }
+
+    // 2. Variables para cálculos
+    const labels = chart.data.labels; // ["Ene (887)", "Feb..."]
+    const datasets = chart.data.datasets;
+    let periodData = []; // Array para guardar {label, total}
+    let grandTotal = 0;
+
+    // 3. Recorrer cada columna (mes/año/día) y sumar los datasets apilados
+    // Se asume que datasets ocultos (!ds.hidden) se suman, o podemos sumar todos si es stacked.
+    // Usaremos chart.isDatasetVisible(i) para respetar filtros de leyenda.
+    
+    for (let i = 0; i < labels.length; i++) {
+        let sum = 0;
+        datasets.forEach((ds, dsIndex) => {
+            // Solo sumar si el dataset es visible y tiene dato
+            if (chart.isDatasetVisible(dsIndex)) {
+                let val = ds.data[i];
+                if (typeof val === 'number') sum += val;
+            }
+        });
+
+        // Limpiar la etiqueta (Quitar paréntesis con totales antiguos si existen)
+        // Ej: "Ene (887)" -> "Ene"
+        let cleanLabel = labels[i];
+        if (typeof cleanLabel === 'string' && cleanLabel.includes('(')) {
+            cleanLabel = cleanLabel.split('(')[0].trim();
+        }
+
+        periodData.push({ label: cleanLabel, value: sum });
+        grandTotal += sum;
+    }
+
+    // 4. Calcular Estadísticas (Min, Max, Avg)
+    if (periodData.length === 0) return;
+
+    // Ordenar por valor para encontrar min/max facilmente
+    const sortedByValue = [...periodData].sort((a, b) => b.value - a.value);
+    
+    const maxItem = sortedByValue[0];
+    const minItem = sortedByValue[sortedByValue.length - 1];
+    const avgVal = Math.round(grandTotal / periodData.length);
+
+    // 5. Rellenar el Modal (Resumen)
+    document.getElementById('narrative-max-val').textContent = maxItem.value.toLocaleString();
+    document.getElementById('narrative-max-lbl').textContent = maxItem.label;
+    
+    document.getElementById('narrative-min-val').textContent = minItem.value.toLocaleString();
+    document.getElementById('narrative-min-lbl').textContent = minItem.label;
+
+    document.getElementById('narrative-avg-val').textContent = avgVal.toLocaleString();
+
+    // 6. Rellenar la Lista Cronológica
+    const listContainer = document.getElementById('narrative-list-container');
+    listContainer.innerHTML = '';
+
+    // Obtener traducción para "registros"
+    const lang = (typeof currentLang !== 'undefined') ? currentLang : 'es';
+    const txtRecords = (typeof translations !== 'undefined') ? translations[lang].narrative_records : 'registros';
+
+    // Crear tabla simple o lista
+    const ul = document.createElement('ul');
+    ul.style.listStyle = 'none';
+    ul.style.padding = '0';
+    ul.style.margin = '0';
+
+    periodData.forEach(item => {
+        const li = document.createElement('li');
+        li.style.display = 'flex';
+        li.style.justifyContent = 'space-between';
+        li.style.alignItems = 'center';
+        li.style.padding = '10px 15px';
+        li.style.borderBottom = '1px solid #f0f0f0';
+        li.style.fontSize = '0.9rem';
+
+        // Barra visual de porcentaje relativo al máximo
+        const percent = Math.round((item.value / maxItem.value) * 100);
+        
+        li.innerHTML = `
+            <div style="display:flex; align-items:center; gap:10px; flex:1;">
+                <div style="font-weight:700; color:#525f7f; width:80px;">${item.label}</div>
+                <div style="flex:1; background:#e9ecef; height:6px; border-radius:3px; max-width:150px;">
+                    <div style="width:${percent}%; background:#5e72e4; height:100%; border-radius:3px;"></div>
+                </div>
+            </div>
+            <div style="font-weight:600; color:#32325d;">
+                ${item.value.toLocaleString()} <span style="font-size:0.75rem; color:#8898aa; font-weight:400;">${txtRecords}</span>
+            </div>
+        `;
+        ul.appendChild(li);
+    });
+
+    listContainer.appendChild(ul);
+
+    // 7. Mostrar Modal
+    const modal = document.getElementById('narrative-modal');
+    modal.classList.add('active');
+
+    // Aplicar traducciones a los títulos estáticos del modal
+    if (typeof applyLanguage === 'function') applyLanguage(lang);
+}

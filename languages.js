@@ -105,7 +105,15 @@ const translations = {
         modal_large_opt_from: "Desde",
         modal_large_opt_all: "Cargar todo el histórico (Más lento)",
         btn_continue: "CONTINUAR",
-        alert_no_records: "No se encontraron registros para el año seleccionado."
+        alert_no_records: "No se encontraron registros para el año seleccionado.",
+                narrative_title: "Análisis Narrativo",
+        narrative_chronology: "Detalle Cronológico",
+        narrative_summary: "Resumen Destacado",
+        narrative_max: "Mayor Actividad",
+        narrative_min: "Menor Actividad",
+        narrative_avg: "Promedio del Periodo",
+        narrative_total_period: "Total en este periodo",
+        narrative_records: "registros"
     },
     eu: {
         nav_title: "EUROCOP",
@@ -213,7 +221,15 @@ const translations = {
         modal_large_opt_from: "Noiztik:",
         modal_large_opt_all: "Kargatu historiko osoa (Motelagoa)",
         btn_continue: "JARRAITU",
-        alert_no_records: "Ez da erregistrorik aurkitu hautatutako urterako."
+        alert_no_records: "Ez da erregistrorik aurkitu hautatutako urterako.",
+        narrative_title: "Analisi Narratiboa",
+        narrative_chronology: "Xehetasun Kronologikoa",
+        narrative_summary: "Laburpen Nabarmena",
+        narrative_max: "Jarduera Handiena",
+        narrative_min: "Jarduera Txikiena",
+        narrative_avg: "Aldiaren Batezbestekoa",
+        narrative_total_period: "Guztira aldi honetan",
+        narrative_records: "erregistro"
     },
     ca: {
         nav_title: "EUROCOP",
@@ -320,7 +336,15 @@ const translations = {
         modal_large_opt_from: "Des de",
         modal_large_opt_all: "Carregar tot l'històric (Més lent)",
         btn_continue: "CONTINUAR",
-        alert_no_records: "No s'han trobat registres per a l'any seleccionat."
+        alert_no_records: "No s'han trobat registres per a l'any seleccionat.",
+        narrative_title: "Anàlisi Narrativa",
+        narrative_chronology: "Detall Cronològic",
+        narrative_summary: "Resum Destacat",
+        narrative_max: "Major Activitat",
+        narrative_min: "Menor Activitat",
+        narrative_avg: "Mitjana del Període",
+        narrative_total_period: "Total en aquest període",
+        narrative_records: "registres"
     },
     gl: {
         nav_title: "EUROCOP",
@@ -427,6 +451,14 @@ const translations = {
         modal_large_opt_from: "Desde",
         modal_large_opt_all: "Cargar todo o histórico (Máis lento)",
         btn_continue: "CONTINUAR",
-        alert_no_records: "Non se atoparon rexistros para o ano seleccionado."
+        alert_no_records: "Non se atoparon rexistros para o ano seleccionado.",
+        narrative_title: "Análise Narrativa",
+        narrative_chronology: "Detalle Cronolóxico",
+        narrative_summary: "Resumo Destacado",
+        narrative_max: "Maior Actividade",
+        narrative_min: "Menor Actividade",
+        narrative_avg: "Media do Período",
+        narrative_total_period: "Total neste período",
+        narrative_records: "rexistros"
     }
 };

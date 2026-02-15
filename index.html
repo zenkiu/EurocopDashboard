@@ -403,7 +403,10 @@
                                 <option value="quarter" data-i18n="view_quarters">Trimestral</option>
                                 <option value="day" data-i18n="view_days">Días Semanal</option>
                             </select>
-                            
+                                <!-- NUEVO BOTÓN: ANÁLISIS NARRATIVO -->
+                            <button class="btn-mini" onclick="generateTimelineNarrative()" title="Ver Relato de Datos">
+                                <i class="fa-solid fa-list-ul"></i>
+                            </button>
                             <!-- Alternar entre Barras y Líneas -->
                             <button class="btn-mini" id="btn-toggle-chart-type" onclick="toggleTimelineType()" title="Cambiar a Líneas">
                                 <i class="fa-solid fa-chart-line"></i>
@@ -795,6 +798,53 @@
         </div>
         <div class="pdf-body" style="overflow: auto; background: white; padding: 0;">
             <div id="records-table-container"></div>
+        </div>
+    </div>
+</div>
+<!-- MODAL DE NARRATIVA -->
+<div id="narrative-modal" class="pdf-modal-overlay" style="z-index: 7000;">
+    <div class="pdf-modal-content" style="max-width: 600px; height: 80vh; display: flex; flex-direction: column;">
+        
+        <!-- Cabecera -->
+        <div class="pdf-header" style="background: #5e72e4; color: white;">
+            <h3><i class="fa-solid fa-chart-bar"></i> <span data-i18n="narrative_title">Análisis Narrativo</span></h3>
+            <button onclick="document.getElementById('narrative-modal').classList.remove('active')" class="btn-close-pdf" style="color:white;">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <!-- Cuerpo con Scroll -->
+        <div class="pdf-body" style="padding: 20px; overflow-y: auto; background: #f8f9fe;">
+            
+            <!-- Sección 1: Resumen (Cards) -->
+            <h4 data-i18n="narrative_summary" style="margin-bottom: 15px; color: #32325d; text-transform: uppercase; font-size: 0.8rem; font-weight: 800; border-bottom: 1px solid #e9ecef; padding-bottom: 5px;">Resumen Destacado</h4>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 25px;">
+                <!-- Max -->
+                <div style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); text-align: center; border-top: 3px solid #2dce89;">
+                    <div style="font-size: 0.7rem; color: #8898aa; text-transform: uppercase;" data-i18n="narrative_max">Mayor Actividad</div>
+                    <div id="narrative-max-val" style="font-size: 1.2rem; font-weight: 800; color: #32325d;">0</div>
+                    <div id="narrative-max-lbl" style="font-size: 0.8rem; color: #2dce89; font-weight: 600;">-</div>
+                </div>
+                <!-- Min -->
+                <div style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); text-align: center; border-top: 3px solid #f5365c;">
+                    <div style="font-size: 0.7rem; color: #8898aa; text-transform: uppercase;" data-i18n="narrative_min">Menor Actividad</div>
+                    <div id="narrative-min-val" style="font-size: 1.2rem; font-weight: 800; color: #32325d;">0</div>
+                    <div id="narrative-min-lbl" style="font-size: 0.8rem; color: #f5365c; font-weight: 600;">-</div>
+                </div>
+                <!-- Avg -->
+                <div style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); text-align: center; border-top: 3px solid #11cdef;">
+                    <div style="font-size: 0.7rem; color: #8898aa; text-transform: uppercase;" data-i18n="narrative_avg">Promedio</div>
+                    <div id="narrative-avg-val" style="font-size: 1.2rem; font-weight: 800; color: #32325d;">0</div>
+                    <div style="font-size: 0.8rem; color: #11cdef;" data-i18n="narrative_records">registros</div>
+                </div>
+            </div>
+
+            <!-- Sección 2: Lista Cronológica -->
+            <h4 data-i18n="narrative_chronology" style="margin-bottom: 15px; color: #32325d; text-transform: uppercase; font-size: 0.8rem; font-weight: 800; border-bottom: 1px solid #e9ecef; padding-bottom: 5px;">Detalle Cronológico</h4>
+            <div id="narrative-list-container" style="background: white; border-radius: 8px; padding: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+                <!-- Se llena con JS -->
+            </div>
+
         </div>
     </div>
 </div>
