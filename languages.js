@@ -42,7 +42,7 @@ const translations = {
         sel_none: "Ninguno",
         sel_clear: "Limpiar",
         sel_select: "Seleccionar...",
-        kpi_expedientes: "Expedientes",
+        kpi_expedientes: "Total",
         kpi_zona: "Zona",
         kpi_titulo: "TÍTULO",
         kpi_periodo: "Periodo",
@@ -75,7 +75,7 @@ const translations = {
         info_lbl_top3: "Top 3 Categorías",
         info_lbl_dominance: "Dominancia",
         info_lbl_footer: "Generado por Eurocop Analytics AI",
-        info_insight_text: "En <strong style='color:#11cdef'>{archivo}</strong>, la categoría {cat} lidera las incidencias, representando el {percent}% del total.",
+        info_insight_text: "En <strong style='color:#11cdef'>{archivo}</strong>, la selección {cat} lidera las incidencias, representando el {percent}% del total.",
         info_trend_morning: "La actividad se concentra principalmente durante la mañana, sugiriendo patrones relacionados con la actividad laboral o comercial.",
         info_trend_afternoon: "Se observa un repunte significativo durante la tarde-noche, típico de actividades sociales y cierre de comercios.",
         info_trend_night: "La actividad nocturna es predominante, lo que podría requerir vigilancia especial en horarios de madrugada.",
@@ -113,7 +113,10 @@ const translations = {
         narrative_min: "Menor Actividad",
         narrative_avg: "Promedio del Periodo",
         narrative_total_period: "Total en este periodo",
-        narrative_records: "registros"
+        narrative_records: "registros",
+        extra_filters_title: "FILTROS EXTRA",
+        extra_filter_1: "FILTRO EXTRA 1",
+        extra_filter_2: "FILTRO EXTRA 2"
     },
     eu: {
         nav_title: "EUROCOP",
@@ -158,7 +161,7 @@ const translations = {
         sel_none: "Bat ere ez",
         sel_clear: "Garbitu",
         sel_select: "Hautatu...",
-        kpi_expedientes: "Espedienteak",
+        kpi_expedientes: "Guztira",
         kpi_zona: "Eremua",
         kpi_titulo: "IZENBURUA",
         kpi_periodo: "Epea",
@@ -191,7 +194,7 @@ const translations = {
         info_lbl_top3: "3 Kategoria Nagusiak",
         info_lbl_dominance: "Dominantzia",
         info_lbl_footer: "Eurocop Analytics AI-k sortua",
-        info_insight_text: "<strong style='color:#11cdef'>{archivo}</strong> fitxategian, {cat} kategoria da nagusi, gertakarien %{percent} delarik.",
+        info_insight_text: "<strong style='color:#11cdef'>{archivo}</strong> fitxategian, {cat} hautaketa da nagusi gertakarietan, guztizkoaren %{percent} izanda.",
         info_trend_morning: "Jarduerea goizean kontzentratzen da nagusiki, lan- edo merkataritza-jarduerekin lotutako ereduen ondorioz.",
         info_trend_afternoon: "Arratsalde-gauean gorakada nabarmena ikusten da, gizarte-jarduerekin eta denden itxierarekin lotua.",
         info_trend_night: "Gaueko jarduera nagusia da, eta horrek zainketa berezia behar dezake goizaldean.",
@@ -229,7 +232,10 @@ const translations = {
         narrative_min: "Jarduera Txikiena",
         narrative_avg: "Aldiaren Batezbestekoa",
         narrative_total_period: "Guztira aldi honetan",
-        narrative_records: "erregistro"
+        narrative_records: "erregistro",
+        extra_filters_title: "IRAGAZKI EXTRAK",
+        extra_filter_1: "1. IRAGAZKI EXTRA",
+        extra_filter_2: "2. IRAGAZKI EXTRA"
     },
     ca: {
         nav_title: "EUROCOP",
@@ -273,7 +279,7 @@ const translations = {
         sel_none: "Cap",
         sel_clear: "Netejar",
         sel_select: "Seleccionar...",
-        kpi_expedientes: "Expedients",
+        kpi_expedientes: "Total",
         kpi_zona: "Zona",
         kpi_titulo: "TÍTOL",
         kpi_periodo: "Període",
@@ -306,7 +312,7 @@ const translations = {
         info_lbl_top3: "Top 3 Categories",
         info_lbl_dominance: "Dominància",
         info_lbl_footer: "Generat per Eurocop Analytics AI",
-        info_insight_text: "A <strong style='color:#11cdef'>{archivo}</strong>, la categoria {cat} lidera les incidències, representant el {percent}% del total.",
+        info_insight_text: "A <strong style='color:#11cdef'>{archivo}</strong>, la selecció {cat} lidera les incidències, representant el {percent}% del total.",
         info_trend_morning: "L'activitat es concentra principalment durant el matí, suggerint patrons relacionats amb l'activitat laboral o comercial.",
         info_trend_afternoon: "S'observa un repunt significatiu durant la tarda-nit, típic d'activitats socials i tancament de comerços.",
         info_trend_night: "L'activitat nocturna és predominant, la qual cosa podria requerir vigilància especial en horaris de matinada.",
@@ -344,7 +350,10 @@ const translations = {
         narrative_min: "Menor Activitat",
         narrative_avg: "Mitjana del Període",
         narrative_total_period: "Total en aquest període",
-        narrative_records: "registres"
+        narrative_records: "registres",
+        extra_filters_title: "FILTRES EXTRA",
+        extra_filter_1: "FILTRE EXTRA 1",
+        extra_filter_2: "FILTRE EXTRA 2"
     },
     gl: {
         nav_title: "EUROCOP",
@@ -388,7 +397,7 @@ const translations = {
         sel_none: "Ningún",
         sel_clear: "Limpar",
         sel_select: "Seleccionar...",
-        kpi_expedientes: "Expedientes",
+        kpi_expedientes: "Total",
         kpi_zona: "Zona",
         kpi_titulo: "TÍTULO",
         kpi_periodo: "Período",
@@ -421,7 +430,7 @@ const translations = {
         info_lbl_top3: "Top 3 Categorías",
         info_lbl_dominance: "Dominancia",
         info_lbl_footer: "Xerado por Eurocop Analytics AI",
-        info_insight_text: "En <strong style='color:#11cdef'>{archivo}</strong>, a categoría {cat} lidera as incidencias, representando o {percent}% do total.",
+        info_insight_text: "En <strong style='color:#11cdef'>{archivo}</strong>, a selección {cat} lidera as incidencias, representando o {percent}% do total.",
         info_trend_morning: "A actividade concéntrase principalmente durante a mañá, suxerindo patróns relacionados coa actividade laboral ou comercial.",
         info_trend_afternoon: "Obsérvase un repunte significativo durante a tarde-noite, típico de actividades sociais e peche de comercios.",
         info_trend_night: "A actividade nocturna é predominante, o que podería requirir vixilancia especial en horarios de madrugada.",
@@ -459,6 +468,9 @@ const translations = {
         narrative_min: "Menor Actividade",
         narrative_avg: "Media do Período",
         narrative_total_period: "Total neste período",
-        narrative_records: "rexistros"
+        narrative_records: "rexistros",
+        extra_filters_title: "FILTROS EXTRA",
+        extra_filter_1: "FILTRO EXTRA 1",
+        extra_filter_2: "FILTRO EXTRA 2"
     }
 };

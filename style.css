@@ -437,48 +437,50 @@ input:checked + .slider:before { transform: translateX(14px); }
 /* Configuración (Mapping) */
 #mapping-view.active {
     display: flex;
-    align-items: center; 
+    align-items: flex-start;
     justify-content: center;
     background: var(--bg-light);
-    padding: 20px;
-    min-height: calc(100vh - var(--nav-height));
+    padding: 10px 20px;
+    height: calc(100vh - var(--nav-height));
+    height: calc(100dvh - var(--nav-height));
     overflow-y: auto;
 }
 .config-panel {
     background: white;
     width: 100%;
-    max-width: 1200px; /* Un poco más ancho para PC */
+    max-width: 1200px;
     border-radius: 16px;
     box-shadow: 0 10px 25px rgba(0,0,0,0.1);
     display: flex;
     flex-direction: column;
+    margin: auto 0;
 }
-.panel-header { background: var(--primary-dark); color: white; padding: 25px; }
+.panel-header { background: var(--primary-dark); color: white; padding: 14px 25px; }
 /* El Grid de 3 columnas */
 .mapping-layout {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 20px;
-    padding: 30px;
-    align-items: start; /* Alinea las tarjetas arriba */
-    justify-content: center; /* Centra el contenido */
-}
-
-/* Cuando solo hay una columna visible, centrarla */
-.mapping-layout:has(.mapping-col:not(.configured-fields-section)) {
-    grid-template-columns: minmax(auto, 400px);
+    gap: 12px;
+    padding: 16px 20px;
+    align-items: start;
     justify-content: center;
 }
-.mapping-col { display: flex; flex-direction: column; gap: 20px; }
+
+/* Cuando solo la columna análisis está visible (campos configurados ocultos) */
+.mapping-layout:not(:has(.configured-fields-section:not([style*="display: none"]))) {
+    grid-template-columns: minmax(auto, 440px);
+    justify-content: center;
+}
+.mapping-col { display: flex; flex-direction: column; gap: 10px; }
 .card {
     background: #f8f9fe;
-    padding: 18px;
+    padding: 12px;
     border-radius: 12px;
     border: 1px solid var(--border-color);
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    height: auto; /* Que cada tarjeta use solo lo que necesita */
+    gap: 6px;
+    height: auto;
     transition: transform 0.2s;
 }
 .card:hover {
@@ -491,22 +493,54 @@ input:checked + .slider:before { transform: translateX(14px); }
 }
 .highlighted-card { background: #eef2ff; border: 2px solid var(--accent-blue); position: relative; }
 .highlight-badge { position: absolute; top: 0; right: 0; background: var(--accent-blue); color: white; padding: 4px 10px; font-size: 0.6rem; font-weight: 800; border-bottom-left-radius: 10px; }
-.styled-select { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #dcdfe6; margin-top: 5px; }
-.action-footer { padding: 20px 30px; background: #f4f6f9; display: flex; justify-content: flex-end; gap: 15px; border-top: 1px solid var(--border-color); }
+.styled-select { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #dcdfe6; margin-top: 2px; }
+.action-footer { padding: 12px 20px; background: #f4f6f9; display: flex; justify-content: flex-end; gap: 15px; border-top: 1px solid var(--border-color); }
 
 /* Botón de toggle para campos configurados */
+/* Reducir gap del contenedor de filtros extra (tiene gap inline de 20px) */
+#extra-filters-config-group { gap: 10px !important; }
+
+/* Reducir margen del wrapper del botón toggle */
+.config-panel > div[style*="margin-bottom: 15px"] { margin-bottom: 8px !important; }
+
+/* --- Diseño del Botón de Mostrar/Ocultar Campos --- */
 .btn-toggle-fields {
+    background-color: #ffffff; /* Fondo blanco */
+    color: var(--accent-blue); /* Texto en azul corporativo */
+    border: 1px solid var(--accent-blue); /* Borde fino azul */
+    padding: 10px 24px;
+    border-radius: 50px; /* Forma de píldora */
+    font-family: 'Inter', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px; /* Espacio entre el icono y el texto */
     transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    outline: none;
+    margin-top: 20px;
 }
 
+/* Efecto al pasar el ratón (Hover) */
 .btn-toggle-fields:hover {
-    background: #e2e8f0 !important;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    background-color: var(--accent-blue); /* Fondo azul */
+    color: #ffffff; /* Texto blanco */
+    box-shadow: 0 4px 12px rgba(94, 114, 228, 0.2); /* Sombra suave azul */
+    transform: translateY(-1px); /* Pequeño salto hacia arriba */
 }
 
+/* Efecto al hacer clic */
 .btn-toggle-fields:active {
     transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* Ajuste para el icono dentro del botón */
+.btn-toggle-fields i {
+    font-size: 1rem;
 }
 
 /* Estilos para campos visibles cuando los configurados están ocultos */
@@ -518,7 +552,7 @@ input:checked + .slider:before { transform: translateX(14px); }
 /* Cuando el layout está en modo flex (campos ocultos) */
 .mapping-layout[style*="display: flex"] {
     align-items: flex-start;
-    padding: 50px 30px;
+    padding: 16px 20px;
 }
 
 .mapping-layout[style*="display: flex"] .visible-fields-section {
@@ -1018,6 +1052,130 @@ input:checked + .slider:before { transform: translateX(14px); }
     }
 }
 
+/* =========================================
+   SAMSUNG GALAXY Z FOLD 6 - PANTALLA INTERIOR DESPLEGADA
+   Viewport aprox: 848px ancho × 1076px alto (portrait)
+   DPR ~2.54 | Resolución física: 2160×1856px
+   ========================================= */
+@media (min-width: 769px) and (max-width: 920px) {
+
+    /* === BODY / LAYOUT BASE === */
+    body { overflow-x: hidden; overflow-y: auto; height: 100%; }
+    .view-container.active { 
+        display: flex !important; 
+        flex-direction: column; 
+        height: auto; 
+        min-height: calc(100dvh - var(--nav-height)); 
+    }
+
+    /* === NAVBAR === */
+    .navbar { padding: 0 12px; gap: 6px; }
+    .hide-mobile { display: none !important; }
+    .nav-filters-info { display: none !important; }
+    .nav-right { gap: 8px; flex-grow: 0; }
+    .lang-select { padding: 4px 8px; font-size: 0.8rem; margin-right: 0; }
+    .badge-records { font-size: 0.7rem; padding: 4px 10px; }
+
+    /* === SIDEBAR (deslizante como en móvil) === */
+    .sidebar {
+        position: fixed; top: 0; left: 0;
+        height: 100vh; width: 75%; max-width: 280px;
+        transform: translateX(-100%); z-index: 3000;
+        transition: transform 0.3s ease;
+    }
+    .sidebar.active { transform: translateX(0); }
+    .sidebar-header-mobile { display: flex !important; justify-content: space-between; align-items: center; }
+    .mobile-overlay { display: block; }
+
+    /* === MAIN CONTENT === */
+    .main-content {
+        padding: 12px; gap: 14px; height: auto !important;
+        overflow: visible !important;
+        display: flex !important; flex-direction: column !important;
+    }
+
+    /* === KPIs === */
+    .kpi-grid { 
+        display: grid !important; 
+        grid-template-columns: repeat(3, 1fr) !important; 
+        gap: 10px; 
+    }
+    .kpi-card { padding: 10px 8px; overflow: hidden; }
+    .kpi-icon { width: 32px; height: 32px; font-size: 0.95rem; margin-bottom: 4px; }
+    .kpi-data h3 { font-size: 0.6rem; }
+    .kpi-data span { font-size: 0.9rem !important; text-align: center; width: 100%; }
+
+    /* === GRÁFICOS: 2 columnas arriba, 2 abajo === */
+    .charts-grid-top { 
+        display: grid !important; 
+        grid-template-columns: 1fr 1fr !important; 
+        gap: 12px; 
+    }
+    .bottom-grid { 
+        display: grid !important; 
+        grid-template-columns: 1fr 1fr !important; 
+        gap: 12px; 
+    }
+    .chart-container, .map-container-wrapper { 
+        width: 100% !important; 
+        height: 280px !important; 
+        min-height: 280px !important;
+        padding: 12px !important; 
+    }
+    .chart-header { flex-direction: row; align-items: center; height: auto; }
+    .chart-header h4 { font-size: 0.75rem; }
+    .header-actions { flex-wrap: wrap; gap: 5px; }
+
+    /* === MAPA === */
+    .map-container-wrapper.active-map { display: flex !important; height: 300px !important; }
+    #main-map { height: 100% !important; min-height: 220px; }
+    .layer-dropdown-content {
+        right: auto !important;
+        left: -40px !important;
+        width: 220px !important;
+        max-width: 80vw;
+    }
+
+    /* === TABLAS === */
+    #table-streets-view .data-table { min-width: 100% !important; table-layout: fixed; }
+    #table-streets-view { overflow-x: hidden !important; overflow-y: auto; }
+
+    /* === VISTA CONFIGURACIÓN (MAPPING) === */
+    #mapping-view.active {
+        padding: 12px 15px;
+        align-items: flex-start;
+        overflow-y: auto;
+        height: calc(100dvh - var(--nav-height));
+    }
+    .config-panel {
+        margin-top: 0;
+        margin-bottom: 15px;
+    }
+    /* 3 columnas compactas en Fold 6 desplegado */
+    .mapping-layout {
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 10px !important;
+        padding: 12px 14px !important;
+        display: grid !important;
+    }
+    .mapping-layout .visible-fields-section,
+    .mapping-layout .configured-fields-section {
+        max-width: 100%;
+        width: 100%;
+    }
+    .panel-header { padding: 12px 18px; }
+    .card { padding: 10px; gap: 5px; }
+    .card label { font-size: 0.7rem; }
+    .styled-select { padding: 8px; font-size: 0.8rem; margin-top: 2px; }
+    .action-footer { padding: 10px 16px; }
+    .mapping-layout[style*="display: flex"] { padding: 12px 14px; }
+
+    /* === UPLOAD === */
+    .upload-card { width: 90%; padding: 25px; }
+    .manual-container { flex-wrap: wrap; gap: 8px; justify-content: center; }
+    .btn-manual-pill { min-width: 140px; }
+}
+
 /* --- RESPONSIVE: MÓVIL (< 768px) --- */
 @media (max-width: 768px) {
     /* 1. Permitir que la cabecera del gráfico crezca y se envuelva */
@@ -1383,4 +1541,25 @@ input:checked + .slider:before { transform: translateX(14px); }
 
 #large-file-modal {
     z-index: 6000; /* Mayor que el loading overlay */
+}
+/* Ajuste para botones con iconos en dropdowns */
+.dropdown-controls {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+}
+
+.dropdown-controls .btn-mini {
+    width: 32px; /* Forzamos tamaño cuadrado */
+    height: 32px;
+    padding: 0 !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem; /* Icono un poco más grande */
+}
+
+/* Evitar que el buscador empuje los botones */
+.dropdown-search {
+    margin-bottom: 8px !important;
 }

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Eurocop Analytics | Seguridad Pública</title>
     <link rel="icon" href="./ImagenCoorporativa/zzenkiu.png" type="image/png">
+    
     <!-- FUENTES: Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
     
@@ -20,10 +21,9 @@
         document.write('<link rel="stylesheet" href="style.css?v=' + EUROCOP_VERSION + '">');
     </script>
 
-    <!-- LIBRERÍAS PARA EXPORTACIÓN PDF -->
+    <!-- LIBRERÍAS EXTERNAS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <!-- LIBRERÍA GEOMÉTRICA (Turf.js) -->
     <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
 </head>
 <body>
@@ -38,12 +38,8 @@
                 <i class="fa-solid fa-bars"></i>
             </button>
             
-            <!-- El div principal ya no tiene onclick -->
             <div class="logo">
-                <!-- El icono queda libre (no es clickable) -->
                 <span class="logo-icon"><i class="fa-solid fa-shield-halved"></i></span>
-                
-                <!-- Solo el texto tiene el evento y el puntero -->
                 <span class="logo-text" onclick="goToMapping()" style="cursor:pointer" title="Volver a Configuración">
                     <span data-i18n="nav_title">EUROCOP</span>
                     <span class="hide-mobile" data-i18n="nav_analytics"> ANALYTICS</span>
@@ -61,8 +57,6 @@
                 <option value="gl">🔵 GL</option>
             </select>
 
-            <!-- <div id="display-filename" class="filename-pill" data-i18n="no_file">SIN ARCHIVO</div> -->
-            
             <span id="kpi-total-filas" class="badge-records">0 <span data-i18n="kpi_reg">REG</span></span>
             
             <div class="nav-filters-info">
@@ -90,15 +84,12 @@
                 </div>
                 
                 <div class="csv-info">
-                    
                     <small class="clickable-info" onclick="openImageModal('./ImagenCoorporativa/Infografia.png', 'Infografía')">
                         <i class="fa-solid fa-circle-info"></i> 
                         <span data-i18n="upload_mobile">Compatible con móviles</span>
                     </small>
                 </div>
 
-                <!-- BOTONES PDF -->
-                <!-- BOTONES PDF -->
                 <div class="manual-container">
                     <button onclick="openPdfModal('Manual.pdf', 'Manual de Ayuda')" class="btn-manual-pill">
                         <i class="fa-solid fa-book-open"></i>
@@ -110,31 +101,27 @@
                         <span data-i18n="btn_updates">Actualizaciones</span>
                     </button>
 
-                    <!-- NUEVO BOTÓN: VÍDEOS -->
                     <a href="https://www.youtube.com/playlist?list=PL0ocQ3pHMwQsPcyIqnI7D1H6NIwqwsoyZ" target="_blank" class="btn-manual-pill" style="text-decoration: none;">
                         <i class="fa-brands fa-youtube"></i>
                         <span data-i18n="btn_videos">VideoTutoriales</span>
                     </a>
 
-                    <!-- BOTÓN: DESCARGA DE MEMORIAS -->
                     <a href="./EurocopMemorias/EurocopMemorias.zip" download class="btn-manual-pill" style="text-decoration: none;">
                         <i class="fa-solid fa-file-zipper"></i>
                         <span data-i18n="btn_memorias">Memorias</span>
                     </a>
                 </div>
 
-            <!-- MARCA -->
                 <div class="brand-footer">
                     <span class="brand-label" data-i18n="brand_powered">Powered by</span>
                     <img src="./ImagenCoorporativa/zzenkiu.png" alt="Zzenkiu" class="brand-logo">
-                    <!-- ETIQUETA VACÍA (Se llena con JS) -->
                     <div id="app-version-badge" class="version-badge"></div> 
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- VISTA 2: CONFIGURACIÓN -->
+    <!-- VISTA 2: CONFIGURACIÓN (Mapeo) -->
     <section id="mapping-view" class="view-container">
         <div class="config-panel">
             <div class="panel-header">
@@ -142,39 +129,30 @@
                 <p data-i18n="config_desc">Vincula las columnas de tu archivo.</p>
             </div>
 
-            <!-- Botón para mostrar/ocultar campos configurados -->
             <div style="margin-bottom: 15px; text-align: center;">
-                <button id="toggle-configured-fields" onclick="toggleConfiguredFields()" class="btn-toggle-fields" style="
-                    background: #f7fafc; 
-                    border: 1px solid #e2e8f0; 
-                    padding: 10px 20px; 
-                    border-radius: 8px; 
-                    cursor: pointer; 
-                    font-size: 14px; 
-                    font-weight: 600;
-                    color: #4a5568;
-                    transition: all 0.2s;">
+                <button id="toggle-configured-fields" onclick="toggleConfiguredFields()" class="btn-toggle-fields">
                     <i class="fa-solid fa-eye"></i> <span id="toggle-text" data-i18n="btn_show_configured">Mostrar campos configurados</span>
                 </button>
             </div>
             
             <div class="cards-grid mapping-layout" id="mapping-grid">
-                <!-- SECCIÓN CAMPOS CONFIGURADOS (OCULTOS POR DEFECTO) -->
+                <!-- SECCIÓN CONFIGURADA COL 1: Contador, Lat, Lon -->
                 <div class="mapping-col configured-fields-section" style="display: none;">
                     <div class="card">
                         <label><strong data-i18n="col_id">CONTADOR / ID</strong></label>
                         <select id="map-expediente" class="styled-select configured-field"></select>
                     </div>
                     <div class="card">
-                        <label><strong>LATITUD (Y) <small style="font-weight:400; color:#888;">(Opcional)</small></strong></label>
+                        <label><strong>LATITUD (Y)</strong></label>
                         <select id="map-lat" class="styled-select configured-field"></select>
                     </div>
                     <div class="card">
-                        <label><strong>LONGITUD (X) <small style="font-weight:400; color:#888;">(Opcional)</small></strong></label>
+                        <label><strong>LONGITUD (X)</strong></label>
                         <select id="map-lon" class="styled-select configured-field"></select>
                     </div>
                 </div>
 
+                <!-- SECCIÓN CONFIGURADA COL 2: Fecha, Hora, Calle -->
                 <div class="mapping-col configured-fields-section" style="display: none;">
                     <div class="card">
                         <label><strong data-i18n="col_date">FECHA (Obligatorio)</strong></label>
@@ -184,19 +162,30 @@
                         <label><strong data-i18n="col_time">HORA (Opcional)</strong></label>
                         <select id="map-hora" class="styled-select configured-field"></select>
                     </div>
-                    <!-- En la columna 2 de mapping-view -->
                     <div class="card">
                         <label><strong data-i18n="col_street">CALLE / DIRECCIÓN (Opcional)</strong></label>
                         <select id="map-calle" class="styled-select configured-field"></select>
                     </div>
                 </div>
 
-                <!-- COLUMNA ANÁLISIS - SIEMPRE VISIBLE Y CENTRADA -->
+                <!-- SECCIÓN ANÁLISIS (Siempre visible) -->
                 <div class="mapping-col visible-fields-section">
                     <div class="card highlighted-card">
                         <div class="highlight-badge">ANÁLISIS</div>
                         <label><strong data-i18n="col_cat">CATEGORÍA / TIPO</strong></label>
                         <select id="map-categoria" class="styled-select select-accent"></select>
+                    </div>
+
+                    <!-- CONTENEDOR FILTROS EXTRA -->
+                    <div id="extra-filters-config-group" style="display: none; flex-direction: column; gap: 20px;">
+                        <div class="card" style="border-left: 4px solid var(--accent-blue); background: #f0f4ff;">
+                            <label><strong data-i18n="extra_filter_1">FILTRO EXTRA 1</strong></label>
+                            <select id="map-filtro-1" class="styled-select"></select>
+                        </div>
+                        <div class="card" style="border-left: 4px solid var(--accent-blue); background: #f0f4ff;">
+                            <label><strong data-i18n="extra_filter_2">FILTRO EXTRA 2</strong></label>
+                            <select id="map-filtro-2" class="styled-select"></select>
+                        </div>
                     </div>
 
                     <div class="card">
@@ -230,13 +219,13 @@
 
             <div class="filter-header"><i class="fa-solid fa-filter"></i> <span data-i18n="filter_header">FILTROS AVANZADOS</span></div>
             
-            <!-- Toggle para modo de filtro de fechas -->
+            <!-- Botón Cambio de Modo Fecha -->
             <div style="margin-bottom: 15px; text-align: center;">
                 <button id="toggle-date-mode" onclick="toggleDateFilterMode()" style="
                     background: #f7fafc; 
                     border: 1px solid #e2e8f0; 
-                    padding: 8px 16px; 
-                    border-radius: 6px; 
+                    padding: 10px 16px; 
+                    border-radius: 8px; 
                     cursor: pointer; 
                     font-size: 13px; 
                     font-weight: 600;
@@ -247,37 +236,37 @@
                 </button>
             </div>
 
-            <!-- Filtro de Años (siempre visible) -->
+            <!-- Filtro de Años -->
             <div class="filter-group">
                 <label data-i18n="filter_years">Años</label>
                 <div class="custom-dropdown" id="drop-year">
                     <div class="dropdown-header" onclick="toggleDropdown('list-year')">
-                        <span id="label-year" data-i18n="sel_select">Seleccionar...</span>
+                        <span id="label-year">----</span>
                         <i class="fa-solid fa-chevron-down"></i>
                     </div>
                     <div id="list-year" class="dropdown-content">
-                        <div class="dropdown-controls">
-                            <button class="btn-mini" onclick="toggleGroup('items-year', true, event)" data-i18n="sel_all">Todos</button>
-                            <button class="btn-mini" onclick="toggleGroup('items-year', false, event)" data-i18n="sel_none">Ninguno</button>
+                        <div class="dropdown-controls" style="padding: 10px 10px 5px 10px;">
+                            <button class="btn-mini" onclick="toggleGroup('items-year', true, event)" title="Todos"><i class="fa-solid fa-check-double"></i></button>
+                            <button class="btn-mini" onclick="toggleGroup('items-year', false, event)" title="Ninguno"><i class="fa-solid fa-minus"></i></button>
                         </div>
                         <div class="dropdown-items" id="items-year"></div>
                     </div>
                 </div>
             </div>
 
-            <!-- Modo 1: Filtro tradicional de Meses -->
+            <!-- Modo 1: Meses (Tradicional) -->
             <div id="filter-month-mode">
                 <div class="filter-group">
                     <label data-i18n="filter_months">Meses</label>
                     <div class="custom-dropdown" id="drop-month">
                         <div class="dropdown-header" onclick="toggleDropdown('list-month')">
-                            <span id="label-month" data-i18n="sel_select">Seleccionar...</span>
+                            <span id="label-month">----</span>
                             <i class="fa-solid fa-chevron-down"></i>
                         </div>
                         <div id="list-month" class="dropdown-content">
-                            <div class="dropdown-controls">
-                                <button class="btn-mini" onclick="toggleGroup('items-month', true, event)" data-i18n="sel_all">Todos</button>
-                                <button class="btn-mini" onclick="toggleGroup('items-month', false, event)" data-i18n="sel_none">Ninguno</button>
+                            <div class="dropdown-controls" style="padding: 10px 10px 5px 10px;">
+                                <button class="btn-mini" onclick="toggleGroup('items-month', true, event)" title="Todos"><i class="fa-solid fa-check-double"></i></button>
+                                <button class="btn-mini" onclick="toggleGroup('items-month', false, event)" title="Ninguno"><i class="fa-solid fa-minus"></i></button>
                             </div>
                             <div class="dropdown-items" id="items-month"></div>
                         </div>
@@ -285,72 +274,54 @@
                 </div>
             </div>
 
-            <!-- Modo 2: Filtro de rango día/mes (oculto por defecto) -->
+            <!-- Modo 2: Rango Día/Mes (Diseño de 2 columnas restaurado) -->
             <div id="filter-daymonth-mode" style="display: none;">
-                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                <div style="display: flex; gap: 10px; margin-bottom: 20px;">
                     <div style="flex: 1;">
-                        <label data-i18n="filter_daymonth_from" style="font-size: 0.75rem; font-weight: 600; color: #4a5568; margin-bottom: 5px; display: block;">Desde</label>
+                        <label data-i18n="filter_daymonth_from" style="font-size: 0.7rem; font-weight: 700; color: var(--text-muted); margin-bottom: 5px; display: block; text-transform: uppercase;">Desde</label>
                         <input type="text" id="daymonth-from-input" class="daymonth-input" placeholder="DD/MM" maxlength="5" 
-                            pattern="[0-3][0-9]/[0-1][0-9]"
-                            onchange="triggerUpdateWithLoader()" style="
-                            width: 100%;
-                            padding: 10px;
-                            border: 1px solid #e2e8f0;
-                            border-radius: 6px;
-                            font-size: 14px;
-                            color: #4a5568;
-                            background: white;">
+                            style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; color: var(--text-dark); background: white;">
                     </div>
-
                     <div style="flex: 1;">
-                        <label data-i18n="filter_daymonth_to" style="font-size: 0.75rem; font-weight: 600; color: #4a5568; margin-bottom: 5px; display: block;">Hasta</label>
+                        <label data-i18n="filter_daymonth_to" style="font-size: 0.7rem; font-weight: 700; color: var(--text-muted); margin-bottom: 5px; display: block; text-transform: uppercase;">Hasta</label>
                         <input type="text" id="daymonth-to-input" class="daymonth-input" placeholder="DD/MM" maxlength="5"
-                            pattern="[0-3][0-9]/[0-1][0-9]"
-                            onchange="triggerUpdateWithLoader()" style="
-                            width: 100%;
-                            padding: 10px;
-                            border: 1px solid #e2e8f0;
-                            border-radius: 6px;
-                            font-size: 14px;
-                            color: #4a5568;
-                            background: white;">
+                            style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; color: var(--text-dark); background: white;">
                     </div>
                 </div>
             </div>
 
-            <!-- ... dentro de index.html ... -->
-
+            <!-- Filtro de Categorías -->
             <div class="filter-group">
                 <label data-i18n="filter_cats">Categorías</label>
                 <div class="custom-dropdown" id="drop-category">
                     <div class="dropdown-header" onclick="toggleDropdown('list-category')">
-                        <span id="label-category" data-i18n="sel_select">Seleccionar...</span>
+                        <span id="label-category">----</span>
                         <i class="fa-solid fa-chevron-down"></i>
                     </div>
-                    
-                    <!-- INICIO MODIFICACIÓN -->
                     <div id="list-category" class="dropdown-content">
-                        <!-- Nuevo Campo de Búsqueda -->
-                        <div style="padding: 10px 10px 0 10px;">
-                            <input type="text" id="cat-search-input" class="dropdown-search" placeholder="Buscar categoría..." autocomplete="off">
+                        <div style="padding: 10px 10px 5px 10px;">
+                            <input type="text" id="cat-search-input" class="dropdown-search" placeholder="Buscar..." autocomplete="off">
                         </div>
-
-                        <div class="dropdown-controls">
-                            <button class="btn-mini" onclick="toggleGroup('items-category', true, event)" data-i18n="sel_all">Todos</button>
-                            <button class="btn-mini" onclick="toggleGroup('items-category', false, event)" data-i18n="sel_none">Ninguno</button>
-                            <button class="btn-mini" onclick="clearCategorySearch(event)" data-i18n="sel_clear" style="margin-left: auto;">Limpiar</button>
+                        <div class="dropdown-controls" style="padding: 0 10px 10px 10px; display: flex; gap: 5px;">
+                            <button class="btn-mini" onclick="toggleGroup('items-category', true, event)" title="Todos"><i class="fa-solid fa-check-double"></i></button>
+                            <button class="btn-mini" onclick="toggleGroup('items-category', false, event)" title="Ninguno"><i class="fa-solid fa-minus"></i></button>
+                            <button class="btn-mini" onclick="clearCategorySearch(event)" title="Limpiar" style="margin-left: auto;"><i class="fa-solid fa-broom"></i></button>
                         </div>
-                        <div class="dropdown-items" id="items-category"></div>
+                        <div class="dropdown-items" id="items-category" style="max-height: 250px; overflow-y: auto;"></div>
                     </div>
-                    <!-- FIN MODIFICACIÓN -->
-
                 </div>
             </div>
-            <!-- BOTÓN IA INFOGRAFÍA -->
-            <button class="btn-ai-infographic" onclick="generateSmartInfographic()">
-                <i class="fa-solid fa-wand-magic-sparkles"></i> 
-                <span data-i18n="btn_ai_infographic">SÍNTESIS</span>
-            </button>
+
+            <!-- Contenedor dinámico para Filtros Extra (Multiselect) -->
+            <div id="dynamic-filters-container"></div>
+
+            <div style="margin-top: 20px;">
+                <button class="btn-ai-infographic" onclick="generateSmartInfographic()">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> 
+                    <span data-i18n="btn_ai_infographic">SÍNTESIS</span>
+                </button>
+            </div>
+
             <div class="sidebar-footer">
                 <img src="./ImagenCoorporativa/zzenkiu.png" alt="Zzenkiu" class="sidebar-logo">
             </div>
@@ -360,94 +331,53 @@
             <div class="kpi-grid">
                 <div class="kpi-card">
                     <div class="kpi-icon"><i class="fa-solid fa-folder-open"></i></div>
-                    <div class="kpi-data"><h3 data-i18n="kpi_expedientes">Expedientes</h3><span id="kpi-count">0</span></div>
+                    <div class="kpi-data"><h3 data-i18n="kpi_expedientes">Total</h3><span id="kpi-count">0</span></div>
                 </div>
                 <div class="kpi-card">
                     <div class="kpi-icon" style="background: #2dce89;"><i class="fa-solid fa-location-crosshairs"></i></div>
-                     <div class="kpi-data"><h3 data-i18n="kpi_zona">Zona</h3><span id="kpi-location" data-i18n="kpi_waiting">Esperando...</span></div>
+                     <div class="kpi-data"><h3 data-i18n="kpi_zona">Zona</h3><span id="kpi-location">----</span></div>
                 </div>
-                <!-- Busca esta parte y déjala así: -->
                 <div class="kpi-card">
                     <div class="kpi-icon" style="background: #fb6340;"><i class="fa-solid fa-calendar-check"></i></div>
-                    <div class="kpi-data">
-                        <h3 id="card-label-titulo" data-i18n="kpi_titulo">TÍTULO</h3> <!-- Añadido data-i18n -->
-                        <span id="card-text-filename">SIN ARCHIVO</span>
-                    </div>
+                    <div class="kpi-data"><h3 data-i18n="kpi_titulo">TÍTULO</h3><span id="card-text-filename">SIN ARCHIVO</span></div>
                 </div>
             </div>
 
             <div class="charts-grid-top">
-                <!-- GRÁFICO 1: EVOLUCIÓN -->
                 <div class="chart-container" id="container-timeline">
                     <div class="chart-header">
                         <div style="display: flex; align-items: center; gap: 8px;">
-                            <!-- NUEVO: BOTÓN DESCARGA -->
-                            <button class="btn-mini" onclick="downloadComponent('container-timeline')" title="Descargar Imagen" style="border:none; background:transparent; padding:0; color:var(--accent-blue); cursor:pointer;">
-                                <i class="fa-solid fa-download"></i>
-                            </button>
+                            <button class="btn-mini" onclick="downloadComponent('container-timeline')"><i class="fa-solid fa-download"></i></button>
                             <h4 data-i18n="chart_timeline">Evolución</h4>
                         </div>
-                        <!-- <div class="header-title-group">
-                            <div style="display:flex; align-items:center; gap:8px">
-                                <button class="btn-mini" onclick="downloadComponent('container-map')">
-                                    <i class="fa-solid fa-download"></i>
-                                </button>
-                                <h4 data-i18n="chart_map">MAPA</h4>
-                            </div>
-                        </div> -->
                         <div class="header-actions">
-                            <!-- Selector de periodo -->
                             <select id="select-temporal-view" class="btn-mini" onchange="changeTemporalView(this.value)">
                                 <option value="year" data-i18n="view_years">Años</option>
                                 <option value="month" selected data-i18n="view_months">Meses</option>
                                 <option value="quarter" data-i18n="view_quarters">Trimestral</option>
                                 <option value="day" data-i18n="view_days">Días Semanal</option>
                             </select>
-                                <!-- NUEVO BOTÓN: ANÁLISIS NARRATIVO -->
-                            <button class="btn-mini" onclick="generateTimelineNarrative()" title="Ver Relato de Datos">
-                                <i class="fa-solid fa-list-ul"></i>
-                            </button>
-                            <!-- Alternar entre Barras y Líneas -->
-                            <button class="btn-mini" id="btn-toggle-chart-type" onclick="toggleTimelineType()" title="Cambiar a Líneas">
-                                <i class="fa-solid fa-chart-line"></i>
-                            </button>
-
-                            <!-- Ver Tabla de Datos -->
-                            <button class="btn-mini" id="btn-toggle-view" onclick="toggleTimelineView()" title="Ver Tabla de Datos">
-                                <i class="fa-solid fa-table"></i>
-                            </button>
-
-                            <!-- Pantalla Completa -->
-                            <button class="btn-maximize" onclick="toggleFullscreen('container-timeline')">
-                                <i class="fa-solid fa-maximize"></i>
-                            </button>
+                            <button class="btn-mini" onclick="generateTimelineNarrative()"><i class="fa-solid fa-list-ul"></i></button>
+                            <button class="btn-mini" id="btn-toggle-chart-type" onclick="toggleTimelineType()"><i class="fa-solid fa-chart-line"></i></button>
+                            <button class="btn-mini" onclick="toggleTimelineView()"><i class="fa-solid fa-table"></i></button>
+                            <button class="btn-maximize" onclick="toggleFullscreen('container-timeline')"><i class="fa-solid fa-maximize"></i></button>
                         </div>
                     </div>
-                    
                     <div class="canvas-wrapper">
                         <canvas id="chart-timeline"></canvas>
                         <div id="table-timeline-view" class="table-view" style="display: none;"></div>
                     </div>
                 </div>
 
-                <!-- GRÁFICO 2: TOP TIPOS -->
                 <div class="chart-container" id="container-category">
                     <div class="chart-header">
                         <div style="display: flex; align-items: center; gap: 8px;">
-                            <!-- NUEVO: BOTÓN DESCARGA -->
-                            <button class="btn-mini" onclick="downloadComponent('container-category')" title="Descargar Imagen" style="border:none; background:transparent; padding:0; color:var(--accent-blue); cursor:pointer;">
-                                <i class="fa-solid fa-download"></i>
-                            </button>
+                            <button class="btn-mini" onclick="downloadComponent('container-category')"><i class="fa-solid fa-download"></i></button>
                             <h4 data-i18n="chart_top">Top Tipos</h4>
                         </div>
-                        
                         <div class="header-actions">
-                            <button class="btn-mini" id="btn-toggle-view-cat" onclick="toggleCategoryView()" title="Ver Tabla de Datos">
-                                <i class="fa-solid fa-table"></i>
-                            </button>
-                            <button class="btn-maximize" onclick="toggleFullscreen('container-category')">
-                                <i class="fa-solid fa-maximize"></i>
-                            </button>
+                            <button class="btn-mini" onclick="toggleCategoryView()"><i class="fa-solid fa-table"></i></button>
+                            <button class="btn-maximize" onclick="toggleFullscreen('container-category')"><i class="fa-solid fa-maximize"></i></button>
                         </div>
                     </div>
                     <div class="canvas-wrapper">
@@ -458,316 +388,271 @@
             </div>
 
             <div class="bottom-grid">
-                <!-- GRÁFICO 3: HORAS -->
                 <div class="chart-container" id="container-hours">
                     <div class="chart-header">
                         <div style="display: flex; align-items: center; gap: 8px;">
-                            <!-- NUEVO: BOTÓN DESCARGA -->
-                            <button class="btn-mini" onclick="downloadComponent('container-hours')" title="Descargar Imagen" style="border:none; background:transparent; padding:0; color:var(--accent-blue); cursor:pointer;">
-                                <i class="fa-solid fa-download"></i>
-                            </button>
+                            <button class="btn-mini" onclick="downloadComponent('container-hours')"><i class="fa-solid fa-download"></i></button>
                             <h4 data-i18n="chart_hours">Horas</h4>
                         </div>
-                        
                         <div class="header-actions">
-                            <!-- Botón Tabla Horas -->
-                            <button class="btn-mini" id="btn-toggle-view-hours" onclick="toggleHoursView()" title="Ver Tabla de Datos">
-                                <i class="fa-solid fa-table"></i>
-                            </button>
-                            <button class="btn-maximize" onclick="toggleFullscreen('container-hours')">
-                                <i class="fa-solid fa-maximize"></i>
-                            </button>
+                            <button class="btn-mini" onclick="toggleHoursView()"><i class="fa-solid fa-table"></i></button>
+                            <button class="btn-maximize" onclick="toggleFullscreen('container-hours')"><i class="fa-solid fa-maximize"></i></button>
                         </div>
                     </div>
                     <div class="canvas-wrapper">
                         <canvas id="chart-hours"></canvas>
-                        <!-- Tabla Horas -->
                         <div id="table-hours-view" class="table-view" style="display: none;"></div>
                     </div>
                 </div>
                 
-                <!-- GRÁFICO 4: MAPA / LISTADO DE CALLES -->
-                <div class="map-container-wrapper" id="container-map">
-                    <div class="chart-header">
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <!-- NUEVO: BOTÓN DESCARGA -->
-                            <button class="btn-mini" onclick="downloadComponent('container-map')" title="Descargar Imagen" style="border:none; background:transparent; padding:0; color:var(--accent-blue); cursor:pointer;">
-                                <i class="fa-solid fa-download"></i>
-                            </button>
-                            <h4 data-i18n="chart_map">Mapa</h4>
-                        </div>
-                        
-                        <div class="header-actions">
-                            <!-- BOTÓN LISTADO DE CALLES -->
-                            <button class="btn-mini" id="btn-toggle-streets" onclick="toggleStreetsView()" title="Ver Listado de Calles">
-                                <i class="fa-solid fa-list-ol"></i>
-                            </button>
+<!-- VISTA DE MAPA Y GESTOR DE CAPAS RECONSTRUIDO -->
+<div class="map-container-wrapper" id="container-map">
+    <div class="chart-header">
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <button class="btn-mini" onclick="downloadComponent('container-map')" title="Descargar Imagen">
+                <i class="fa-solid fa-download"></i>
+            </button>
+            <h4 data-i18n="chart_map">Mapa</h4>
+        </div>
+        
+        <div class="header-actions">
+            <!-- 1. Botón de Calles -->
+            <button class="btn-mini" id="btn-toggle-streets" onclick="toggleStreetsView()" title="Ver Listado de Calles">
+                <i class="fa-solid fa-list-ol"></i>
+            </button>
 
-                            <!-- GESTOR DE CAPAS (Dropdown) -->
-                            <div class="layer-manager-container" style="position: relative;">
-                                <button class="btn-mini" id="btn-layers-menu" onclick="toggleLayerMenu()" title="Gestor de Capas">
-                                    <i class="fa-solid fa-layer-group"></i>
-                                </button>
-                                
-                                <div id="layers-dropdown" class="layer-dropdown-content">
-                                    <div class="layer-header" style="flex-direction: column; align-items: flex-start; gap: 10px;">
-                                        <div style="display:flex; justify-content:space-between; width:100%; align-items:center;">
-                                            <span data-i18n="map_layers_title">Mis Capas</span>
-                                            <button id="btn-add-layer-icon" class="btn-add-layer" onclick="document.getElementById('input-geojson').click()" title="Subir GeoJSON">
-                                                <i class="fa-solid fa-plus"></i>
-                                            </button>
-                                        </div>
-                                        
-                                        <div style="display:flex; align-items:center; gap:8px; font-size:0.7rem; color:#525f7f; width:100%; padding-top:5px; border-top:1px solid #eee;">
-                                            <label class="switch">
-                                                <input type="checkbox" id="chk-spatial-filter" onchange="triggerUpdateWithLoader()">
-                                                <span class="slider round"></span>
-                                            </label>
-                                            <span data-i18n="map_filter_zone">Filtrar datos por zona</span>
-                                        </div>
-                                    </div>
-                                    <input type="text" id="layer-search" class="layer-search-input" placeholder="Buscar zona..." oninput="searchAndFlyToLayer(this.value)" style="display:none;">
-                                    <div id="layers-list" class="layer-list-body">
-                                        <p class="empty-layers-msg" data-i18n="map_no_layers">Sin capas cargadas</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- HERRAMIENTAS MAPA -->
-                            <input type="file" id="input-geojson" accept=".geojson, .json" style="display: none;" onchange="handleGeojsonUpload(this)">
-                            
-                            <button class="btn-mini" id="btn-heatmap" onclick="toggleHeatmap(this)" title="Mapa de Calor">
-                                <i class="fa-solid fa-fire"></i>
-                            </button>
-                            <!-- Agregado: Botón de Análisis Inteligente de Hotspots -->
-                            <button class="btn-mini" id="btn-smart-focus" onclick="focusIntelligentHotspot()" title="Detectar Zona Crítica Automáticamente">
-                                <i class="fa-solid fa-wand-magic-sparkles"></i>
-                            </button>
-                            <button class="btn-mini" onclick="toggleSatelite(this)" title="Vista Satélite">
-                                <i class="fa-solid fa-earth-americas"></i>
-                            </button>
-                            
-                            <button class="btn-mini" onclick="toggle3D()" title="Vista 3D">
-                                <i class="fa-solid fa-cube"></i>
-                            </button>
-                            
-                            <button class="btn-maximize" onclick="toggleFullscreen('container-map')" title="Pantalla Completa">
-                                <i class="fa-solid fa-expand"></i>
-                            </button>
-                        </div>
+            <!-- 2. GESTOR DE CAPAS (Este bloque es el que falla si no está exacto) -->
+            <div class="layer-manager-container" style="position: relative;">
+                <button class="btn-mini" id="btn-layers-menu" onclick="toggleLayerMenu()" title="Gestor de Capas">
+                    <i class="fa-solid fa-layer-group"></i>
+                </button>
+                
+                <div id="layers-dropdown" class="layer-dropdown-content">
+                    <div class="layer-header">
+                        <span data-i18n="map_layers_title">Mis Capas</span>
+                        <button id="btn-add-layer-icon" class="btn-add-layer" onclick="document.getElementById('input-geojson').click()" title="Subir GeoJSON">
+                            <i class="fa-solid fa-plus"></i>
+                        </button>
                     </div>
 
-                    <div class="canvas-wrapper">
-                        <!-- VISTA DE MAPA -->
-                        <div id="main-map"></div>
-                        <!-- TOAST INTERNO DEL MAPA -->
-                        <div id="map-toast" class="map-toast"></div>
-                        <!-- VISTA DE TABLA DE CALLES -->
-                        <div id="table-streets-view" class="table-view" style="display: none;"></div>
+                    <!-- Filtro Espacial -->
+                    <div style="padding: 8px 10px; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 8px; font-size: 0.75rem;">
+                        <label class="switch">
+                            <input type="checkbox" id="chk-spatial-filter" onchange="triggerUpdateWithLoader()">
+                            <span class="slider round"></span>
+                        </label>
+                        <span data-i18n="map_filter_zone">Filtrar por zona</span>
+                    </div>
+
+                    <!-- BUSCADOR DE CAPAS (ID CRÍTICO: layer-search) -->
+                    <div style="padding: 10px; border-bottom: 1px solid #eee;">
+                        <input type="text" id="layer-search" class="dropdown-search" placeholder="Buscar zona..." oninput="searchAndFlyToLayer(this.value)" style="width: 100%; display: block;">
+                    </div>
+
+                    <!-- LISTA DE CAPAS (ID CRÍTICO: layers-list) -->
+                    <div id="layers-list" class="layer-list-body">
+                        <p class="empty-layers-msg" data-i18n="map_no_layers">Sin capas cargadas</p>
                     </div>
                 </div>
             </div>
 
+            <!-- 3. Herramientas de Mapa -->
+            <input type="file" id="input-geojson" accept=".geojson, .json" style="display: none;" onchange="handleGeojsonUpload(this)">
+            
+            <button class="btn-mini" id="btn-heatmap" onclick="toggleHeatmap(this)" title="Mapa de Calor">
+                <i class="fa-solid fa-fire"></i>
+            </button>
+
+            <button class="btn-mini" id="btn-smart-focus" onclick="focusIntelligentHotspot()" title="Zona Crítica">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+            </button>
+
+            <button class="btn-mini" onclick="toggleSatelite(this)" title="Satelite">
+                <i class="fa-solid fa-earth-americas"></i>
+            </button>
+            
+            <button class="btn-maximize" onclick="toggleFullscreen('container-map')">
+                <i class="fa-solid fa-expand"></i>
+            </button>
+        </div>
     </div>
+
     <div class="canvas-wrapper">
         <div id="main-map"></div>
+        <!-- Toast para mensajes del mapa (Cerca de, Hotspots, etc) -->
+        <div id="map-toast" class="map-toast"></div>
+        <!-- Tabla de calles oculta -->
+        <div id="table-streets-view" class="table-view" style="display: none;"></div>
     </div>
 </div>
             </div>
         </main>
     </section>
-
-    <div id="loading-overlay" class="loading-overlay">
-        <div class="spinner-box">
-            <div class="spinner"></div>
-            <!-- AÑADIDO data-i18n -->
-            <p data-i18n="loading_msg">Procesando archivo...</p>
-        </div>
+<div id="layers-dropdown" class="layer-dropdown-content">
+    <div class="layer-header">
+        <span data-i18n="map_layers_title">Mis Capas</span>
+        <button class="btn-add-layer" onclick="document.getElementById('input-geojson').click()"><i class="fa-solid fa-plus"></i></button>
     </div>
-    <!-- MODAL DE REGISTROS DESCARTADOS -->
-    <div id="rejected-modal" class="pdf-modal-overlay">
-        <div class="pdf-modal-content" style="max-width: 550px; height: auto; max-height: 85vh;"> 
-            <!-- Header Rojo -->
-            <div class="pdf-header" style="background: #f5365c; color: white;"> 
-                <h3><i class="fa-solid fa-triangle-exclamation"></i> Expedientes no integrados</h3>
-                <button onclick="closeRejectedModal()" class="btn-close-pdf" style="color: white;"><i class="fa-solid fa-xmark"></i></button>
-            </div>
+    
+    <!-- AÑADIR ESTE BLOQUE: Es el buscador que pide el JS -->
+    <div style="padding: 10px; border-bottom: 1px solid #eee;">
+        <input type="text" id="layer-search" class="dropdown-search" placeholder="Buscar zona..." style="display: none; width: 100%;">
+    </div>
+
+    <div style="padding: 5px 10px; border-bottom: 1px solid #eee;">
+        <label class="switch">
+            <input type="checkbox" id="chk-spatial-filter" onchange="triggerUpdateWithLoader()">
+            <span class="slider round"></span>
+        </label>
+        <small data-i18n="map_filter_zone">Filtrar por zona</small>
+    </div>
+    <div id="layers-list" class="layer-list-body"></div>
+</div>
+    <!-- MODALES Y NOTIFICACIONES -->
+    <div id="loading-overlay" class="loading-overlay"><div class="spinner-box"><div class="spinner"></div><p data-i18n="loading_msg">Procesando...</p></div></div>
+
+    <div id="toast-notification" class="toast-notification"><i class="fa-solid fa-triangle-exclamation"></i><span id="toast-message"></span></div>
+
+    <!-- MODAL ARCHIVOS GRANDES -->
+    <!-- MODAL PARA ARCHIVOS GRANDES (>1MB) - DISEÑO RESTAURADO -->
+    <div id="large-file-modal" class="pdf-modal-overlay" style="z-index: 9999;">
+        <div class="pdf-modal-content" style="max-width: 450px; height: auto; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.3);">
             
-            <div class="pdf-body">
-                <p style="color: #ffffff; font-size: 15px; margin-bottom: 15px;">
-                    Los siguientes expedientes <strong style="color: #ff8fa3;">no tienen fecha válida</strong> y no se han incluido:
+            <!-- Cabecera Azul -->
+            <div class="pdf-header" style="background: var(--accent-blue); color: white; padding: 20px; border-bottom: none;">
+                <h3 style="margin: 0; font-size: 1.1rem;">
+                    <i class="fa-solid fa-triangle-exclamation"></i> 
+                    <span data-i18n="modal_large_title">Archivo Grande Detectado</span>
+                </h3>
+            </div>
+
+            <div class="pdf-body" style="padding: 30px; text-align: center; background: #fff;">
+                <p style="color: #525f7f; font-size: 0.95rem; line-height: 1.5; margin-bottom: 25px;" data-i18n="modal_large_desc">
+                    El archivo es superior a 1 MB. Para optimizar la velocidad, selecciona a partir de qué año quieres cargar los datos.
                 </p>
                 
-                <div id="rejected-list" style="
-                    background: #ffffff; 
-                    border-radius: 8px; 
-                    padding: 15px; 
-                    max-height: 300px; 
-                    overflow-y: auto; 
-                    color: #333;
-                    font-family: monospace;
-                    font-weight: bold;">
-                    <!-- Aquí se inyectan los datos vía JS -->
+                <div style="margin-bottom: 30px; text-align: left;">
+                    <label style="font-size: 0.75rem; font-weight: 800; color: var(--primary-dark); text-transform: uppercase; display: block; margin-bottom: 8px;" data-i18n="modal_large_label">
+                        CARGAR DESDE EL AÑO:
+                    </label>
+                    <select id="large-file-year-select" class="styled-select" style="width: 100%; padding: 12px; border: 2px solid #e9ecef; border-radius: 10px; font-weight: 700; color: var(--accent-blue); cursor: pointer;">
+                        <!-- Se llena vía JS -->
+                    </select>
                 </div>
-                
-                <div style="text-align: right; margin-top: 20px;">
-                    <button onclick="closeRejectedModal()" class="btn-primary" style="padding: 10px 20px;">ENTENDIDO</button>
+
+                <!-- Botones con diseño de la aplicación -->
+                <div style="display: flex; gap: 12px; justify-content: center;">
+                    <button onclick="cancelLargeFileLoad()" class="btn-mini" style="padding: 12px 24px; border-color: #f5365c; color: #f5365c; font-weight: 800;">
+                        CANCELAR
+                    </button>
+                    <button onclick="confirmLargeFileYear()" class="btn-primary" style="padding: 12px 30px; min-width: 140px;" data-i18n="btn_continue">
+                        CONTINUAR
+                    </button>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- MODAL NARRATIVA -->
+    <div id="narrative-modal" class="pdf-modal-overlay">
+        <div class="pdf-modal-content" style="max-width: 600px; height: 80vh;">
+            <div class="pdf-header" style="background: #5e72e4; color: white;">
+                <h3><i class="fa-solid fa-list-ul"></i> <span data-i18n="narrative_title">Análisis Narrativo</span></h3>
+                <button onclick="document.getElementById('narrative-modal').classList.remove('active')" class="btn-close-pdf" style="color:white;"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="pdf-body" style="padding: 20px; overflow-y: auto; background: #f8f9fe;">
+                <h4 data-i18n="narrative_summary" style="font-size: 0.8rem; font-weight: 800; border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-bottom: 15px;"></h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 25px;">
+                    <div style="background: white; padding: 10px; border-radius: 8px; text-align: center; border-top: 3px solid #2dce89;">
+                        <small data-i18n="narrative_max"></small><div id="narrative-max-val" style="font-size: 1.1rem; font-weight: 800;"></div><small id="narrative-max-lbl" style="color: #2dce89; font-weight: 600;"></small>
+                    </div>
+                    <div style="background: white; padding: 10px; border-radius: 8px; text-align: center; border-top: 3px solid #f5365c;">
+                        <small data-i18n="narrative_min"></small><div id="narrative-min-val" style="font-size: 1.1rem; font-weight: 800;"></div><small id="narrative-min-lbl" style="color: #f5365c; font-weight: 600;"></small>
+                    </div>
+                    <div style="background: white; padding: 10px; border-radius: 8px; text-align: center; border-top: 3px solid #11cdef;">
+                        <small data-i18n="narrative_avg"></small><div id="narrative-avg-val" style="font-size: 1.1rem; font-weight: 800;"></div><small data-i18n="narrative_records" style="color: #11cdef;"></small>
+                    </div>
+                </div>
+                <h4 data-i18n="narrative_chronology" style="font-size: 0.8rem; font-weight: 800; border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-bottom: 15px;"></h4>
+                <div id="narrative-list-container" style="background: white; border-radius: 8px; padding: 10px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- OTROS MODALES (PDF, Errores, Registros) -->
     <div id="pdf-modal" class="pdf-modal-overlay">
         <div class="pdf-modal-content">
             <div class="pdf-header">
-                <h3 id="pdf-modal-title"><i class="fa-solid fa-image"></i> Infografía</h3>
+                <h3 id="pdf-modal-title"><i class="fa-solid fa-image"></i></h3>
                 <button onclick="closePdfModal()" class="btn-close-pdf"><i class="fa-solid fa-xmark"></i></button>
             </div>
-            <div class="pdf-body">
-                <!-- Iframe para PDFs (Oculto al abrir imagen) -->
+            <div class="pdf-body" style="background: #333; display: flex; align-items: center; justify-content: center; overflow: hidden;">
                 <iframe src="" id="pdf-frame" frameborder="0" style="display:none; width:100%; height:100%;"></iframe>
-                
-                <!-- Imagen adaptada -->
-                <img id="img-frame" src="" style="display:none;">
+                <img id="img-frame" src="" style="display:none; max-width: 100%; max-height: 100%; object-fit: contain;">
             </div>
         </div>
     </div>
-
-    <!-- NOTIFICACIÓN FLOTANTE (TOAST) -->
-    <div id="toast-notification" class="toast-notification">
-        <i class="fa-solid fa-triangle-exclamation"></i>
-        <span id="toast-message">Mensaje de aviso</span>
-    </div>
-    <!-- PLANTILLA OCULTA PARA GENERACIÓN DE INFOGRAFÍA (ESTILO NOTEBOOK LM) -->
-<div id="ai-infographic-container" class="infographic-canvas">
+<!-- PLANTILLA OCULTA PARA GENERACIÓN DE INFOGRAFÍA -->
+<div id="ai-infographic-container" class="infographic-canvas" style="position: fixed; left: -9999px;">
     <div class="info-header">
         <div class="header-text-group">
-            <div class="info-tag" data-i18n="info_tag">EUROCOP ANALYTICS • SINTESIS</div>
+            <div class="info-tag" data-i18n="info_tag">EUROCOP ANALYTICS • SÍNTESIS</div>
             <h1 id="info-title">Resumen de Seguridad</h1>
             <p id="info-subtitle" data-i18n="info_subtitle">Análisis de datos filtrados</p>
         </div>
-        <img src="./ImagenCoorporativa/zzenkiu.png" class="header-logo" alt="Logo Corporativo">
+        <img src="./ImagenCoorporativa/zzenkiu.png" class="header-logo" alt="Logo">
     </div>
 
     <div class="info-grid">
         <div class="info-card highlight-card">
-            <div class="card-icon"><i class="fa-solid fa-bolt"></i> <span data-i18n="info_card_sintesis">SINTESIS PRINCIPAL</span></div>
+            <div class="card-icon"><i class="fa-solid fa-bolt"></i> <span data-i18n="info_card_sintesis">SÍNTESIS PRINCIPAL</span></div>
             <h2 id="info-insight-main">...</h2>
         </div>
-
         <div class="info-card stats-card">
-            <div class="stat-item">
-                <span class="stat-label" data-i18n="info_lbl_total">TOTAL REGISTROS</span>
-                <span class="stat-value" id="info-stat-total">0</span>
-            </div>
-            <div class="stat-item">
-                <span class="stat-label" data-i18n="info_lbl_peak">PICO DE ACTIVIDAD</span>
-                <span class="stat-value" id="info-stat-peak">--:--</span>
-            </div>
-            <div class="stat-item">
-                <span class="stat-label" data-i18n="info_lbl_day">DÍA MÁS ACTIVO</span>
-                <span class="stat-value" id="info-stat-day">---</span>
-            </div>
+            <div class="stat-item"><span class="stat-label" data-i18n="info_lbl_total">TOTAL REGISTROS</span><span class="stat-value" id="info-stat-total">0</span></div>
+            <div class="stat-item"><span class="stat-label" data-i18n="info_lbl_peak">PICO DE ACTIVIDAD</span><span class="stat-value" id="info-stat-peak">--:--</span></div>
+            <div class="stat-item"><span class="stat-label" data-i18n="info_lbl_day">DÍA MÁS ACTIVO</span><span class="stat-value" id="info-stat-day">---</span></div>
         </div>
-
         <div class="info-card">
             <h3 data-i18n="info_lbl_trend">Tendencia Temporal</h3>
-            <p id="info-text-trend" class="info-text-body" style="margin-bottom:15px;">...</p>
-            
-            <!-- NUEVA SECCIÓN DE CALLES -->
-            <h3 data-i18n="info_lbl_streets" style="border-top: 1px solid #eee; padding-top: 15px; margin-top: 5px;">Ubicaciones Críticas</h3>
-            <ul id="info-street-list" class="info-list" style="color: #4b5563;"></ul>
+            <p id="info-text-trend" class="info-text-body">...</p>
+            <h3 data-i18n="info_lbl_streets" style="border-top: 1px solid #eee; padding-top: 10px; margin-top: 10px;">Ubicaciones Críticas</h3>
+            <ul id="info-street-list" class="info-list"></ul>
         </div>
-
         <div class="info-card dark-card">
             <h3 data-i18n="info_lbl_top3">Top 3 Categorías</h3>
             <ul id="info-top-list" class="info-list"></ul>
         </div>
-        
-<!-- Tarjeta 5: Gráfico Comparativo -->
-<div class="info-card graph-card">
-    <h3 data-i18n="info_lbl_dominance">Dominancia</h3>
-    <div class="comparison-layout">
-        <!-- Gráfico Circular SVG -->
-        <div class="svg-pie-container">
-            <svg width="120" height="120" viewBox="0 0 120 120">
-                <circle cx="60" cy="60" r="54" fill="none" stroke="#edf2f7" stroke-width="12" />
-                <circle id="svg-pie-progress" cx="60" cy="60" r="54" fill="none" stroke="#5e72e4" 
-                        stroke-width="12" stroke-linecap="round"
-                        stroke-dasharray="339.29" stroke-dashoffset="339.29"
-                        transform="rotate(-90 60 60)" />
-            </svg>
-            <div class="pie-inner-text">
-                <span id="info-pie-percent">0%</span>
-                <span class="pie-sublabel">TOTAL</span>
-            </div>
-        </div>
-        
-        <!-- Leyenda -->
-        <div class="pie-legend">
-            <div class="legend-row">
-                <span class="dot-leader"></span>
-                <div class="legend-content">
-                    <span id="info-lbl-leader" class="legend-text">Líder</span>
+        <div class="info-card graph-card">
+            <h3 data-i18n="info_lbl_dominance">Dominancia</h3>
+            <div class="comparison-layout">
+                <div class="svg-pie-container">
+                    <svg width="120" height="120" viewBox="0 0 120 120">
+                        <circle cx="60" cy="60" r="54" fill="none" stroke="#edf2f7" stroke-width="12" />
+                        <circle id="svg-pie-progress" cx="60" cy="60" r="54" fill="none" stroke="#5e72e4" stroke-width="12" stroke-linecap="round" stroke-dasharray="339.29" stroke-dashoffset="339.29" transform="rotate(-90 60 60)" />
+                    </svg>
+                    <div class="pie-inner-text"><span id="info-pie-percent">0%</span></div>
+                </div>
+                <div class="pie-legend">
+                    <div class="legend-row"><span class="dot-leader"></span><span id="info-lbl-leader" class="legend-text">Líder</span></div>
+                    <div class="legend-row"><span class="dot-rest"></span><span id="info-lbl-resto" class="legend-text">Resto</span></div>
+                    <div class="pie-subtext" id="info-pie-subtext">0 vs 0</div>
                 </div>
             </div>
-            <div class="legend-row">
-                <span class="dot-rest"></span>
-                <div class="legend-content">
-                    <!-- HE AÑADIDO ESTE ID info-lbl-resto -->
-                    <span id="info-lbl-resto" class="legend-text">Resto</span>
-                </div>
-            </div>
-            <div class="pie-subtext" id="info-pie-subtext">0 vs 0</div>
         </div>
     </div>
-</div>
-    </div>
-
     <div class="info-footer">
         <span data-i18n="info_lbl_footer">Generado por Eurocop Analytics AI</span>
         <span id="info-date">--/--/----</span>
     </div>
-    <!-- index.html -->
-
-    <!-- MODAL PARA ARCHIVOS GRANDES (>1MB) -->
-<!-- MODAL PARA ARCHIVOS GRANDES (>1MB) -->
-<div id="large-file-modal" class="pdf-modal-overlay" style="z-index: 6000;">
-    <div class="pdf-modal-content" style="max-width: 400px; height: auto; overflow: visible;">
-        <div class="pdf-header" style="background: var(--accent-blue); color: white;">
-            <h3><i class="fa-solid fa-weight-hanging"></i> <span data-i18n="modal_large_title">Archivo Grande Detectado</span></h3>
-        </div>
-        <div class="pdf-body" style="padding: 25px; text-align: center;">
-            <p style="margin-bottom: 20px; color: #525f7f; font-size: 0.9rem;" data-i18n="modal_large_desc">
-                El archivo es superior a 1 MB. Para optimizar la velocidad, selecciona a partir de qué año quieres cargar los datos.
-            </p>
-            
-            <div style="margin-bottom: 25px; text-align: left;">
-                <label style="font-size: 0.75rem; font-weight: 800; color: #32325d; text-transform: uppercase;" data-i18n="modal_large_label">CARGAR DESDE EL AÑO:</label>
-                <div class="custom-dropdown" style="margin-top: 5px;">
-                    <select id="large-file-year-select" class="styled-select" style="width: 100%; padding: 10px; border: 1px solid #e9ecef; border-radius: 6px; font-weight: bold;">
-                        <!-- Se llena dinámicamente -->
-                    </select>
-                </div>
-            </div>
-
-            <div style="display: flex; gap: 10px; justify-content: center; margin-top: 10px;">
-                <button onclick="cancelLargeFileLoad()" class="btn-mini" style="border-color: #f5365c; color: #f5365c; padding: 10px 20px;" data-i18n="btn_cancel">CANCELAR</button>
-                <button onclick="confirmLargeFileYear()" class="btn-primary" style="padding: 10px 20px;" data-i18n="btn_continue">CONTINUAR</button>
-            </div>
-        </div>
-    </div>
 </div>
-</div>
-    <!-- LIBRERÍAS EXTERNAS -->
+    <!-- CARGA DE SCRIPTS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script> 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js"></script>
-    
-<!-- LÓGICA Y SCRIPTS version-->
     <script src="languages.js"></script>
     <script>
-        // Carga modular con cache-busting usando EUROCOP_VERSION
         var v = EUROCOP_VERSION;
         var modules = [
             'FncFunciones/FncGlobales.js',
@@ -779,74 +664,14 @@
             'FncFunciones/FncMapa.js',
             'FncFunciones/FncTablas.js',
             'FncFunciones/FncFiltros.js',
+            'FncFunciones/FncMultiselect.js',
             'FncFunciones/FncProcesamiento.js',
             'FncFunciones/FncIdioma.js',
             'FncFunciones/FncInfografia.js',
             'FncFunciones/FncConvertirPdf.js',
             'script.js'
         ];
-        modules.forEach(function(m) {
-            document.write('<script src="' + m + '?v=' + v + '"><\/script>');
-        });
+        modules.forEach(function(m) { document.write('<script src="' + m + '?v=' + v + '"><\/script>'); });
     </script>
-<!-- MODAL PARA VER REGISTROS DETALLADOS -->
-<div id="records-modal" class="pdf-modal-overlay">
-    <div class="pdf-modal-content" style="max-width: 900px; width: 95%; height: 80vh;">
-        <div class="pdf-header">
-            <h3 id="records-modal-title">Registros Detallados</h3>
-            <button onclick="closeRecordsModal()" class="btn-close-pdf"><i class="fa-solid fa-xmark"></i></button>
-        </div>
-        <div class="pdf-body" style="overflow: auto; background: white; padding: 0;">
-            <div id="records-table-container"></div>
-        </div>
-    </div>
-</div>
-<!-- MODAL DE NARRATIVA -->
-<div id="narrative-modal" class="pdf-modal-overlay" style="z-index: 7000;">
-    <div class="pdf-modal-content" style="max-width: 600px; height: 80vh; display: flex; flex-direction: column;">
-        
-        <!-- Cabecera -->
-        <div class="pdf-header" style="background: #5e72e4; color: white;">
-            <h3><i class="fa-solid fa-chart-bar"></i> <span data-i18n="narrative_title">Análisis Narrativo</span></h3>
-            <button onclick="document.getElementById('narrative-modal').classList.remove('active')" class="btn-close-pdf" style="color:white;">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
-        </div>
-
-        <!-- Cuerpo con Scroll -->
-        <div class="pdf-body" style="padding: 20px; overflow-y: auto; background: #f8f9fe;">
-            
-            <!-- Sección 1: Resumen (Cards) -->
-            <h4 data-i18n="narrative_summary" style="margin-bottom: 15px; color: #32325d; text-transform: uppercase; font-size: 0.8rem; font-weight: 800; border-bottom: 1px solid #e9ecef; padding-bottom: 5px;">Resumen Destacado</h4>
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 25px;">
-                <!-- Max -->
-                <div style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); text-align: center; border-top: 3px solid #2dce89;">
-                    <div style="font-size: 0.7rem; color: #8898aa; text-transform: uppercase;" data-i18n="narrative_max">Mayor Actividad</div>
-                    <div id="narrative-max-val" style="font-size: 1.2rem; font-weight: 800; color: #32325d;">0</div>
-                    <div id="narrative-max-lbl" style="font-size: 0.8rem; color: #2dce89; font-weight: 600;">-</div>
-                </div>
-                <!-- Min -->
-                <div style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); text-align: center; border-top: 3px solid #f5365c;">
-                    <div style="font-size: 0.7rem; color: #8898aa; text-transform: uppercase;" data-i18n="narrative_min">Menor Actividad</div>
-                    <div id="narrative-min-val" style="font-size: 1.2rem; font-weight: 800; color: #32325d;">0</div>
-                    <div id="narrative-min-lbl" style="font-size: 0.8rem; color: #f5365c; font-weight: 600;">-</div>
-                </div>
-                <!-- Avg -->
-                <div style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); text-align: center; border-top: 3px solid #11cdef;">
-                    <div style="font-size: 0.7rem; color: #8898aa; text-transform: uppercase;" data-i18n="narrative_avg">Promedio</div>
-                    <div id="narrative-avg-val" style="font-size: 1.2rem; font-weight: 800; color: #32325d;">0</div>
-                    <div style="font-size: 0.8rem; color: #11cdef;" data-i18n="narrative_records">registros</div>
-                </div>
-            </div>
-
-            <!-- Sección 2: Lista Cronológica -->
-            <h4 data-i18n="narrative_chronology" style="margin-bottom: 15px; color: #32325d; text-transform: uppercase; font-size: 0.8rem; font-weight: 800; border-bottom: 1px solid #e9ecef; padding-bottom: 5px;">Detalle Cronológico</h4>
-            <div id="narrative-list-container" style="background: white; border-radius: 8px; padding: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
-                <!-- Se llena con JS -->
-            </div>
-
-        </div>
-    </div>
-</div>
 </body>
 </html>

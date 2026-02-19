@@ -29,7 +29,7 @@ function toggleSidebarMobile() {
 }
 
 window.addEventListener('resize', () => {
-    if (window.innerWidth > 768) {
+    if (window.innerWidth > 920) {
         document.getElementById('sidebar').classList.remove('active');
         document.getElementById('mobile-overlay').classList.remove('active');
     }
@@ -72,6 +72,8 @@ document.addEventListener('DOMContentLoaded', () => {
         pdfModal.addEventListener('click', function (e) { if (e.target === this) closePdfModal(); });
     }
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closePdfModal(); });
+    // 8. Inicializar el contenedor de filtros dinámicos
+    FncMultiselect.init(); 
 });
 
 // ============================================================
@@ -85,12 +87,13 @@ window.onclick = (e) => {
     if (!e.target.closest('.custom-dropdown')) {
         document.querySelectorAll('.dropdown-content').forEach(d => d.classList.remove('active'));
         document.querySelectorAll('.dropdown-header').forEach(h => h.classList.remove('active'));
+        
     }
 
     // 2. CERRAR SIDEBAR MÓVIL
     const sidebar   = document.getElementById('sidebar');
     const toggleBtn = document.querySelector('.mobile-menu-btn');
-    if (sidebar && toggleBtn && window.innerWidth <= 768) {
+    if (sidebar && toggleBtn && window.innerWidth <= 920) {
         if (sidebar.classList.contains('active') && !sidebar.contains(e.target) && !toggleBtn.contains(e.target)) {
             toggleSidebarMobile();
         }
