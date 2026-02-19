@@ -5,7 +5,7 @@
  */
 
 // ============================================================
-// CAMBIAR VISTA TEMPORAL (year | month | quarter | day)
+// CAMBIAR VISTA TEMPORAL (year | month | quarter | day | daily)
 // ============================================================
 function changeTemporalView(v) {
     runWithLoader(() => {
@@ -72,6 +72,33 @@ function updateCharts(data, selYears) {
         else if (temporalView === 'month')   baseLabelTexts = t.months_abbr;
         else if (temporalView === 'quarter') baseLabelTexts = t.quarters;
         else if (temporalView === 'day')     baseLabelTexts = t.days_abbr.map(l => l.substring(0, 3));
+        else if (temporalView === 'daily') {
+            // Abreviaturas de día de semana según idioma (L-D)
+            const weekDayAbbr = t.days_abbr
+                ? t.days_abbr.map(l => l.split('-')[0])   // ['L','M','X','J','V','S','D']
+                : ['L','M','X','J','V','S','D'];
+
+            // Generar lista de fechas únicas con día de semana, ordenadas
+            const uniqueDates = [...new Set(data.map(d => {
+                const dd = String(d.date.getDate()).padStart(2, '0');
+                const mm = String(d.date.getMonth() + 1).padStart(2, '0');
+                const yy = String(d.date.getFullYear()).slice(-2);
+                return `${dd}/${mm}/${yy}`;
+            }))].sort((a, b) => {
+                const [ad, am, ay] = a.split('/').map(Number);
+                const [bd, bm, by] = b.split('/').map(Number);
+                return new Date(2000 + ay, am - 1, ad) - new Date(2000 + by, bm - 1, bd);
+            });
+
+            // Añadir abreviatura del día de la semana a cada etiqueta
+            baseLabelTexts = uniqueDates.map(label => {
+                const [dd, mm, yy] = label.split('/').map(Number);
+                const dateObj = new Date(2000 + yy, mm - 1, dd);
+                const jsDay  = dateObj.getDay(); // 0=Dom, 1=Lun ... 6=Sáb
+                const idx    = jsDay === 0 ? 6 : jsDay - 1; // 0=Lun ... 6=Dom
+                return `${label} ${weekDayAbbr[idx]}`;
+            });
+        }
 
         // Paleta de categorías
         const getCategoryColor = (index) => {
@@ -98,6 +125,16 @@ function updateCharts(data, selYears) {
                 data.filter(d => d.cat === catName).forEach(d => {
                     let idx = d.date.getDay();
                     catData[idx === 0 ? 6 : idx - 1]++;
+                });
+            } else if (temporalView === 'daily') {
+                catData = baseLabelTexts.map(label => {
+                    const dateKey = label.substring(0, 8); // Extraer solo "DD/MM/YY"
+                    return data.filter(d => d.cat === catName).filter(d => {
+                        const dd = String(d.date.getDate()).padStart(2, '0');
+                        const mm = String(d.date.getMonth() + 1).padStart(2, '0');
+                        const yy = String(d.date.getFullYear()).slice(-2);
+                        return `${dd}/${mm}/${yy}` === dateKey;
+                    }).length;
                 });
             }
 

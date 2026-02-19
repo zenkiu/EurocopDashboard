@@ -260,8 +260,29 @@ function validateDayMonthInput(input) {
 function initValidacionDayMonth() {
     const from = document.getElementById('daymonth-from-input');
     const to   = document.getElementById('daymonth-to-input');
-    if (from) from.addEventListener('input', function () { validateDayMonthInput(this); });
-    if (to)   to.addEventListener('input',   function () { validateDayMonthInput(this); });
+
+    function handleDateInput(inputEl) {
+        const valid = validateDayMonthInput(inputEl);
+        // Disparar updateUI en cuanto la fecha esté completa (5 chars) y válida
+        if (valid) runWithLoader(() => { updateUI(); });
+    }
+
+    if (from) {
+        from.addEventListener('input',  function () { handleDateInput(this); });
+        from.addEventListener('change', function () { handleDateInput(this); });
+        from.addEventListener('blur',   function () { handleDateInput(this); });
+        from.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') { this.blur(); }
+        });
+    }
+    if (to) {
+        to.addEventListener('input',  function () { handleDateInput(this); });
+        to.addEventListener('change', function () { handleDateInput(this); });
+        to.addEventListener('blur',   function () { handleDateInput(this); });
+        to.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') { this.blur(); }
+        });
+    }
 }
 
 // ============================================================
