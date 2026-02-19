@@ -276,7 +276,7 @@
 
             <!-- Modo 2: Rango Día/Mes (Diseño de 2 columnas restaurado) -->
             <div id="filter-daymonth-mode" style="display: none;">
-                <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
                     <div style="flex: 1;">
                         <label data-i18n="filter_daymonth_from" style="font-size: 0.7rem; font-weight: 700; color: var(--text-muted); margin-bottom: 5px; display: block; text-transform: uppercase;">Desde</label>
                         <input type="text" id="daymonth-from-input" class="daymonth-input" placeholder="DD/MM" maxlength="5" 
@@ -288,6 +288,9 @@
                             style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; color: var(--text-dark); background: white;">
                     </div>
                 </div>
+                <button onclick="triggerUpdateWithLoader()" style="width: 100%; padding: 8px; background: var(--primary-color, #5e72e4); color: white; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; margin-bottom: 15px;" data-i18n="btn_apply_filter">
+                    <i class="fa-solid fa-filter"></i> Aplicar filtro
+                </button>
             </div>
 
             <!-- Filtro de Categorías -->
@@ -356,6 +359,7 @@
                                 <option value="month" selected data-i18n="view_months">Meses</option>
                                 <option value="quarter" data-i18n="view_quarters">Trimestral</option>
                                 <option value="day" data-i18n="view_days">Días Semanal</option>
+                                <option value="daily" data-i18n="view_daily">Diario</option>
                             </select>
                             <button class="btn-mini" onclick="generateTimelineNarrative()"><i class="fa-solid fa-list-ul"></i></button>
                             <button class="btn-mini" id="btn-toggle-chart-type" onclick="toggleTimelineType()"><i class="fa-solid fa-chart-line"></i></button>
