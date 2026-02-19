@@ -45,7 +45,7 @@ function updateCharts(data, selYears) {
         maintainAspectRatio: false,
         plugins: {
             legend: {
-                position: window.innerWidth < 768 ? 'bottom' : 'top',
+                position: window.innerWidth < 769 ? 'bottom' : 'top',
                 labels: { boxWidth: 12, font: { size: 10 } }
             }
         }

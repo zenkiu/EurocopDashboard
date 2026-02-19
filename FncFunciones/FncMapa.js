@@ -897,7 +897,7 @@ function focusStreetOnMap(streetName) {
             const center = bounds.getCenter();
 
             map.fitBounds(bounds, { 
-                padding: window.innerWidth < 768 ? 40 : 100, // Menos margen en móviles
+                padding: window.innerWidth < 769 ? 40 : 100, // Menos margen en móviles
                 maxZoom: 17, 
                 duration: 1200 
             });

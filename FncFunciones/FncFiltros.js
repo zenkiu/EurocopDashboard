@@ -2,13 +2,16 @@
  * EUROCOP ANALYTICS - FILTROS Y updateUI
  * Genera los filtros (años, meses, categorías), buscador con debounce,
  * modo fecha día/mes, filtro espacial con Turf.js, y la función central updateUI
- * que orquesta KPIs + gráficos + mapa.
+ * que orquesta KPIs + gráficos + mapa + MULTISELECT.
  */
 
 // ============================================================
 // INICIALIZAR FILTROS (tras procesar datos)
 // ============================================================
 function setupFilters() {
+    // Protección contra datos vacíos
+    if (!finalData || finalData.length === 0) return;
+
     const years = [...new Set(finalData.map(d => d.year))].sort((a, b) => b - a);
     const cats  = [...new Set(finalData.map(d => d.cat))].sort();
 
@@ -22,14 +25,22 @@ function setupFilters() {
 // ============================================================
 function renderCheckboxes(containerId, items, defaultValue) {
     const container = document.getElementById(containerId);
+    if (!container) return;
+    
     container.innerHTML = '';
-    const t = translations[currentLang];
+    // Protección por si translations no está cargado aún
+    const t = (typeof translations !== 'undefined' && translations[currentLang]) 
+              ? translations[currentLang] 
+              : (translations ? translations['es'] : {});
 
     items.forEach(item => {
         let val, label;
         if (typeof item === 'object') {
             val = item.id;
-            label = (containerId === 'items-month') ? t.months_abbr[item.id - 1] : (item.name || item.id);
+            // Si es mes, usamos la abreviatura, si no el nombre
+            label = (containerId === 'items-month' && t.months_abbr) 
+                    ? t.months_abbr[item.id - 1] 
+                    : (item.name || item.id);
         } else {
             val = item;
             label = item;
@@ -37,7 +48,9 @@ function renderCheckboxes(containerId, items, defaultValue) {
 
         const div = document.createElement('div');
         div.className = 'checkbox-item';
+        // 'all' marca todo, si es un valor específico solo marca ese
         const isChecked = (defaultValue === 'all' || val == defaultValue) ? 'checked' : '';
+        
         div.innerHTML = `<input type="checkbox" value="${val}" ${isChecked} onchange="triggerUpdateWithLoader()"> <span>${label}</span>`;
         container.appendChild(div);
     });
@@ -69,7 +82,7 @@ function updateMonthLabels() {
 // WRAPPER: triggerUpdateWithLoader
 // ============================================================
 function triggerUpdateWithLoader() {
-    stopHotspotTour(); // <--- Detener el tour si se cambian filtros
+    if (typeof stopHotspotTour === 'function') stopHotspotTour(); 
     runWithLoader(() => { updateUI(); });
 }
 
@@ -78,15 +91,22 @@ function triggerUpdateWithLoader() {
 // ============================================================
 function toggleDropdown(id) {
     const el = document.getElementById(id);
+    if (!el) return;
+    
     const isActive = el.classList.contains('active');
+    
+    // Cerrar otros dropdowns activos
     document.querySelectorAll('.dropdown-content').forEach(d => d.classList.remove('active'));
 
     if (!isActive) {
         el.classList.add('active');
+        // Cálculo de altura disponible para scroll
         const rect = el.getBoundingClientRect();
         const spaceAvailable = window.innerHeight - rect.top - 50;
         const itemsCont = el.querySelector('.dropdown-items');
-        itemsCont.style.maxHeight = Math.max(150, spaceAvailable) + "px";
+        if (itemsCont) {
+            itemsCont.style.maxHeight = Math.max(150, spaceAvailable) + "px";
+        }
     }
 }
 
@@ -113,8 +133,11 @@ function toggleGroup(containerId, state, event) {
 
 // ============================================================
 // BUSCADOR DE CATEGORÍAS (multitérmino AND + debounce)
-// Llamada desde el DOMContentLoaded central en script.js
 // ============================================================
+// NOTA: 'searchTimeout' debe estar declarado en FncGlobales.js
+// Si no lo está, descomenta la siguiente línea:
+// var searchTimeout; 
+
 function initBuscadorCategorias() {
     const searchInput = document.getElementById('cat-search-input');
     if (!searchInput) return;
@@ -134,7 +157,9 @@ function initBuscadorCategorias() {
         });
 
         // Auto-selección con debounce (600ms)
-        clearTimeout(searchTimeout);
+        if (typeof searchTimeout !== 'undefined') clearTimeout(searchTimeout);
+        
+        // Asignamos a window.searchTimeout o variable global implícita
         searchTimeout = setTimeout(() => {
             if (terms.length > 0) {
                 let hasChanges = false;
@@ -170,24 +195,24 @@ function clearCategorySearch(event) {
 }
 
 // ============================================================
-// MODO DE FILTRO DE FECHAS (mes tradicional ↔ día/mes desde-hasta)
+// MODO DE FILTRO DE FECHAS (mes tradicional ↔ día/mes)
 // ============================================================
 function toggleDateFilterMode() {
-    const t = translations[currentLang];
+    const t = translations[currentLang] || translations['es'];
     const monthModeDiv    = document.getElementById('filter-month-mode');
     const dayMonthModeDiv = document.getElementById('filter-daymonth-mode');
     const modeTextEl      = document.getElementById('date-mode-text');
 
     if (dateFilterMode === 'month') {
         dateFilterMode = 'daymonth';
-        monthModeDiv.style.display    = 'none';
-        dayMonthModeDiv.style.display = 'block';
+        if(monthModeDiv) monthModeDiv.style.display    = 'none';
+        if(dayMonthModeDiv) dayMonthModeDiv.style.display = 'block';
         if (modeTextEl) modeTextEl.textContent = t.btn_year_month_mode || 'Modo: Año / Mes';
         initializeDayMonthInputs();
     } else {
         dateFilterMode = 'month';
-        monthModeDiv.style.display    = 'block';
-        dayMonthModeDiv.style.display = 'none';
+        if(monthModeDiv) monthModeDiv.style.display    = 'block';
+        if(dayMonthModeDiv) dayMonthModeDiv.style.display = 'none';
         if (modeTextEl) modeTextEl.textContent = t.btn_date_range_mode || 'Modo: Desde - Hasta';
     }
 
@@ -195,7 +220,7 @@ function toggleDateFilterMode() {
 }
 
 // ============================================================
-// INICIALIZAR INPUTS DÍA/MES con valores por defecto
+// INICIALIZAR INPUTS DÍA/MES
 // ============================================================
 function initializeDayMonthInputs() {
     const from = document.getElementById('daymonth-from-input');
@@ -208,6 +233,7 @@ function initializeDayMonthInputs() {
 // VALIDAR INPUT DÍA/MES (formato DD/MM)
 // ============================================================
 function validateDayMonthInput(input) {
+    if(!input) return false;
     let value = input.value.replace(/[^\d\/]/g, '');
 
     // Auto-agregar barra después de 2 dígitos
@@ -231,8 +257,6 @@ function validateDayMonthInput(input) {
     return false;
 }
 
-// Conectar listeners de validación día/mes
-// Llamada desde el DOMContentLoaded central en script.js
 function initValidacionDayMonth() {
     const from = document.getElementById('daymonth-from-input');
     const to   = document.getElementById('daymonth-to-input');
@@ -244,32 +268,37 @@ function initValidacionDayMonth() {
 // FILTRO ESPACIAL (Turf.js)
 // ============================================================
 function applySpatialFilter(data) {
-    const isFilterActive = document.getElementById('chk-spatial-filter')?.checked;
+    const chk = document.getElementById('chk-spatial-filter');
+    const isFilterActive = chk && chk.checked;
+    
     if (!isFilterActive) return data;
+    if (typeof mapLayers === 'undefined' || !mapLayers || mapLayers.length === 0) return data;
 
     const activeLayers = mapLayers.filter(l => l.visible);
     if (activeLayers.length === 0) return [];
 
-    // Verificar que las capas tienen datos geométricos
+    // Verificar datos geométricos
     if (!activeLayers[0].geojson) {
         alert("⚠️ ERROR: La capa no tiene datos geométricos guardados.");
         return data;
     }
 
-    // Preparar polígonos con limpieza
+    // Preparar polígonos
     let activePolygons = [];
     try {
         activeLayers.forEach(layer => {
             let clone = JSON.parse(JSON.stringify(layer.geojson));
-            clone = turf.truncate(clone, { precision: 6, coordinates: 2 });
-            clone = turf.rewind(clone, { mutate: true });
+            if(typeof turf !== 'undefined') {
+                clone = turf.truncate(clone, { precision: 6, coordinates: 2 });
+                clone = turf.rewind(clone, { mutate: true });
 
-            turf.flatten(clone).features.forEach(feature => {
-                if (feature.geometry &&
-                    (feature.geometry.type === "Polygon" || feature.geometry.type === "MultiPolygon")) {
-                    activePolygons.push(feature);
-                }
-            });
+                turf.flatten(clone).features.forEach(feature => {
+                    if (feature.geometry &&
+                        (feature.geometry.type === "Polygon" || feature.geometry.type === "MultiPolygon")) {
+                        activePolygons.push(feature);
+                    }
+                });
+            }
         });
     } catch (e) {
         alert("❌ Error procesando el polígono: " + e.message);
@@ -277,26 +306,15 @@ function applySpatialFilter(data) {
     }
 
     if (activePolygons.length === 0) {
-        alert("⚠️ La capa activa es una LÍNEA o PUNTO, no una ZONA CERRADA.\nNo se puede filtrar 'dentro' de una línea.");
-        return data;
-    }
-
-    // Diagnóstico de coordenadas (una sola vez por sesión)
-    const polyCoord = activePolygons[0].geometry.coordinates[0][0];
-    const dataPoint = data.find(d => d.hasGeo);
-    if (dataPoint && !window.hasShownDiagAlert) {
-        const msg = `🔍 DIAGNÓSTICO DE COORDENADAS:\n\n` +
-                    `📍 POLÍGONO (Zona): [${polyCoord[0].toFixed(3)}, ${polyCoord[1].toFixed(3)}]\n` +
-                    `🚓 TUS DATOS (Punto): [${dataPoint.lon.toFixed(3)}, ${dataPoint.lat.toFixed(3)}]\n\n` +
-                    `REGLA DE ORO:\nEspaña está en Longitud (X) negativa (-2.0) y Latitud (Y) positiva (43.0).\n\n` +
-                    `Si tus datos muestran [43.0, -2.0] están AL REVÉS.`;
-        console.log(msg);
-        window.hasShownDiagAlert = true;
+        console.warn("La capa activa no contiene polígonos.");
+        return data; 
     }
 
     // FILTRADO REAL
     const filtered = data.filter(point => {
         if (!point.hasGeo) return false;
+        if (typeof turf === 'undefined') return true; // Si falla turf, devolvemos todo
+        
         const pt = turf.point([point.lon, point.lat]);
         for (let poly of activePolygons) {
             if (turf.booleanPointInPolygon(pt, poly)) return true;
@@ -304,41 +322,23 @@ function applySpatialFilter(data) {
         return false;
     });
 
-    // AUTO-CORRECCIÓN: si sale 0 resultados, intentar con coordenadas invertidas
-    if (filtered.length === 0 && data.length > 0) {
-        console.warn("Intento 1 falló. Probando inversión de coordenadas...");
-
-        const invertedData = data.filter(point => {
-            if (!point.hasGeo) return false;
-            const pt = turf.point([point.lat, point.lon]); // INVERTIDO
-            for (let poly of activePolygons) {
-                if (turf.booleanPointInPolygon(pt, poly)) return true;
-            }
-            return false;
-        });
-
-        if (invertedData.length > 0) {
-            if (!window.hasShownFixAlert) {
-                alert("✅ ¡ARREGLADO!\n\nEl sistema detectó que tus coordenadas estaban invertidas y las ha corregido automáticamente para este filtro.");
-                window.hasShownFixAlert = true;
-            }
-            return invertedData;
-        }
-    }
-
     return filtered;
 }
 
 // ============================================================
 // updateUI — FUNCIÓN CENTRAL (orquestadora)
-// Calcula filtros → KPIs → gráficos → mapa → tablas
+// Calcula filtros → MULTISELECT → mapa → gráficos
+// ============================================================
+// ============================================================
+// updateUI — FUNCIÓN CENTRAL (orquestadora)
+// Calcula filtros → MULTISELECT → mapa → gráficos
 // ============================================================
 function updateUI() {
     // 1. SINCRONIZAR SELECTOR DE VISTA TEMPORAL
     const temporalSelect = document.getElementById('select-temporal-view');
-    if (temporalSelect) temporalSelect.value = temporalView;
+    if (temporalSelect && typeof temporalView !== 'undefined') temporalSelect.value = temporalView;
 
-    const t = translations[currentLang];
+    const t = translations[currentLang] || translations['es'];
 
     // HELPERS PARA ETIQUETAS
     const getValues = (containerId) => {
@@ -348,9 +348,9 @@ function updateUI() {
     const getLabels = (containerId) => {
         const container = document.getElementById(containerId);
         if (!container) return "---";
-        const allCount    = container.querySelectorAll('input').length;
+        const allCount      = container.querySelectorAll('input').length;
         const checkedInputs = Array.from(container.querySelectorAll('input:checked'));
-        const count       = checkedInputs.length;
+        const count         = checkedInputs.length;
 
         if (count === 0) return (t.sel_none || "NINGUNO").toUpperCase();
         if (count === allCount && allCount > 0) return (t.sel_all || "TODOS").toUpperCase();
@@ -358,11 +358,11 @@ function updateUI() {
         return `${count} ${(currentLang === 'en' ? 'SELECTED' : 'SELECCIONADOS')}`;
     };
 
-    // 2. OBTENER SELECCIONES ACTUALES
+    // 2. OBTENER SELECCIONES DE FILTROS BÁSICOS
     const selYears = getValues('items-year').map(Number);
-    let selMonths, dayMonthFrom, dayMonthTo;
+    let selMonths = [], dayMonthFrom, dayMonthTo;
 
-    if (dateFilterMode === 'daymonth') {
+    if (typeof dateFilterMode !== 'undefined' && dateFilterMode === 'daymonth') {
         const fromInput = document.getElementById('daymonth-from-input');
         const toInput   = document.getElementById('daymonth-to-input');
         dayMonthFrom = fromInput && fromInput.value ? fromInput.value : '01/01';
@@ -381,7 +381,7 @@ function updateUI() {
     setLabel('label-year',  getLabels('items-year'));
     setLabel('header-year', getLabels('items-year'));
 
-    if (dateFilterMode === 'month') {
+    if (typeof dateFilterMode !== 'undefined' && dateFilterMode === 'month') {
         setLabel('label-month',  getLabels('items-month'));
         setLabel('header-month', getLabels('items-month'));
     } else {
@@ -393,10 +393,10 @@ function updateUI() {
     setLabel('label-category',  getLabels('items-category'));
     setLabel('header-category', getLabels('items-category'));
 
-    // 4. FILTRADO DE DATOS (CRÍTICO)
+    // 4. FILTRADO DE DATOS (Filtros Base: Año, Mes/Día, Categoría)
     let filtered;
 
-    if (dateFilterMode === 'daymonth') {
+    if (typeof dateFilterMode !== 'undefined' && dateFilterMode === 'daymonth') {
         const parsesDayMonth = (dmString) => {
             const parts = dmString.split('/');
             return { day: parseInt(parts[0]), month: parseInt(parts[1]) };
@@ -413,7 +413,6 @@ function updateUI() {
             const fromDM      = from.month * 100 + from.day;
             const toDM        = to.month * 100 + to.day;
 
-            // Rango normal o que cruza el año
             if (fromDM <= toDM) return recordDM >= fromDM && recordDM <= toDM;
             else                return recordDM >= fromDM || recordDM <= toDM;
         });
@@ -425,39 +424,61 @@ function updateUI() {
         );
     }
 
-    // Aplicar filtro espacial si existe
+    // -----------------------------------------------------------------------
+    // [MODIFICADO] APLICAR MULTI-FILTROS DINÁMICOS (Talde, Siglas...)
+    // -----------------------------------------------------------------------
+    if (typeof FncMultiselect !== 'undefined') {
+        // 1. Guardamos una copia antes de filtrar por Multiselect para el render
+        const baseDataForDropdowns = [...filtered];
+
+        // 2. Filtramos los datos para los gráficos y mapa (aquí sí se reduce)
+        filtered = FncMultiselect.applyFilters(filtered);
+
+        // 3. Renderizamos la barra lateral usando los datos SIN reducir por sí mismos
+        FncMultiselect.renderSidebarFilters(baseDataForDropdowns);
+    }
+    // -----------------------------------------------------------------------
+
+    // 5. FILTRO ESPACIAL (si aplica)
     filtered = applySpatialFilter(filtered);
 
-    // Guardar en caché global para re-ordenamientos y otros módulos
-    lastFilteredData = filtered;
+    // Guardar en caché global
+    if (typeof lastFilteredData !== 'undefined') lastFilteredData = filtered;
+    else window.lastFilteredData = filtered;
 
-    // 5. ACTUALIZAR KPIs
-    document.getElementById('kpi-count').innerText = filtered.length.toLocaleString();
+    // 6. ACTUALIZAR KPIs
+    const elCount = document.getElementById('kpi-count');
+    if(elCount) elCount.innerText = filtered.length.toLocaleString();
+    
     const kpiTotal = document.getElementById('kpi-total-filas');
-    if (kpiTotal) kpiTotal.innerHTML = `${filtered.length} <span data-i18n="kpi_reg">${t.kpi_reg}</span>`;
+    if (kpiTotal) kpiTotal.innerHTML = `${filtered.length} <span data-i18n="kpi_reg">${t.kpi_reg || "REG"}</span>`;
 
     const textFilename = document.getElementById('card-text-filename');
-    if (textFilename) textFilename.innerText = nombreArchivoSubido || "SIN ARCHIVO";
+    if (textFilename) textFilename.innerText = (typeof nombreArchivoSubido !== 'undefined' ? nombreArchivoSubido : "SIN ARCHIVO");
 
-// 6. ACTUALIZAR MAPA Y GRÁFICOS
-    updateMapData(filtered);
-    updateCharts(filtered, selYears);
-    updateLocationKPI(filtered).catch(err => console.warn(err));
+    // 7. ACTUALIZAR MAPA Y GRÁFICOS
+    if (typeof updateMapData === 'function') updateMapData(filtered);
+    if (typeof updateCharts === 'function') updateCharts(filtered, selYears);
+    if (typeof updateLocationKPI === 'function') updateLocationKPI(filtered).catch(err => console.warn(err));
 
-    // 7. TABLA DE CALLES (si está activa)
-    if (isTableStreetsView) renderStreetsTable(filtered);
-        if (isTableView) { // Evolución Temporal
-        document.getElementById('chart-timeline').style.display = 'none';
-        document.getElementById('table-timeline-view').style.display = 'block';
+    // 8. TABLAS ESPECÍFICAS
+    if (typeof isTableStreetsView !== 'undefined' && isTableStreetsView && typeof renderStreetsTable === 'function') {
+        renderStreetsTable(filtered);
+    }
+    
+    // Gestión visual de tablas vs gráficos
+    if (typeof isTableView !== 'undefined' && isTableView) {
+        if(document.getElementById('chart-timeline')) document.getElementById('chart-timeline').style.display = 'none';
+        if(document.getElementById('table-timeline-view')) document.getElementById('table-timeline-view').style.display = 'block';
     }
 
-    if (isTableCatView) { // Top Tipos
-        document.getElementById('chart-category').style.display = 'none';
-        document.getElementById('table-category-view').style.display = 'block';
+    if (typeof isTableCatView !== 'undefined' && isTableCatView) {
+        if(document.getElementById('chart-category')) document.getElementById('chart-category').style.display = 'none';
+        if(document.getElementById('table-category-view')) document.getElementById('table-category-view').style.display = 'block';
     }
 
-    if (isTableHoursView) { // Horas
-        document.getElementById('chart-hours').style.display = 'none';
-        document.getElementById('table-hours-view').style.display = 'block';
+    if (typeof isTableHoursView !== 'undefined' && isTableHoursView) {
+        if(document.getElementById('chart-hours')) document.getElementById('chart-hours').style.display = 'none';
+        if(document.getElementById('table-hours-view')) document.getElementById('table-hours-view').style.display = 'block';
     }
 }
