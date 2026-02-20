@@ -123,6 +123,14 @@ function showDetailedRecords(periodLabel, categoryName) {
             let dayName = t.days_abbr[idx === 0 ? 6 : idx - 1].substring(0, 3);
             return dayName === labelClean;
         }
+        if (temporalView === 'daily') {
+            // La etiqueta tiene formato "DD/MM/YY L" — extraemos solo los primeros 8 chars
+            const dateKey = labelClean.substring(0, 8);
+            const dd = String(d.date.getDate()).padStart(2, '0');
+            const mm = String(d.date.getMonth() + 1).padStart(2, '0');
+            const yy = String(d.date.getFullYear()).slice(-2);
+            return `${dd}/${mm}/${yy}` === dateKey;
+        }
         return false;
     });
 
