@@ -153,32 +153,47 @@ function analyzeYearsInDataset(data) {
 
     columns.forEach(col => {
         let validDates = 0;
+        let fullDateMatches = 0; // Cuenta cuántos valores parecen fechas COMPLETAS (DD/MM/YYYY)
         const tempYears = new Set();
 
         indicesToCheck.forEach(i => {
             const val = data[i][col];
             let year = null;
+            let isFullDate = false;
 
-            // Detección 1: Objeto Date
+            // Detección 1: Objeto Date (XLSX con cellDates:true)
             if (val instanceof Date && !isNaN(val)) {
                 year = val.getFullYear();
-            } 
-            // Detección 2: String (Regex más fuerte para capturar 2026)
-            else if (typeof val === 'string' || typeof val === 'number') {
+                isFullDate = true;
+            }
+            // Detección 2: String con separadores de fecha (DD/MM/YYYY, YYYY-MM-DD...)
+            else if (typeof val === 'string') {
+                const strVal = val.trim();
+                if (strVal.includes('/') || strVal.includes('-')) {
+                    const match = strVal.match(/\b(20\d{2})\b/);
+                    if (match) { year = parseInt(match[1]); isFullDate = true; }
+                }
+            }
+            // Detección 3: Número puro — puede ser año solo (2024) o serial Excel
+            else if (typeof val === 'number') {
                 const strVal = String(val);
-                const match = strVal.match(/\b(20\d{2})\b/); // Busca cualquier 20XX
+                const match = strVal.match(/^(20\d{2})$/); // Solo si ES exactamente un año
                 if (match) year = parseInt(match[1]);
+                // isFullDate queda false → no puntúa como fecha completa
             }
 
-            // Filtro: Solo años lógicos (Desde el 2000 hasta el AÑO ACTUAL)
             if (year && year >= 2000 && year <= currentYear) {
                 validDates++;
+                if (isFullDate) fullDateMatches++;
                 tempYears.add(year);
             }
         });
 
-        if (validDates > maxValidDates) {
-            maxValidDates = validDates;
+        // Usamos fullDateMatches como criterio principal para evitar que columnas
+        // con solo el año (REFANNO) ganen sobre columnas con fecha completa (FECHA)
+        const score = fullDateMatches * 10000 + validDates;
+        if (score > maxValidDates) {
+            maxValidDates = score;
             bestColumn = col;
             yearCounts[col] = Array.from(tempYears).sort((a, b) => b - a);
         }
