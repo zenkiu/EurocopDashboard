@@ -583,6 +583,23 @@
         </div>
     </div>
 
+    <!-- MODAL REGISTROS RECHAZADOS (fechas inválidas) -->
+    <div id="rejected-modal" class="pdf-modal-overlay">
+        <div class="pdf-modal-content" style="max-width: 480px; height: auto; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.3);">
+            <div class="pdf-header" style="background: #f5365c;">
+                <h3 style="color:white;"><i class="fa-solid fa-triangle-exclamation"></i> Avisos de procesamiento</h3>
+                <button onclick="closeRejectedModal()" class="btn-close-pdf" style="color:white;"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="pdf-body" style="padding: 20px; background: white; max-height: 60vh; overflow-y: auto;">
+                <p style="color:#525f7f; font-size:0.9rem; margin-bottom:15px;">Los registros sin fecha o categoría han sido procesados con valores por defecto:</p>
+                <div id="rejected-list" style="font-size:0.85rem; color:#32325d; display:flex; flex-direction:column; gap:6px;"></div>
+            </div>
+            <div style="padding: 15px 20px; background: #f8f9fa; border-top: 1px solid #e9ecef; text-align:right;">
+                <button onclick="closeRejectedModal()" style="padding: 8px 20px; background:#5e72e4; color:white; border:none; border-radius:8px; font-weight:600; cursor:pointer;">Aceptar</button>
+            </div>
+        </div>
+    </div>
+
     <!-- OTROS MODALES (PDF, Errores, Registros) -->
     <div id="pdf-modal" class="pdf-modal-overlay">
         <div class="pdf-modal-content">
