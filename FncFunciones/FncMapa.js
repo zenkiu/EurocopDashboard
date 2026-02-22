@@ -239,8 +239,14 @@ function toggleHeatmap(btn) {
 }
 
 function toggle3D() {
-    const p = map.getPitch();
-    map.easeTo({ pitch: p > 0 ? 0 : 60, bearing: p > 0 ? 0 : -20, duration: 1000 });
+    const p    = map.getPitch();
+    const is3D = p > 0;
+    map.easeTo({ pitch: is3D ? 0 : 60, bearing: is3D ? 0 : -20, duration: 1000 });
+    const btn = document.getElementById('btn-3d');
+    if (btn) {
+        btn.style.background = is3D ? '' : '#e9ecef';
+        btn.style.color      = is3D ? '' : '#32325d';
+    }
 }
 
 // ============================================================

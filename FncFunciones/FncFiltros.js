@@ -82,6 +82,7 @@ function updateMonthLabels() {
 // WRAPPER: triggerUpdateWithLoader
 // ============================================================
 function triggerUpdateWithLoader() {
+    if (window._filterResetInProgress) return; // Bloquear durante reset masivo
     if (typeof stopHotspotTour === 'function') stopHotspotTour(); 
     runWithLoader(() => { updateUI(); });
 }
@@ -214,6 +215,32 @@ function toggleDateFilterMode() {
         if(monthModeDiv) monthModeDiv.style.display    = 'block';
         if(dayMonthModeDiv) dayMonthModeDiv.style.display = 'none';
         if (modeTextEl) modeTextEl.textContent = t.btn_date_range_mode || 'Modo: Desde - Hasta';
+
+        // Resetear todos los filtros a "TODOS" — bloqueamos eventos durante el reset
+        window._filterResetInProgress = true;
+        try {
+            document.querySelectorAll('#items-year input[type="checkbox"]').forEach(cb => { cb.checked = true; });
+            const yearAllCb = document.getElementById('check-year-all');
+            if (yearAllCb) yearAllCb.checked = true;
+
+            document.querySelectorAll('#items-month input[type="checkbox"]').forEach(cb => { cb.checked = true; });
+            const monthAllCb = document.getElementById('check-month-all');
+            if (monthAllCb) monthAllCb.checked = true;
+
+            document.querySelectorAll('#items-category input[type="checkbox"]').forEach(cb => { cb.checked = true; });
+            const catAllCb = document.getElementById('check-category-all');
+            if (catAllCb) catAllCb.checked = true;
+        } finally {
+            window._filterResetInProgress = false;
+        }
+
+        // Si estaba en vista Diario, cambiar a Años para evitar ralentización
+        if (typeof temporalView !== 'undefined' && temporalView === 'daily') {
+            const sel = document.getElementById('select-temporal-view');
+            if (sel) sel.value = 'year';
+            temporalView = 'year';
+            if (typeof hideMeteoUI === 'function') hideMeteoUI();
+        }
     }
 
     runWithLoader(() => { updateUI(); });
@@ -261,27 +288,14 @@ function initValidacionDayMonth() {
     const from = document.getElementById('daymonth-from-input');
     const to   = document.getElementById('daymonth-to-input');
 
-    function handleDateInput(inputEl) {
-        const valid = validateDayMonthInput(inputEl);
-        // Disparar updateUI en cuanto la fecha esté completa (5 chars) y válida
-        if (valid) runWithLoader(() => { updateUI(); });
-    }
-
+    // Solo validación visual — el filtro se aplica únicamente al pulsar "Aplicar filtro"
     if (from) {
-        from.addEventListener('input',  function () { handleDateInput(this); });
-        from.addEventListener('change', function () { handleDateInput(this); });
-        from.addEventListener('blur',   function () { handleDateInput(this); });
-        from.addEventListener('keydown', function (e) {
-            if (e.key === 'Enter') { this.blur(); }
-        });
+        from.addEventListener('input', function () { validateDayMonthInput(this); });
+        from.addEventListener('blur',  function () { validateDayMonthInput(this); });
     }
     if (to) {
-        to.addEventListener('input',  function () { handleDateInput(this); });
-        to.addEventListener('change', function () { handleDateInput(this); });
-        to.addEventListener('blur',   function () { handleDateInput(this); });
-        to.addEventListener('keydown', function (e) {
-            if (e.key === 'Enter') { this.blur(); }
-        });
+        to.addEventListener('input', function () { validateDayMonthInput(this); });
+        to.addEventListener('blur',  function () { validateDayMonthInput(this); });
     }
 }
 

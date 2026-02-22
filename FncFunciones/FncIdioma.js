@@ -23,8 +23,50 @@ function applyLanguage(lang) {
     // 1. Traducción estándar: todos los elementos con data-i18n
     document.querySelectorAll('[data-i18n]').forEach(el => {
         const key = el.getAttribute('data-i18n');
-        if (t[key]) el.textContent = t[key];
+        if (t[key]) {
+            // <option> y elementos con hijos → textContent
+            el.textContent = t[key];
+        }
     });
+
+    // 1b. Traducir atributos title (data-i18n-title)
+    document.querySelectorAll('[data-i18n-title]').forEach(el => {
+        const key = el.getAttribute('data-i18n-title');
+        if (t[key]) el.title = t[key];
+    });
+
+    // 1c2. Traducir placeholder (data-i18n-placeholder)
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+        const key = el.getAttribute('data-i18n-placeholder');
+        if (t[key]) el.placeholder = t[key];
+    });
+
+    // 1c. Traducir <option> dentro de selects del clima
+    const varSelect  = document.getElementById('meteo-var-select');
+    const modeSelect = document.getElementById('meteo-mode-select');
+    if (varSelect) {
+        varSelect.querySelectorAll('option[data-i18n]').forEach(opt => {
+            const key = opt.getAttribute('data-i18n');
+            if (t[key]) opt.textContent = t[key];
+        });
+    }
+    if (modeSelect) {
+        modeSelect.querySelectorAll('option[data-i18n]').forEach(opt => {
+            const key = opt.getAttribute('data-i18n');
+            if (t[key]) opt.textContent = t[key];
+        });
+    }
+
+    // 1d. Actualizar texto del botón de clima según estado actual
+    const btnMeteo = document.getElementById('btn-meteo-toggle');
+    if (btnMeteo) {
+        const icon = '<i class="fa-solid fa-cloud-sun"></i> ';
+        if (typeof meteoEnabled !== 'undefined' && meteoEnabled) {
+            btnMeteo.innerHTML = icon + (t.clima_active || 'Clima Activo');
+        } else {
+            btnMeteo.innerHTML = icon + (t.clima_activate || 'Activar Clima');
+        }
+    }
 
     // 2. Traducir title del botón de subir capa
     const btnAdd = document.getElementById('btn-add-layer-icon');

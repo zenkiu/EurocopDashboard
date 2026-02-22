@@ -10,6 +10,11 @@
 function changeTemporalView(v) {
     runWithLoader(() => {
         temporalView = v;
+        // Mostrar/ocultar barra de clima según vista
+        if (typeof initMeteoUI === 'function' && typeof hideMeteoUI === 'function') {
+            if (v === 'daily') { initMeteoUI(); }
+            else              { hideMeteoUI(); }
+        }
         updateUI();
     });
 }
@@ -56,6 +61,13 @@ function updateCharts(data, selYears) {
     // --------------------------------------------------------
     const ctxTimeline = document.getElementById('chart-timeline');
     if (ctxTimeline) {
+
+        // Mostrar u ocultar barra meteorología según vista
+        if (temporalView === 'daily') {
+            if (typeof initMeteoUI === 'function') initMeteoUI();
+        } else {
+            if (typeof hideMeteoUI === 'function') hideMeteoUI();
+        }
         const activeCategories = [...new Set(data.map(d => d.cat))].sort();
 
         // Años activos según vista
@@ -173,16 +185,36 @@ function updateCharts(data, selYears) {
         });
         if (isTableView) renderTimelineTable();
 
+        // Auto-sincronizar datos meteo si el rango de fechas ha cambiado
+        if (typeof syncMeteoIfActive === 'function') {
+            syncMeteoIfActive(); // async, no bloqueante
+        }
+
+        // Inyectar datos climáticos si vista Diario y clima activo
+        let allDatasets = [...datasets];
+        let extraScales = {};
+        if (temporalView === 'daily' && typeof getMeteoOverlayConfig === 'function') {
+            const meteoConfig = getMeteoOverlayConfig(baseLabelTexts);
+            if (meteoConfig.datasets.length > 0) {
+                allDatasets = [...datasets, ...meteoConfig.datasets];
+                extraScales = meteoConfig.yAxis || {};
+            }
+        }
+
         // Crear / recrear gráfico
         if (chartTimeline) chartTimeline.destroy();
         chartTimeline = new Chart(ctxTimeline, {
             type: chartTimelineType,
-            data: { labels, datasets },
+            data: { labels, datasets: allDatasets },
             options: {
                 ...commonOptions,
                 onClick: (e, activeEls) => {
                     if (activeEls.length > 0) {
-                        showDetailedRecords(labels[activeEls[0].index], datasets[activeEls[0].datasetIndex].label);
+                        const ds = allDatasets[activeEls[0].datasetIndex];
+                        // Solo abrir detalle si es dataset de incidencias (no clima)
+                        if (!ds.yAxisID || ds.yAxisID !== 'yMeteo') {
+                            showDetailedRecords(labels[activeEls[0].index], ds.label);
+                        }
                     }
                 },
                 plugins: {
@@ -192,15 +224,53 @@ function updateCharts(data, selYears) {
                         mode: 'nearest',
                         intersect: true,
                         itemSort: (a, b) => b.raw - a.raw,
-                        filter: (tooltipItem) => tooltipItem.raw > 0
+                        filter: (tooltipItem) => tooltipItem.raw !== null && tooltipItem.raw > 0
                     }
                 },
                 scales: {
-                    x: { stacked: chartTimelineType === 'bar', grid: { display: false } },
-                    y: { stacked: chartTimelineType === 'bar', beginAtZero: true, ticks: { precision: 0 } }
+                    x: {
+                        stacked: chartTimelineType === 'bar',
+                        grid: { display: false },
+                        ticks: {
+                            color: function(ctx) {
+                                if (temporalView !== 'daily') return '#525f7f';
+                                const label = ctx.chart.data.labels[ctx.index] || '';
+                                const parts = label.split(' ');
+                                const [dd, mm, yy] = parts[0] ? parts[0].split('/').map(Number) : [0,0,0];
+                                if (dd && mm && yy) {
+                                    const dow = new Date(2000 + yy, mm - 1, dd).getDay();
+                                    if (dow === 5) return '#2dce89'; // Viernes → verde
+                                    if (dow === 6) return '#f5365c'; // Sábado  → rojo
+                                    if (dow === 0) return '#5e72e4'; // Domingo → azul
+                                }
+                                return '#525f7f';
+                            },
+                            font: function(ctx) {
+                                if (temporalView !== 'daily') return {};
+                                const label = ctx.chart.data.labels[ctx.index] || '';
+                                const parts = label.split(' ');
+                                const [dd, mm, yy] = parts[0] ? parts[0].split('/').map(Number) : [0,0,0];
+                                if (dd && mm && yy) {
+                                    const dow = new Date(2000 + yy, mm - 1, dd).getDay();
+                                    if (dow === 0 || dow === 5 || dow === 6) return { weight: 'bold' };
+                                }
+                                return {};
+                            }
+                        }
+                    },
+                    y: { stacked: chartTimelineType === 'bar', beginAtZero: true, ticks: { precision: 0 } },
+                    ...extraScales
                 }
             }
         });
+
+        // Si modo panel separado, renderizar gráfico de clima debajo
+        if (temporalView === 'daily' && typeof _meteoRenderPanel === 'function') {
+            const modeEl = document.getElementById('meteo-mode-select');
+            if (modeEl && modeEl.value === 'panel' && typeof meteoEnabled !== 'undefined' && meteoEnabled) {
+                setTimeout(() => _meteoRenderPanel(), 50);
+            }
+        }
     }
 
     // --------------------------------------------------------
