@@ -371,6 +371,57 @@
                         <canvas id="chart-timeline"></canvas>
                         <div id="table-timeline-view" class="table-view" style="display: none;"></div>
                     </div>
+
+                    <!-- BARRA CLIMA — solo visible en vista Diario -->
+                    <div id="meteo-bar" style="display:none; align-items:center; gap:8px; padding:8px 12px; background:linear-gradient(135deg,rgba(255,107,53,0.07),rgba(78,205,196,0.07)); border-top:1px solid rgba(255,107,53,0.18); border-radius:0 0 12px 12px; flex-wrap:wrap;">
+                        <i class="fa-solid fa-cloud-sun" style="color:#ff6b35; font-size:1rem;"></i>
+                        <span data-i18n="clima_title" style="font-size:0.75rem; font-weight:700; color:#525f7f; text-transform:uppercase; letter-spacing:.5px;">METEOROLOGÍA</span>
+
+                        <button id="btn-meteo-toggle" onclick="toggleMeteo()"
+                            style="padding:4px 12px; border:1.5px solid #ff6b35; border-radius:20px; background:transparent; color:#ff6b35; font-size:0.75rem; font-weight:700; cursor:pointer; transition:all .2s; white-space:nowrap;">
+                            <i class="fa-solid fa-cloud-sun"></i> <span data-i18n="clima_activate">Activar Clima</span>
+                        </button>
+
+                        <select id="meteo-var-select" onchange="onMeteoVarChange()"
+                            style="padding:4px 8px; border:1px solid #e2e8f0; border-radius:8px; font-size:0.75rem; color:#525f7f; background:white; cursor:pointer;">
+                            <option value="temp"   data-i18n="clima_var_temp">🌡 Temperatura</option>
+                            <option value="precip" data-i18n="clima_var_precip">🌧 Precipitación</option>
+                            <option value="wind"   data-i18n="clima_var_wind">💨 Viento</option>
+                            <option value="snow"   data-i18n="clima_var_snow">❄ Nieve</option>
+                            <option value="all"    data-i18n="clima_var_all">🌤 Todas</option>
+                        </select>
+
+                        <select id="meteo-mode-select" onchange="onMeteoModeChange()"
+                            style="padding:4px 8px; border:1px solid #e2e8f0; border-radius:8px; font-size:0.75rem; color:#525f7f; background:white; cursor:pointer;">
+                            <option value="overlay" data-i18n="clima_mode_overlay">Superpuesto</option>
+                            <option value="panel"   data-i18n="clima_mode_panel">Panel separado</option>
+                        </select>
+
+                        <!-- Buscador municipio + coordenadas ocultas -->
+                        <div style="display:flex; align-items:center; gap:4px; margin-left:auto; position:relative;">
+                            <i class="fa-solid fa-location-dot" style="color:#8898aa; font-size:0.75rem;"></i>
+                            <div style="position:relative;">
+                                <input id="meteo-municipio" type="text" placeholder="Municipio, Provincia"
+                                    autocomplete="off"
+                                    oninput="onMeteoMunicipioInput(this.value)"
+                                    data-i18n-placeholder="clima_municipio_placeholder"
+                                    style="width:160px; padding:3px 8px; border:1px solid #e2e8f0; border-radius:6px; font-size:0.72rem; color:#525f7f; background:white;">
+                                <div id="meteo-municipio-results"
+                                    style="display:none; position:absolute; top:100%; left:0; width:220px; background:white;
+                                           border:1px solid #e2e8f0; border-radius:8px; box-shadow:0 4px 16px rgba(0,0,0,0.12);
+                                           z-index:9999; max-height:180px; overflow-y:auto;">
+                                </div>
+                            </div>
+                            <!-- Coords ocultas — usadas internamente por FncClima -->
+                            <input id="meteo-lat" type="hidden">
+                            <input id="meteo-lon" type="hidden">
+                            <button onclick="onMeteoReload()"
+                                data-i18n-title="clima_reload_tip"
+                                style="padding:3px 7px; border:1px solid #e2e8f0; border-radius:6px; background:white; color:#525f7f; font-size:0.72rem; cursor:pointer;">
+                                <i class="fa-solid fa-rotate-right"></i>
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="chart-container" id="container-category">
@@ -388,6 +439,23 @@
                         <canvas id="chart-category"></canvas>
                         <div id="table-category-view" class="table-view" style="display: none;"></div>
                     </div>
+                </div>
+            </div>
+
+            <!-- PANEL METEOROLOGÍA SEPARADO — sincronizado con vista Diario -->
+            <div id="container-meteo" class="chart-container" style="display:none; margin-bottom:20px;">
+                <div class="chart-header">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <i class="fa-solid fa-cloud-sun" style="color:#ff6b35;"></i>
+                        <h4 style="margin:0;">Meteorología Histórica</h4>
+                        <span id="meteo-panel-location" style="font-size:0.72rem; color:#8898aa; font-weight:400;"></span>
+                    </div>
+                    <div class="header-actions">
+                        <span style="font-size:0.7rem; color:#8898aa;">Open-Meteo Historical API</span>
+                    </div>
+                </div>
+                <div class="canvas-wrapper" style="height:200px;">
+                    <canvas id="chart-meteo"></canvas>
                 </div>
             </div>
 
@@ -473,6 +541,10 @@
 
             <button class="btn-mini" onclick="toggleSatelite(this)" title="Satelite">
                 <i class="fa-solid fa-earth-americas"></i>
+            </button>
+
+            <button class="btn-mini" id="btn-3d" onclick="toggle3D()" data-i18n-title="map_btn_3d" title="Vista 3D">
+                <i class="fa-solid fa-cube"></i>
             </button>
             
             <button class="btn-maximize" onclick="toggleFullscreen('container-map')">
@@ -615,53 +687,77 @@
     </div>
 <!-- PLANTILLA OCULTA PARA GENERACIÓN DE INFOGRAFÍA -->
 <div id="ai-infographic-container" class="infographic-canvas" style="position: fixed; left: -9999px;">
+
+    <!-- CABECERA -->
     <div class="info-header">
         <div class="header-text-group">
             <div class="info-tag" data-i18n="info_tag">EUROCOP ANALYTICS • SÍNTESIS</div>
-            <h1 id="info-title">Resumen de Seguridad</h1>
+            <h1 id="info-title">Informe</h1>
             <p id="info-subtitle" data-i18n="info_subtitle">Análisis de datos filtrados</p>
         </div>
         <img src="./ImagenCoorporativa/zzenkiu.png" class="header-logo" alt="Logo">
     </div>
 
+    <!-- GRID PRINCIPAL -->
     <div class="info-grid">
+
+        <!-- FILA 1: Síntesis principal — ancho completo con % integrado -->
         <div class="info-card highlight-card">
-            <div class="card-icon"><i class="fa-solid fa-bolt"></i> <span data-i18n="info_card_sintesis">SÍNTESIS PRINCIPAL</span></div>
-            <h2 id="info-insight-main">...</h2>
-        </div>
-        <div class="info-card stats-card">
-            <div class="stat-item"><span class="stat-label" data-i18n="info_lbl_total">TOTAL REGISTROS</span><span class="stat-value" id="info-stat-total">0</span></div>
-            <div class="stat-item"><span class="stat-label" data-i18n="info_lbl_peak">PICO DE ACTIVIDAD</span><span class="stat-value" id="info-stat-peak">--:--</span></div>
-            <div class="stat-item"><span class="stat-label" data-i18n="info_lbl_day">DÍA MÁS ACTIVO</span><span class="stat-value" id="info-stat-day">---</span></div>
-        </div>
-        <div class="info-card">
-            <h3 data-i18n="info_lbl_trend">Tendencia Temporal</h3>
-            <p id="info-text-trend" class="info-text-body">...</p>
-            <h3 data-i18n="info_lbl_streets" style="border-top: 1px solid #eee; padding-top: 10px; margin-top: 10px;">Ubicaciones Críticas</h3>
-            <ul id="info-street-list" class="info-list"></ul>
-        </div>
-        <div class="info-card dark-card">
-            <h3 data-i18n="info_lbl_top3">Top 3 Categorías</h3>
-            <ul id="info-top-list" class="info-list"></ul>
-        </div>
-        <div class="info-card graph-card">
-            <h3 data-i18n="info_lbl_dominance">Dominancia</h3>
-            <div class="comparison-layout">
-                <div class="svg-pie-container">
-                    <svg width="120" height="120" viewBox="0 0 120 120">
-                        <circle cx="60" cy="60" r="54" fill="none" stroke="#edf2f7" stroke-width="12" />
-                        <circle id="svg-pie-progress" cx="60" cy="60" r="54" fill="none" stroke="#5e72e4" stroke-width="12" stroke-linecap="round" stroke-dasharray="339.29" stroke-dashoffset="339.29" transform="rotate(-90 60 60)" />
-                    </svg>
-                    <div class="pie-inner-text"><span id="info-pie-percent">0%</span></div>
-                </div>
-                <div class="pie-legend">
-                    <div class="legend-row"><span class="dot-leader"></span><span id="info-lbl-leader" class="legend-text">Líder</span></div>
-                    <div class="legend-row"><span class="dot-rest"></span><span id="info-lbl-resto" class="legend-text">Resto</span></div>
-                    <div class="pie-subtext" id="info-pie-subtext">0 vs 0</div>
-                </div>
+            <div class="highlight-left">
+                <div class="card-icon"><i class="fa-solid fa-bolt"></i> <span data-i18n="info_card_sintesis">SÍNTESIS PRINCIPAL</span></div>
+                <h2 id="info-insight-main">...</h2>
+            </div>
+            <div class="highlight-right">
+                <span class="big-pct" id="info-pie-percent">0%</span>
+                <span class="big-label" data-i18n="clima_dominancia">dominancia</span>
+                <span class="big-cat" id="info-lbl-leader">—</span>
+                <!-- SVG oculto (sigue siendo actualizado por JS para compatibilidad) -->
+                <svg width="0" height="0" style="position:absolute">
+                    <circle id="svg-pie-progress" cx="60" cy="60" r="54" fill="none" stroke="#5e72e4" stroke-width="12" stroke-linecap="round" stroke-dasharray="339.29" stroke-dashoffset="339.29" transform="rotate(-90 60 60)" />
+                </svg>
+                <span id="info-pie-subtext" style="font-size:0.62rem; color:rgba(255,255,255,0.35); margin-top:2px;">0 vs 0</span>
+                <span id="info-lbl-resto" style="display:none"></span>
             </div>
         </div>
+
+        <!-- FILA 2: Estadísticas | Ubicaciones + Tendencia | Top 3 -->
+        <div class="info-card stats-card">
+            <h3 data-i18n="info_lbl_stats">KPIs</h3>
+            <div class="stat-item">
+                <span class="stat-label" data-i18n="info_lbl_total">TOTAL REGISTROS</span>
+                <span class="stat-value" id="info-stat-total">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label" data-i18n="info_lbl_peak">PICO DE ACTIVIDAD</span>
+                <span class="stat-value" id="info-stat-peak">--:--</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label" data-i18n="info_lbl_day">DÍA MÁS ACTIVO</span>
+                <span class="stat-value" style="font-size:1.2rem;" id="info-stat-day">---</span>
+            </div>
+        </div>
+
+        <div class="info-card tendency-card">
+            <h3 data-i18n="info_lbl_streets">UBICACIONES CRÍTICAS</h3>
+            <ul id="info-street-list" class="info-list"></ul>
+            <h3 data-i18n="info_lbl_trend" style="margin-top:14px; padding-top:12px; border-top:1px solid #f3f4f6;">TENDENCIA</h3>
+            <p id="info-text-trend" class="info-text-body">...</p>
+        </div>
+
+        <div class="info-card dark-card">
+            <h3 data-i18n="info_lbl_top3">TOP 3 CATEGORÍAS</h3>
+            <ul id="info-top-list" class="info-list"></ul>
+        </div>
+
+        <!-- FILA 3: Meteorología — solo visible en vista Diario con clima activo -->
+        <div id="info-meteo-card" class="info-card info-meteo-card" style="display:none;">
+            <div class="card-icon"><i class="fa-solid fa-cloud-sun-rain"></i> <span>CORRELACIÓN METEOROLÓGICA</span></div>
+            <div id="info-meteo-body" class="info-meteo-body"></div>
+        </div>
+
     </div>
+
+    <!-- FOOTER -->
     <div class="info-footer">
         <span data-i18n="info_lbl_footer">Generado por Eurocop Analytics AI</span>
         <span id="info-date">--/--/----</span>
@@ -686,6 +782,7 @@
             'FncFunciones/FncTablas.js',
             'FncFunciones/FncFiltros.js',
             'FncFunciones/FncMultiselect.js',
+            'FncFunciones/FncClima.js',
             'FncFunciones/FncProcesamiento.js',
             'FncFunciones/FncIdioma.js',
             'FncFunciones/FncInfografia.js',

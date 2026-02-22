@@ -1,3 +1,4 @@
 /* --- CONTROL DE VERSIONES CENTRALIZADO --- */
 /* Cambia este valor para actualizar Cache y UI */
-const EUROCOP_VERSION = "2.0.6";
+/* Incorporada la opción de clima*/
+const EUROCOP_VERSION = "3.0";
