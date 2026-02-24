@@ -79,9 +79,21 @@ function applyLanguage(lang) {
         renderLayerList();
     }
 
-    // 4. Actualizar los labels de los meses en el filtro
+    // 4. Bloquear triggers espurios durante actualización de DOM por idioma
+    window._filterResetInProgress = true;
+
+    // 5. Actualizar los labels de los meses en el filtro
     updateMonthLabels();
 
-    // 5. Si ya hay datos cargados, refrescar toda la UI
-    if (finalData.length > 0) updateUI();
+    // 6. Actualizar el texto del loader explícitamente (idioma activo)
+    const loaderMsg = document.querySelector('#loading-overlay [data-i18n="loading_msg"]');
+    if (loaderMsg && t.loading_msg) loaderMsg.textContent = t.loading_msg;
+
+    // 7. Si ya hay datos cargados, refrescar la UI con el nuevo idioma
+    if (typeof finalData !== 'undefined' && finalData.length > 0) {
+        updateUI();
+    }
+
+    // 8. Liberar bloqueo tras un tick (garantiza que el DOM ya se estabilizó)
+    requestAnimationFrame(() => { window._filterResetInProgress = false; });
 }

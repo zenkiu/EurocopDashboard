@@ -11,6 +11,12 @@
  * El navegador dibuja el spinner antes de bloquear con el cálculo.
  */
 function runWithLoader(actionCallback) {
+    // Asegurar que el texto del loader está en el idioma activo antes de mostrarlo
+    const loaderTxt = document.querySelector('#loading-overlay [data-i18n="loading_msg"]');
+    if (loaderTxt && typeof currentLang !== 'undefined' && typeof translations !== 'undefined') {
+        const msg = (translations[currentLang] || {}).loading_msg;
+        if (msg) loaderTxt.textContent = msg;
+    }
     document.getElementById('loading-overlay').classList.add('active');
     setTimeout(() => {
         try {

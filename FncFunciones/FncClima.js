@@ -82,9 +82,13 @@ async function _meteoGeocodificarDesdeZona() {
 
     try {
         const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(zonaNombre)}&countrycodes=es&format=json&limit=1&addressdetails=1`;
+        const ctrl = new AbortController();
+        const tid  = setTimeout(() => ctrl.abort(), 4000);
         const res = await fetch(url, {
+            signal: ctrl.signal,
             headers: { 'Accept-Language': currentLang || 'es', 'User-Agent': 'EurocopAnalytics/2.0' }
         });
+        clearTimeout(tid);
         if (!res.ok) return;
         const data = await res.json();
         if (!data.length) return;
@@ -182,9 +186,13 @@ async function _meteoSearchMunicipio(query) {
     try {
         // Nominatim: buscar en España, municipios
         const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&countrycodes=es&featuretype=settlement&format=json&limit=6&addressdetails=1&accept-language=${currentLang || 'es'}`;
+        const ctrl2 = new AbortController();
+        const tid2  = setTimeout(() => ctrl2.abort(), 5000);
         const res = await fetch(url, {
+            signal: ctrl2.signal,
             headers: { 'Accept-Language': currentLang || 'es', 'User-Agent': 'EurocopAnalytics/2.0' }
         });
+        clearTimeout(tid2);
         if (!res.ok) throw new Error('API error');
         const data = await res.json();
 
@@ -514,6 +522,8 @@ function _meteoBuildDatasets(labels, tipo) {
 // ============================================================
 function _meteoRenderPanel() {
     if (!meteoEnabled || !meteoData) return;
+    // Solo mostrar panel si estamos en vista Diario
+    if (typeof temporalView !== 'undefined' && temporalView !== 'daily') return;
 
     const panel = document.getElementById('container-meteo');
     if (!panel) return;

@@ -355,47 +355,150 @@ function updateCharts(data, selYears) {
         }));
         if (isTableHoursView) renderHoursTable();
 
+        // ── Franjas horarias ──────────────────────────────────────────────
+        // Noche  00-06  gris claro   | Mañana 06-14  azul  | Tarde 14-22  marrón | Noche 22-24
+        const FRANJA_COLORS = {
+            manana: { border: '#11cdef', bg: 'rgba(17,205,239,0.18)',  label: '☀️ Mañana',  range: [6, 14] },
+            tarde:  { border: '#c8916a', bg: 'rgba(200,145,106,0.18)', label: '🌤️ Tarde',   range: [14, 22] },
+            noche:  { border: '#adb5bd', bg: 'rgba(173,181,189,0.18)', label: '🌙 Noche',   range: [22, 30] } // 30 = wrap 0-6
+        };
+
+        // Función: devuelve franja para hora h
+        function getFranja(h) {
+            if (h >= 6  && h < 14) return 'manana';
+            if (h >= 14 && h < 22) return 'tarde';
+            return 'noche';
+        }
+
+        // Colores por punto (borde y fondo del punto)
+        const pointColors = Array.from({length: 24}, (_, h) => {
+            const f = getFranja(h);
+            return FRANJA_COLORS[f].border;
+        });
+
+        // Plugin: fondo de franja (annotation manual con beforeDraw)
+        const franjaPlugin = {
+            id: 'franjasBg',
+            beforeDraw(chart) {
+                const { ctx, chartArea: ca, scales: { x, y } } = chart;
+                if (!ca) return;
+                ctx.save();
+                // Noche 0-6
+                ctx.fillStyle = FRANJA_COLORS.noche.bg;
+                ctx.fillRect(x.getPixelForValue(0), ca.top, x.getPixelForValue(6) - x.getPixelForValue(0), ca.height);
+                // Mañana 6-14
+                ctx.fillStyle = FRANJA_COLORS.manana.bg;
+                ctx.fillRect(x.getPixelForValue(6), ca.top, x.getPixelForValue(14) - x.getPixelForValue(6), ca.height);
+                // Tarde 14-22
+                ctx.fillStyle = FRANJA_COLORS.tarde.bg;
+                ctx.fillRect(x.getPixelForValue(14), ca.top, x.getPixelForValue(22) - x.getPixelForValue(14), ca.height);
+                // Noche 22-23
+                ctx.fillStyle = FRANJA_COLORS.noche.bg;
+                ctx.fillRect(x.getPixelForValue(22), ca.top, x.getPixelForValue(23) - x.getPixelForValue(22) + 2, ca.height);
+                ctx.restore();
+            },
+            afterDraw(chart) {
+                const { ctx, chartArea: ca, scales: { x } } = chart;
+                if (!ca) return;
+                ctx.save();
+                const _t = (typeof translations !== 'undefined' && translations[currentLang]) || {};
+                const franjas = [
+                    { emoji: '🌙', text: _t.shift_night     || 'Noche',   from: 0,  to: 6  },
+                    { emoji: '☀️', text: _t.shift_morning   || 'Mañana',  from: 6,  to: 14 },
+                    { emoji: '🌤️', text: _t.shift_afternoon || 'Tarde',   from: 14, to: 22 },
+                    { emoji: '🌙', text: _t.shift_night     || 'Noche',   from: 22, to: 23 },
+                ];
+                franjas.forEach(f => {
+                    const xFrom = x.getPixelForValue(f.from);
+                    const xTo   = x.getPixelForValue(f.to);
+                    const xMid  = (xFrom + xTo) / 2;
+                    const width = xTo - xFrom;
+                    if (width < 30) return; // No cabe
+                    // Emoji en una llamada separada (mejora nitidez)
+                    ctx.font = '13px sans-serif';
+                    ctx.textAlign = 'right';
+                    ctx.textBaseline = 'top';
+                    ctx.globalAlpha = 0.85;
+                    ctx.fillStyle = '#333';
+                    ctx.fillText(f.emoji, xMid - 1, ca.top + 4);
+                    // Texto del turno en otra llamada (fuente del sistema, nítida)
+                    ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+                    ctx.textAlign = 'left';
+                    ctx.fillStyle = '#444';
+                    ctx.globalAlpha = 0.75;
+                    ctx.fillText(f.text, xMid + 2, ca.top + 5);
+                });
+                ctx.globalAlpha = 1;
+                ctx.restore();
+            }
+        };
+
         if (chartHours) chartHours.destroy();
         chartHours = new Chart(ctxHours, {
             type: 'line',
+            plugins: [franjaPlugin],
             data: {
-                labels: Array.from({ length: 24 }, (_, i) => i), // Genera 0, 1, 2... 23
+                labels: Array.from({ length: 24 }, (_, i) => i),
                 datasets: [{
                     label: 'Actividad',
-                    data: hC, // Los datos que calculamos arriba
-                    borderColor: '#11cdef',
-                    fill: true,
-                    backgroundColor: 'rgba(17,205,239,0.1)',
+                    data: hC,
+                    borderColor: '#525f7f',
+                    borderWidth: 2,
+                    fill: false,
                     tension: 0.4,
-                    pointRadius: 4,
-                    pointBackgroundColor: '#11cdef'
+                    pointRadius: 5,
+                    pointHoverRadius: 7,
+                    pointBackgroundColor: pointColors,
+                    pointBorderColor: pointColors,
+                    segment: {
+                        borderColor: ctx2 => {
+                            const h = ctx2.p0DataIndex;
+                            return FRANJA_COLORS[getFranja(h)].border;
+                        }
+                    }
                 }]
             },
             options: {
                 responsive: true,
-                maintainAspectRatio: false, // CLAVE para que se estire
-                plugins: { 
+                maintainAspectRatio: false,
+                plugins: {
                     legend: { display: false },
                     tooltip: {
                         callbacks: {
-                            title: (items) => `Hora: ${items[0].label}:00`
+                            title: (items) => {
+                                const h = parseInt(items[0].label);
+                                const t = (typeof translations !== 'undefined' && translations[currentLang]) || {};
+                                const f = getFranja(h);
+                                const fLabel = f === 'manana' ? (t.shift_morning || 'Mañana') :
+                                               f === 'tarde'  ? (t.shift_afternoon || 'Tarde') :
+                                                                (t.shift_night || 'Noche');
+                                return `${String(h).padStart(2,'0')}:00 — ${fLabel}`;
+                            }
                         }
                     }
                 },
-                layout: {
-                    padding: { bottom: 10, left: 10, right: 15, top: 10 }
-                },
+                layout: { padding: { bottom: 10, left: 10, right: 15, top: window.innerWidth < 500 ? 22 : 28 } },
                 scales: {
-                    x: { 
-                        ticks: { maxTicksLimit: 12 },
-                        grid: { display: false } 
+                    x: {
+                        ticks: {
+                            maxTicksLimit: window.innerWidth < 500 ? 6 : 12,
+                            font: { size: window.innerWidth < 500 ? 9 : 11 }
+                        },
+                        grid: { display: false }
                     },
-                    y: { 
-                        beginAtZero: true, 
-                        ticks: { precision: 0 }
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0,
+                            font: { size: window.innerWidth < 500 ? 9 : 11 }
+                        }
                     }
                 }
             }
+        });
+        // Forzar recálculo de dimensiones en móvil (chart puede crearse antes del layout)
+        requestAnimationFrame(() => {
+            if (chartHours) chartHours.resize();
         });
     }
 }

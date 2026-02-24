@@ -16,7 +16,7 @@ function showMapping(data) {
     const mappingIds = [
         'map-expediente', 'map-fecha', 'map-hora', 
         'map-lat', 'map-lon', 'map-categoria', 'map-calle',
-        'map-filtro-1', 'map-filtro-2'
+        'map-filtro-1', 'map-filtro-2', 'map-suma'
     ];
 
     mappingIds.forEach(id => {
@@ -51,6 +51,8 @@ function showMapping(data) {
         // --- CONFIGURACIÓN DE OPCIONES INICIALES (PLACEHOLDERS) ---
         if (id === 'map-hora') {
             newSel.innerHTML = '<option value="">-- Sin hora (00:00) --</option>';
+        } else if (id === 'map-suma') {
+            newSel.innerHTML = '<option value="">-- No usar --</option>';
         } else if (id === 'map-categoria') {
             newSel.innerHTML = `
                 <option value="" disabled selected>Seleccionar...</option>
@@ -89,6 +91,15 @@ function showMapping(data) {
             match = headers.find(h => h.toUpperCase().includes('TIPO') || h.toUpperCase().includes('CAT') || h.toUpperCase().includes('HECHO') || h.toUpperCase().includes('CAUSA'));
         } else if (id === 'map-calle') {
             match = headers.find(h => h.toUpperCase().includes('CALLE') || h.toUpperCase().includes('DIR') || h.toUpperCase().includes('DOMICILIO') || h.toUpperCase().includes('VIA'));
+        } else if (id === 'map-suma') {
+            // Auto-detectar campo numérico: DURACION, MINUTOS, IMPORTE, TOTAL, HORAS, VALOR, MONTO
+            match = headers.find(h => {
+                const u = h.toUpperCase();
+                return u.includes('DURACION') || u.includes('DURACIÓN') || u.includes('MINUTO') ||
+                       u.includes('IMPORTE') || u.includes('TOTAL') || u.includes('VALOR') ||
+                       u.includes('MONTO') || u.includes('HORAS') || u.includes('PRECIO') ||
+                       u.includes('CANTIDAD') || u.includes('COSTE');
+            });
         }
         
         // NOTA: Para map-filtro-1 y map-filtro-2 NO buscamos coincidencias automáticas
@@ -116,7 +127,7 @@ function refreshMappingStatus() {
     const mappingIds = [
         'map-expediente', 'map-fecha', 'map-hora', 
         'map-lat', 'map-lon', 'map-categoria', 'map-calle',
-        'map-filtro-1', 'map-filtro-2'
+        'map-filtro-1', 'map-filtro-2', 'map-suma'
     ];
 
     // Obtener valores actualmente seleccionados (excluyendo comandos especiales)

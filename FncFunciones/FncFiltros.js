@@ -26,7 +26,8 @@ function setupFilters() {
 function renderCheckboxes(containerId, items, defaultValue) {
     const container = document.getElementById(containerId);
     if (!container) return;
-    
+    // Bloquear triggers durante reconstrucción de checkboxes
+    window._filterResetInProgress = true;
     container.innerHTML = '';
     // Protección por si translations no está cargado aún
     const t = (typeof translations !== 'undefined' && translations[currentLang]) 
@@ -54,6 +55,8 @@ function renderCheckboxes(containerId, items, defaultValue) {
         div.innerHTML = `<input type="checkbox" value="${val}" ${isChecked} onchange="triggerUpdateWithLoader()"> <span>${label}</span>`;
         container.appendChild(div);
     });
+    // Liberar bloqueo (en siguiente tick para que el DOM se estabilice)
+    requestAnimationFrame(() => { window._filterResetInProgress = false; });
 }
 
 // ============================================================
@@ -490,6 +493,31 @@ function updateUI() {
 
     const textFilename = document.getElementById('card-text-filename');
     if (textFilename) textFilename.innerText = (typeof nombreArchivoSubido !== 'undefined' ? nombreArchivoSubido : "SIN ARCHIVO");
+
+// KPI SUMATORIO — Siempre numérico
+    const sumaCard  = document.getElementById('kpi-suma-card');
+    const sumaValue = document.getElementById('kpi-suma-value');
+    const sumaLabel = document.getElementById('kpi-suma-label');
+    const hasSuma   = filtered.length > 0 && filtered[0].sumaVal !== null && filtered[0].sumaVal !== undefined;
+
+    if (sumaCard) sumaCard.style.display = hasSuma ? 'flex' : 'none';
+
+    if (hasSuma && sumaValue) {
+        // Sumamos todos los valores de la columna seleccionada
+        const total = filtered.reduce((s, d) => s + (d.sumaVal || 0), 0);
+
+        // Mostramos el número con separador de miles y hasta 2 decimales si existen
+        sumaValue.innerText = total % 1 === 0
+            ? total.toLocaleString()
+            : total.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+
+        // Mostrar nombre del campo como subtexto con el icono de sumatorio Σ
+        const sumaField = document.getElementById('kpi-suma-field');
+        if (sumaField) {
+            const colName = document.getElementById('map-suma') ? document.getElementById('map-suma').value : '';
+            sumaField.innerText = colName ? `Σ ${colName}` : '';
+        }
+    }
 
     // 7. ACTUALIZAR MAPA Y GRÁFICOS
     if (typeof updateMapData === 'function') updateMapData(filtered);

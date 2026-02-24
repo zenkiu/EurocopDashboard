@@ -97,16 +97,18 @@ function generarDashboard() {
         return el ? safeStr(el.value) : "";
     };
 
-    const config = {
-        exp:       getVal('map-expediente'),
-        fecha:     getVal('map-fecha'),
-        hora:      getVal('map-hora'),
-        lat:       getVal('map-lat'),
-        lon:       getVal('map-lon'),
-        cat:       getVal('map-categoria'),
-        calle:     getVal('map-calle'),
-        locManual: getVal('map-localidad')
-    };
+const config = {
+    exp:       getVal('map-expediente'),
+    fecha:     getVal('map-fecha'),
+    hora:      getVal('map-hora'),
+    lat:       getVal('map-lat'),
+    lon:       getVal('map-lon'),
+    cat:       getVal('map-categoria'),
+    calle:     getVal('map-calle'),
+    locManual: getVal('map-localidad'),
+    suma:      getVal('map-suma'),
+    sumaIsTime: false // Forzamos siempre a falso para evitar conversiones a Hh Mm
+};
 
     const colFiltro1 = getVal('map-filtro-1');
     const colFiltro2 = getVal('map-filtro-2');
@@ -212,6 +214,8 @@ function generarDashboard() {
                     hasGeo:    tieneGeo,
                     calle:     safeStr(row[config.calle]).toUpperCase() || "SIN CALLE / GPS",
                     locManual: config.locManual,
+                    sumaVal:   config.suma ? (parseFloat(String(row[config.suma]).replace(',','.')) || 0) : null,
+                    sumaIsTime: config.sumaIsTime || false,
                     refnum:    safeStr(row['REFNUM']),
                     refanno:   safeStr(row['REFANNO'])
                 };
