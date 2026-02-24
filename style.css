@@ -313,7 +313,7 @@ input:checked + .slider:before { transform: translateX(14px); }
    ========================================= */
 
 /* KPI Cards */
-.kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 20px; }
 .kpi-card { 
     background: white; padding: 20px; border-radius: 12px; 
     display: flex; align-items: center; gap: 15px; 
@@ -1116,8 +1116,8 @@ input:checked + .slider:before { transform: translateX(14px); }
     /* === KPIs === */
     .kpi-grid { 
         display: grid !important; 
-        grid-template-columns: repeat(3, 1fr) !important; 
-        gap: 10px; 
+        grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)) !important;
+        gap: 10px;
     }
     .kpi-card { padding: 10px 8px; overflow: hidden; }
     .kpi-icon { width: 32px; height: 32px; font-size: 0.95rem; margin-bottom: 4px; }
@@ -1318,7 +1318,7 @@ input:checked + .slider:before { transform: translateX(14px); }
     .sidebar.active { transform: translateX(0); }
 
     /* KPIs */
-    .kpi-grid { display: grid !important; grid-template-columns: repeat(3, 1fr) !important; gap: 8px; }
+    .kpi-grid { display: grid !important; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)) !important; gap: 8px; }
     .kpi-card {
         padding: 8px 5px;            /* Un poco más de aire */
         overflow: hidden;            /* Evita cualquier desborde */
@@ -1332,11 +1332,52 @@ input:checked + .slider:before { transform: translateX(14px); }
     }
 
     /* Gráficos */
-    .charts-grid-top, .bottom-grid { display: flex !important; flex-direction: column !important; gap: 15px; }
-    .chart-container, .map-container-wrapper { 
-        width: 100% !important; height: 350px !important; min-height: 350px !important;
-        padding: 12px !important; overflow: visible !important; 
+    .charts-grid-top, .bottom-grid {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 15px;
+        width: 100% !important;
+        margin: 0 !important;
     }
+    .chart-container, .map-container-wrapper { 
+        width: 100% !important;
+        height: 320px !important;
+        min-height: 320px !important;
+        max-height: 320px !important;
+        padding: 12px !important;
+        overflow: hidden !important;
+        box-sizing: border-box !important;
+        display: flex !important;
+        flex-direction: column !important;
+    }
+    /* Meteorología: nunca mostrar en móvil si está oculto (respeta display:none inline) */
+    #container-meteo[style*="display:none"],
+    #container-meteo[style*="display: none"] {
+        display: none !important;
+    }
+
+    /* Gráfico Horas: mismas dimensiones que los otros gráficos en móvil */
+    #container-hours {
+        height: 320px !important;
+        min-height: 320px !important;
+        max-height: 320px !important;
+        display: flex !important;
+        flex-direction: column !important;
+    }
+    #container-hours .canvas-wrapper {
+        flex: 1 !important;
+        min-height: 0 !important;
+        height: 0 !important;
+        position: relative !important;
+        overflow: hidden !important;
+    }
+    #container-hours canvas {
+        position: absolute !important;
+        top: 0 !important; left: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+    }
+    .chart-header { flex-shrink: 0; }
     .chart-header h4 { font-size: 0.75rem; }
 
     /* Fix Layer Menu Móvil */
@@ -1389,7 +1430,7 @@ input:checked + .slider:before { transform: translateX(14px); }
         grid-template-columns: 1fr; 
     }
 
-    .kpi-grid { display: grid !important; grid-template-columns: repeat(3, 1fr); gap: 10px; height: 60px; flex-shrink: 0; }
+    .kpi-grid { display: grid !important; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; height: 60px; flex-shrink: 0; }
     .kpi-card { height: 100%; padding: 0 15px; justify-content: center; gap: 10px; flex-direction: row; }
     
     .kpi-icon { width: 35px; height: 35px; font-size: 1rem; }
@@ -1527,10 +1568,15 @@ input:checked + .slider:before { transform: translateX(14px); }
 }
 /* Ajuste específico para el gráfico de horas */
 #container-hours .canvas-wrapper {
+    flex: 1;
+    min-height: 0;
     height: 100%;
-    min-height: 250px;
+    position: relative;
 }
 #container-hours canvas {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100% !important;
     height: 100% !important;
 }
 

@@ -192,6 +192,11 @@
                         <label><strong data-i18n="col_loc">LOCALIDAD (Opcional)</strong></label>
                         <input type="text" id="map-localidad" class="styled-select" placeholder="Ej: DURANGO" autocomplete="off">
                     </div>
+                    <div class="card" style="border-left: 4px solid #2dce89; background: #f0fff8;">
+                        <label><strong data-i18n="col_suma">CAMPO SUMATORIO (Opcional)</strong></label>
+                        <p style="font-size:0.72rem; color:#8898aa; margin: 2px 0 6px 0;" data-i18n="col_suma_desc">Columna numérica a sumar (duración, importe, etc.)</p>
+                        <select id="map-suma" class="styled-select"></select>
+                    </div>
                 </div>
             </div>
             
@@ -344,6 +349,18 @@
                     <div class="kpi-icon" style="background: #fb6340;"><i class="fa-solid fa-calendar-check"></i></div>
                     <div class="kpi-data"><h3 data-i18n="kpi_titulo">TÍTULO</h3><span id="card-text-filename">SIN ARCHIVO</span></div>
                 </div>
+                <!-- KPI Sumatorio — visible solo cuando se mapea campo suma -->
+                <div class="kpi-card" id="kpi-suma-card" style="display:none;">
+                    <div class="kpi-icon" style="background: #8965e0; flex-shrink:0; position:relative;">
+                        <i class="fa-solid fa-sigma"></i>
+                        <span style="position:absolute; top:-5px; right:-5px; background:#2dce89; color:white; border-radius:50%; width:14px; height:14px; font-size:0.6rem; font-weight:900; display:flex; align-items:center; justify-content:center; line-height:1; border:1.5px solid white;">+</span>
+                    </div>
+                    <div class="kpi-data">
+                        <h3 data-i18n="kpi_suma">Calculada</h3>
+                        <span id="kpi-suma-value" style="font-size:1.2rem;">0</span>
+                        <small id="kpi-suma-field" style="font-size:0.65rem; color:#8898aa; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></small>
+                    </div>
+                </div>
             </div>
 
             <div class="charts-grid-top">
@@ -447,7 +464,7 @@
                 <div class="chart-header">
                     <div style="display:flex; align-items:center; gap:8px;">
                         <i class="fa-solid fa-cloud-sun" style="color:#ff6b35;"></i>
-                        <h4 style="margin:0;">Meteorología Histórica</h4>
+                        <h4 style="margin:0;" data-i18n="clima_panel_title">Meteorología Histórica</h4>
                         <span id="meteo-panel-location" style="font-size:0.72rem; color:#8898aa; font-weight:400;"></span>
                     </div>
                     <div class="header-actions">
@@ -651,6 +668,19 @@
                 </div>
                 <h4 data-i18n="narrative_chronology" style="font-size: 0.8rem; font-weight: 800; border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-bottom: 15px;"></h4>
                 <div id="narrative-list-container" style="background: white; border-radius: 8px; padding: 10px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DETALLE DE REGISTROS (clic en gráfico timeline) -->
+    <div id="records-modal" class="pdf-modal-overlay">
+        <div class="pdf-modal-content" style="max-width:560px; height:70vh;">
+            <div class="pdf-header" style="background:#5e72e4; color:white;">
+                <h3><i class="fa-solid fa-magnifying-glass"></i> <span id="records-modal-title"></span></h3>
+                <button onclick="closeRecordsModal()" class="btn-close-pdf" style="color:white;"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="pdf-body" style="padding:16px; overflow-y:auto; background:#f8f9fe;">
+                <div id="records-table-container"></div>
             </div>
         </div>
     </div>
