@@ -60,7 +60,7 @@ let currentSortHours = { col: 'hour', dir: 'asc' };
 // Tabla Calles
 let isTableStreetsView = false;
 let tableStreetsDataCache = [];
-let currentSortStreets = { col: 'count', dir: 'desc' };
+let currentSortStreets = { col: 'name', dir: 'asc' };
 
 // ============================================================
 // MODO DE FILTRO DE FECHAS
