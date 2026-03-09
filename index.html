@@ -510,6 +510,14 @@
                 <i class="fa-solid fa-list-ol"></i>
             </button>
 
+            <!-- 1b. Exportar Calles (visible solo en vista tabla calles) -->
+            <button class="btn-mini" id="btn-export-streets-pdf" onclick="exportStreetsToPdf()" title="Exportar calles a PDF" style="display:none;">
+                <i class="fa-solid fa-file-pdf"></i>
+            </button>
+            <button class="btn-mini" id="btn-export-streets-docx" onclick="exportStreetsToDocx()" title="Exportar calles a Word (.docx)" style="display:none;">
+                <i class="fa-solid fa-file-word"></i>
+            </button>
+
             <!-- 2. GESTOR DE CAPAS (Este bloque es el que falla si no está exacto) -->
             <div class="layer-manager-container" style="position: relative;">
                 <button class="btn-mini" id="btn-layers-menu" onclick="toggleLayerMenu()" title="Gestor de Capas">
