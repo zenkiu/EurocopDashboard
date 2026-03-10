@@ -248,9 +248,11 @@ function renderStreetsTable(data) {
     // ── Nombre base: quitar número de portal (todo tras la última ", <dígitos>")
     function nombreBase(displayName) {
         if (!displayName || displayName === "SIN CALLE / GPS") return displayName;
-        const m = displayName.match(/^(.*),\s*[\d\w\s\-]+$/);
+        // Agrupar por: NOMBRE (TIPO) — todo hasta el primer espacio tras el paréntesis de cierre
+        const m = displayName.match(/^(.+?\([^)]+\))/);
         if (m) return m[1].trim();
-        return displayName.replace(/[,\s\d\-\/]+$/, '').trim() || displayName;
+        // Sin paréntesis: quedarse solo con el texto antes del primer número o coma
+        return displayName.split(/[,\d]/)[0].trim() || displayName;
     }
 
     tableStreetsDataCache.forEach(row => {
@@ -274,16 +276,14 @@ function renderStreetsTable(data) {
 
     function flushGrupo() {
         if (grupoActual === null) return;
-        if (filasPend.length > 1) {
-            html += `
+        html += `
             <tr style="background:linear-gradient(90deg,#eef0ff,#f5f6ff); border-top:2px solid #c5caf0; border-bottom:2px solid #c5caf0;">
                 <td style="text-align:left; font-weight:800; color:#3d4db7; font-size:0.78rem; padding-left:14px;">
                     <i class="fa-solid fa-layer-group" style="font-size:0.68rem; margin-right:5px; opacity:0.7;"></i>
-                    SUBTOTAL &nbsp;·&nbsp; ${grupoActual}
+                    ${(typeof translations !== 'undefined' && translations[currentLang]) ? translations[currentLang]['streets_report_subtotal'] : 'SUBTOTAL'} &nbsp;·&nbsp; ${grupoActual}
                 </td>
                 <td style="font-weight:900; color:#3d4db7; text-align:right; font-size:0.85rem;">${totalGrupo.toLocaleString()}</td>
             </tr>`;
-        }
         filasPend.forEach(f => { html += f; });
         grupoActual = null;
         totalGrupo  = 0;
@@ -341,6 +341,9 @@ function exportStreetsToPdf() {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
+    // Helper de traducción
+    const T = (key) => (typeof translations !== 'undefined' && translations[currentLang] && translations[currentLang][key]) ? translations[currentLang][key] : translations['es'][key];
+
     const titulo    = nombreArchivoSubido || 'EUROCOP ANALYTICS';
     const fecha     = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
     const total     = tableStreetsDataCache.reduce((s, r) => s + r.count, 0);
@@ -359,7 +362,7 @@ function exportStreetsToPdf() {
     doc.text('EUROCOP ANALYTICS', marginL, 12);
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
-    doc.text('Listado de Calles / Ubicaciones', marginL, 19);
+    doc.text(T('streets_report_title'), marginL, 19);
     doc.text(fecha, pageW - marginR, 12, { align: 'right' });
     doc.text(titulo, pageW - marginR, 19, { align: 'right' });
 
@@ -367,7 +370,7 @@ function exportStreetsToPdf() {
     doc.setTextColor(50, 50, 80);
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
-    doc.text(`Total registros: ${total.toLocaleString('es-ES')}   ·   Ubicaciones únicas: ${tableStreetsDataCache.length.toLocaleString('es-ES')}`, marginL, 35);
+    doc.text(`${T('streets_report_total')}: ${total.toLocaleString('es-ES')}   ·   ${T('streets_report_unique')}: ${tableStreetsDataCache.length.toLocaleString('es-ES')}`, marginL, 35);
 
     // ── Cabecera de tabla ──
     let y = 41;
@@ -382,8 +385,8 @@ function exportStreetsToPdf() {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8);
     doc.setTextColor(94, 114, 228);
-    doc.text('CALLE / UBICACIÓN', marginL + 3, y + 4.8);
-    doc.text('REG.', marginL + colWName + colWReg - 3, y + 4.8, { align: 'right' });
+    doc.text(T('streets_report_col_street'), marginL + 3, y + 4.8);
+    doc.text(T('streets_report_col_reg'), marginL + colWName + colWReg - 3, y + 4.8, { align: 'right' });
 
     y += rowH;
 
@@ -395,7 +398,7 @@ function exportStreetsToPdf() {
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(7);
         doc.setFont('helvetica', 'bold');
-        doc.text('EUROCOP ANALYTICS · Listado de Calles (cont.)', marginL, 7);
+        doc.text('EUROCOP ANALYTICS · ' + T('streets_report_title') + ' (cont.)', marginL, 7);
         y = 16;
         doc.setFillColor(240, 242, 255);
         doc.rect(marginL, y, contentW, rowH, 'F');
@@ -404,17 +407,17 @@ function exportStreetsToPdf() {
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(8);
         doc.setTextColor(94, 114, 228);
-        doc.text('CALLE / UBICACIÓN', marginL + 3, y + 4.8);
-        doc.text('REG.', marginL + colWName + colWReg - 3, y + 4.8, { align: 'right' });
+        doc.text(T('streets_report_col_street'), marginL + 3, y + 4.8);
+        doc.text(T('streets_report_col_reg'), marginL + colWName + colWReg - 3, y + 4.8, { align: 'right' });
         y += rowH;
     }
 
     // ── Filas con subtotales agrupados por nombre base ──
     function nombreBasePDF(dn) {
         if (!dn || dn === 'SIN CALLE / GPS') return dn;
-        const m = dn.match(/^(.*),\s*[\d\w\s\-]+$/);
+        const m = dn.match(/^(.+?\([^)]+\))/);
         if (m) return m[1].trim();
-        return dn.replace(/[,\s\d\-\/]+$/, '').trim() || dn;
+        return dn.split(/[,\d]/)[0].trim() || dn;
     }
 
     // Preparar lista con filas de subtotal intercaladas
@@ -423,7 +426,7 @@ function exportStreetsToPdf() {
 
     function pushGrupoPDF() {
         if (grupoBase === null) return;
-        if (grupoFilas.length > 1) rowsConSubtotal.push({ tipo: 'subtotal', label: grupoBase, count: grupoTotal });
+        rowsConSubtotal.push({ tipo: 'subtotal', label: grupoBase, count: grupoTotal });
         grupoFilas.forEach(r => rowsConSubtotal.push({ tipo: 'fila', row: r }));
         grupoBase = null; grupoTotal = 0; grupoFilas = [];
     }
@@ -455,7 +458,7 @@ function exportStreetsToPdf() {
             doc.setFontSize(7.5);
             doc.setTextColor(61, 77, 183);
             const label = item.label.length > 60 ? item.label.substring(0, 57) + '...' : item.label;
-            doc.text('SUBTOTAL  ' + label, marginL + 5, y + 5.2);
+            doc.text(T('streets_report_subtotal') + '  ' + label, marginL + 5, y + 5.2);
             doc.text(item.count.toLocaleString('es-ES'), marginL + colWName + colWReg - 3, y + 5.2, { align: 'right' });
             y += subH;
             odd = false;
@@ -487,8 +490,8 @@ function exportStreetsToPdf() {
         doc.setFontSize(7);
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(130, 130, 160);
-        doc.text('Generado por Eurocop Analytics · zzenkiu.com', marginL, pageH - 3.5);
-        doc.text(`Pág. ${p} / ${totalPags}`, pageW - marginR, pageH - 3.5, { align: 'right' });
+        doc.text(T('streets_report_footer'), marginL, pageH - 3.5);
+        doc.text(`${T('streets_report_page')} ${p} / ${totalPags}`, pageW - marginR, pageH - 3.5, { align: 'right' });
     }
 
     const nombreArchivo = (nombreArchivoSubido || 'calles').replace(/[^a-zA-Z0-9_\-]/g, '_');
@@ -507,22 +510,24 @@ function exportStreetsToDocx() {
     const titulo  = nombreArchivoSubido || 'EUROCOP ANALYTICS';
     const fecha   = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
     const total   = tableStreetsDataCache.reduce((s, r) => s + r.count, 0);
+    // Helper de traducción
+    const T = (key) => (typeof translations !== 'undefined' && translations[currentLang] && translations[currentLang][key]) ? translations[currentLang][key] : translations['es'][key];
 
     // Construir XML del documento DOCX manualmente (sin dependencia externa)
     // Colores corporativos: azul #5E72E4
     // Preparar lista con subtotales intercalados (igual que en pantalla y PDF)
     function nombreBaseDocx(dn) {
         if (!dn || dn === 'SIN CALLE / GPS') return dn;
-        const m = dn.match(/^(.*),\s*[\d\w\s\-]+$/);
+        const m = dn.match(/^(.+?\([^)]+\))/);
         if (m) return m[1].trim();
-        return dn.replace(/[,\s\d\-\/]+$/, '').trim() || dn;
+        return dn.split(/[,\d]/)[0].trim() || dn;
     }
 
     const itemsDocx = [];
     let gBase = null, gTotal = 0, gFilas = [];
     function pushGrupoDocx() {
         if (gBase === null) return;
-        if (gFilas.length > 1) itemsDocx.push({ tipo: 'subtotal', label: gBase, count: gTotal });
+        itemsDocx.push({ tipo: 'subtotal', label: gBase, count: gTotal });
         gFilas.forEach(r => itemsDocx.push({ tipo: 'fila', row: r }));
         gBase = null; gTotal = 0; gFilas = [];
     }
@@ -548,7 +553,7 @@ function exportStreetsToDocx() {
             </w:tcPr>
             <w:p><w:pPr><w:spacing w:before="80" w:after="80"/></w:pPr>
               <w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="17"/><w:b/><w:color w:val="3D4DB7"/></w:rPr>
-                <w:t xml:space="preserve">▪ SUBTOTAL  ${_escapeXml(item.label)}</w:t>
+                <w:t xml:space="preserve">${T('streets_report_subtotal')}  ${_escapeXml(item.label)}</w:t>
               </w:r>
             </w:p>
           </w:tc>
@@ -637,7 +642,7 @@ function exportStreetsToDocx() {
     <w:pPr><w:spacing w:before="0" w:after="80"/></w:pPr>
     <w:r>
       <w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="22"/><w:color w:val="525F7F"/></w:rPr>
-      <w:t>Listado de Calles / Ubicaciones</w:t>
+      <w:t>${T('streets_report_title')}</w:t>
     </w:r>
   </w:p>
 
@@ -646,7 +651,7 @@ function exportStreetsToDocx() {
     <w:pPr><w:spacing w:before="0" w:after="240"/></w:pPr>
     <w:r>
       <w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="18"/><w:color w:val="8898AA"/></w:rPr>
-      <w:t xml:space="preserve">Archivo: ${_escapeXml(titulo)}   ·   Fecha: ${fecha}   ·   Total registros: ${total.toLocaleString('es-ES')}   ·   Ubicaciones únicas: ${tableStreetsDataCache.length.toLocaleString('es-ES')}</w:t>
+      <w:t xml:space="preserve">Archivo: ${_escapeXml(titulo)}   ·   Fecha: ${fecha}   ·   ${T('streets_report_total')}: ${total.toLocaleString('es-ES')}   ·   ${T('streets_report_unique')}: ${tableStreetsDataCache.length.toLocaleString('es-ES')}</w:t>
     </w:r>
   </w:p>
 
@@ -684,7 +689,7 @@ function exportStreetsToDocx() {
         </w:tcPr>
         <w:p><w:pPr><w:spacing w:before="80" w:after="80"/></w:pPr>
           <w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="18"/><w:b/><w:color w:val="FFFFFF"/></w:rPr>
-            <w:t>CALLE / UBICACIÓN</w:t>
+            <w:t>${T('streets_report_col_street')}</w:t>
           </w:r>
         </w:p>
       </w:tc>
@@ -696,7 +701,7 @@ function exportStreetsToDocx() {
         </w:tcPr>
         <w:p><w:pPr><w:jc w:val="right"/><w:spacing w:before="80" w:after="80"/></w:pPr>
           <w:r><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="18"/><w:b/><w:color w:val="FFFFFF"/></w:rPr>
-            <w:t>REG.</w:t>
+            <w:t>${T('streets_report_col_reg')}</w:t>
           </w:r>
         </w:p>
       </w:tc>
@@ -710,7 +715,7 @@ function exportStreetsToDocx() {
     <w:pPr><w:spacing w:before="320" w:after="0"/></w:pPr>
     <w:r>
       <w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="16"/><w:color w:val="AAAACC"/></w:rPr>
-      <w:t>Generado por Eurocop Analytics · zzenkiu.com</w:t>
+      <w:t>${T('streets_report_footer')}</w:t>
     </w:r>
   </w:p>
 
