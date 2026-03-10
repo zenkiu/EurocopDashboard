@@ -259,7 +259,15 @@ const translations = {
         narrative_records: "registros",
         extra_filters_title: "FILTROS EXTRA",
         extra_filter_1: "FILTRO EXTRA 1",
-        extra_filter_2: "FILTRO EXTRA 2"
+        extra_filter_2: "FILTRO EXTRA 2",
+        streets_report_title: "Listado de Calles / Ubicaciones",
+        streets_report_total: "Total registros",
+        streets_report_unique: "Ubicaciones únicas",
+        streets_report_col_street: "CALLE / UBICACIÓN",
+        streets_report_col_reg: "REG.",
+        streets_report_subtotal: "SUBTOTAL",
+        streets_report_footer: "Generado por Eurocop Analytics · zzenkiu.com",
+        streets_report_page: "Pág."
     },
     eu: {
         nav_title: "EUROCOP",
@@ -452,7 +460,15 @@ const translations = {
         narrative_records: "erregistro",
         extra_filters_title: "IRAGAZKI EXTRAK",
         extra_filter_1: "1. IRAGAZKI EXTRA",
-        extra_filter_2: "2. IRAGAZKI EXTRA"
+        extra_filter_2: "2. IRAGAZKI EXTRA",
+        streets_report_title: "Kaleen / Kokapenen Zerrenda",
+        streets_report_total: "Erregistro guztira",
+        streets_report_unique: "Kokapen bakarrak",
+        streets_report_col_street: "KALEA / KOKAPENA",
+        streets_report_col_reg: "ERREG.",
+        streets_report_subtotal: "AZPITOTALA",
+        streets_report_footer: "Eurocop Analytics · zzenkiu.com sortua",
+        streets_report_page: "Or."
     },
     ca: {
         nav_title: "EUROCOP",
@@ -644,7 +660,15 @@ const translations = {
         narrative_records: "registres",
         extra_filters_title: "FILTRES EXTRA",
         extra_filter_1: "FILTRE EXTRA 1",
-        extra_filter_2: "FILTRE EXTRA 2"
+        extra_filter_2: "FILTRE EXTRA 2",
+        streets_report_title: "Llistat de Carrers / Ubicacions",
+        streets_report_total: "Total registres",
+        streets_report_unique: "Ubicacions úniques",
+        streets_report_col_street: "CARRER / UBICACIÓ",
+        streets_report_col_reg: "REG.",
+        streets_report_subtotal: "SUBTOTAL",
+        streets_report_footer: "Generat per Eurocop Analytics · zzenkiu.com",
+        streets_report_page: "Pàg."
     },
     gl: {
         nav_title: "EUROCOP",
@@ -764,6 +788,14 @@ const translations = {
         narrative_records: "rexistros",
         extra_filters_title: "FILTROS EXTRA",
         extra_filter_1: "FILTRO EXTRA 1",
-        extra_filter_2: "FILTRO EXTRA 2"
+        extra_filter_2: "FILTRO EXTRA 2",
+        streets_report_title: "Listaxe de Rúas / Localizacións",
+        streets_report_total: "Total rexistros",
+        streets_report_unique: "Localizacións únicas",
+        streets_report_col_street: "RÚA / LOCALIZACIÓN",
+        streets_report_col_reg: "REX.",
+        streets_report_subtotal: "SUBTOTAL",
+        streets_report_footer: "Xerado por Eurocop Analytics · zzenkiu.com",
+        streets_report_page: "Páx."
     }
 };
