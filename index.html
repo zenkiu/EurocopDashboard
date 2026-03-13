@@ -380,7 +380,9 @@
                             </select>
                             <button class="btn-mini" onclick="generateTimelineNarrative()"><i class="fa-solid fa-list-ul"></i></button>
                             <button class="btn-mini" id="btn-toggle-chart-type" onclick="toggleTimelineType()"><i class="fa-solid fa-chart-line"></i></button>
-                            <button class="btn-mini" onclick="toggleTimelineView()"><i class="fa-solid fa-table"></i></button>
+                            <button class="btn-mini" id="btn-toggle-view" onclick="toggleTimelineView()"><i class="fa-solid fa-table"></i></button>
+                            <button class="btn-mini" id="btn-export-timeline-pdf" onclick="exportChartToPdf('timeline')" title="Exportar a PDF"><i class="fa-solid fa-file-pdf"></i></button>
+                            <button class="btn-mini" id="btn-export-timeline-docx" onclick="exportChartToDocx('timeline')" title="Exportar a Word"><i class="fa-solid fa-file-word"></i></button>
                             <button class="btn-maximize" onclick="toggleFullscreen('container-timeline')"><i class="fa-solid fa-maximize"></i></button>
                         </div>
                     </div>
@@ -448,7 +450,9 @@
                             <h4 data-i18n="chart_top">Top Tipos</h4>
                         </div>
                         <div class="header-actions">
-                            <button class="btn-mini" onclick="toggleCategoryView()"><i class="fa-solid fa-table"></i></button>
+                            <button class="btn-mini" id="btn-toggle-view-cat" onclick="toggleCategoryView()"><i class="fa-solid fa-table"></i></button>
+                            <button class="btn-mini" id="btn-export-category-pdf" onclick="exportChartToPdf('category')" title="Exportar a PDF"><i class="fa-solid fa-file-pdf"></i></button>
+                            <button class="btn-mini" id="btn-export-category-docx" onclick="exportChartToDocx('category')" title="Exportar a Word"><i class="fa-solid fa-file-word"></i></button>
                             <button class="btn-maximize" onclick="toggleFullscreen('container-category')"><i class="fa-solid fa-maximize"></i></button>
                         </div>
                     </div>
@@ -484,7 +488,9 @@
                             <h4 data-i18n="chart_hours">Horas</h4>
                         </div>
                         <div class="header-actions">
-                            <button class="btn-mini" onclick="toggleHoursView()"><i class="fa-solid fa-table"></i></button>
+                            <button class="btn-mini" id="btn-toggle-view-hours" onclick="toggleHoursView()"><i class="fa-solid fa-table"></i></button>
+                            <button class="btn-mini" id="btn-export-hours-pdf" onclick="exportChartToPdf('hours')" title="Exportar a PDF"><i class="fa-solid fa-file-pdf"></i></button>
+                            <button class="btn-mini" id="btn-export-hours-docx" onclick="exportChartToDocx('hours')" title="Exportar a Word"><i class="fa-solid fa-file-word"></i></button>
                             <button class="btn-maximize" onclick="toggleFullscreen('container-hours')"><i class="fa-solid fa-maximize"></i></button>
                         </div>
                     </div>
@@ -825,6 +831,7 @@
             'FncFunciones/FncIdioma.js',
             'FncFunciones/FncInfografia.js',
             'FncFunciones/FncConvertirPdf.js',
+            'FncFunciones/FncExportGraficos.js',
             'script.js'
         ];
         modules.forEach(function(m) { document.write('<script src="' + m + '?v=' + v + '"><\/script>'); });
