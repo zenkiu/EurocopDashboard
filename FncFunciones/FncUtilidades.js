@@ -199,20 +199,28 @@ function toggleFullscreen(containerId) {
         document.body.style.overflow = '';
     }
 
-    // El tiempo debe ser suficiente para que la animación CSS termine
+    // Esperar a que la animación CSS de fullscreen termine
     setTimeout(() => {
         if (map) map.resize();
-        
-        // FORZAR REDIBUJADO DE GRÁFICOS AL NUEVO TAMAÑO
-        if (chartHours) chartHours.resize();
+
+        // Para el gráfico de categorías: actualizar flag y redibujar completo
+        if (containerId === 'container-category') {
+            window._categoryFullscreen = isFullscreen;
+            if (typeof updateUI === 'function') updateUI();
+            // Restaurar visibilidad de tabla si estaba activa
+            if (isTableCatView) {
+                document.getElementById('chart-category').style.display = 'none';
+                document.getElementById('table-category-view').style.display = 'block';
+            }
+            return; // updateUI ya redibuja todo, no hacer resize manual
+        }
+
+        // Resto de gráficos: solo resize
+        if (chartHours)    chartHours.resize();
         if (chartTimeline) chartTimeline.resize();
         if (chartCategory) chartCategory.resize();
 
-        // Si hay tablas, se mantienen las lógicas de visibilidad que ya tenías
-        if (containerId === 'container-category' && isTableCatView) {
-            document.getElementById('chart-category').style.display = 'none';
-            document.getElementById('table-category-view').style.display = 'block';
-        }
+        // Restaurar tablas si estaban visibles
         if (containerId === 'container-hours' && isTableHoursView) {
             document.getElementById('chart-hours').style.display = 'none';
             document.getElementById('table-hours-view').style.display = 'block';
@@ -221,7 +229,7 @@ function toggleFullscreen(containerId) {
             document.getElementById('chart-timeline').style.display = 'none';
             document.getElementById('table-timeline-view').style.display = 'block';
         }
-    }, 350); // 350ms es el tiempo ideal para transiciones CSS
+    }, 350);
 }
 
 // ============================================================

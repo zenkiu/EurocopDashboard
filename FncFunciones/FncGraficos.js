@@ -279,7 +279,7 @@ function updateCharts(data, selYears) {
     const ctxCat = document.getElementById('chart-category');
     if (ctxCat) {
         const container    = document.getElementById('container-category');
-        const isFullscreen = container.classList.contains('fullscreen');
+        const isFullscreen = container.classList.contains('fullscreen') || window._categoryFullscreen === true;
 
         const catData = {};
         data.forEach(d => { catData[d.cat] = (catData[d.cat] || 0) + 1; });
@@ -318,7 +318,21 @@ function updateCharts(data, selYears) {
                 scales: { x: { display: false }, y: { display: false } },
                 layout: { padding: { top: 10, bottom: 20, left: 10, right: 10 } },
                 plugins: {
-                    legend: { display: false },
+                    legend: {
+                        display: isFullscreen,
+                        position: 'right',
+                        labels: { font: { size: 13 }, padding: 16, boxWidth: 14, color: '#32325d',
+                            generateLabels: function(chart) {
+                                return fullLabels.map((lbl, i) => ({
+                                    text: lbl,
+                                    fillStyle: yearColors[i % yearColors.length].bg,
+                                    strokeStyle: '#fff',
+                                    lineWidth: 1,
+                                    index: i
+                                }));
+                            }
+                        }
+                    },
                     tooltip: {
                         callbacks: {
                             label: function (context) {
