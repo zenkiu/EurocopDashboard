@@ -11,6 +11,15 @@ function changeLanguage(lang) {
     currentLang = lang;
     localStorage.setItem('eurocop_lang', lang);
     applyLanguage(lang);
+    // Si la vista de atestados está activa, redibujarla con el nuevo idioma
+    const atView = document.getElementById('atestados-view');
+    if (atView && atView.classList.contains('active')) {
+        if (typeof FncAtestadosPJ !== 'undefined' && atView.querySelector('.pj-wrapper')) {
+            FncAtestadosPJ._onMostrar();
+        } else if (typeof FncAtestados !== 'undefined') {
+            FncAtestados._onMostrar();
+        }
+    }
 }
 
 // ============================================================

@@ -115,6 +115,18 @@ function filterFutureYearsOnly(data, colName) {
  * Finaliza la carga y pasa a la vista de Mapeo
  */
 function completeLoadingProcess(data) {
+    // Detección de archivos especiales (Atestados PJ)
+    if (typeof FncAtestadosPJ !== 'undefined' &&
+        FncAtestadosPJ.esArchivoPJ(typeof nombreArchivoSubido !== 'undefined' ? nombreArchivoSubido : '')) {
+        FncAtestadosPJ.init(data, nombreArchivoSubido);
+        return;
+    }
+    // Detección de archivos especiales (Atestados DSV-GV)
+    if (typeof FncAtestados !== 'undefined' &&
+        FncAtestados.esArchivoAtestados(typeof nombreArchivoSubido !== 'undefined' ? nombreArchivoSubido : '')) {
+        FncAtestados.init(data, nombreArchivoSubido);
+        return; // FncAtestados toma el control completo
+    }
     if (typeof showMapping === 'function') showMapping(data);
     const loader = document.getElementById('loading-overlay');
     if (loader) loader.classList.remove('active');

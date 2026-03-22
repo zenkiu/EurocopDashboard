@@ -212,6 +212,18 @@ function toggleConfiguredFields() {
 // VOLVER AL MAPEO (desde el dashboard)
 // ============================================================
 function goToMapping() {
+    const atView = document.getElementById('atestados-view');
+
+    // Si estamos en un módulo especial (Accidentalidad o PJ), salir de él
+    if (atView && atView.classList.contains('active')) {
+        if (typeof FncAtestadosPJ !== 'undefined' && document.body.classList.contains('pj-active')) {
+            FncAtestadosPJ.salir();
+        } else if (typeof FncAtestados !== 'undefined') {
+            FncAtestados.salir();
+        }
+        return;
+    }
+
     const dashboard = document.getElementById('dashboard-view');
     const mapping   = document.getElementById('mapping-view');
 
