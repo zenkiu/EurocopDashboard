@@ -807,6 +807,9 @@
         <span id="info-date">--/--/----</span>
     </div>
 </div>
+    <!-- VISTA ESPECIAL: ATESTADOS DSV-GV -->
+    <section id="atestados-view" class="view-container"></section>
+
     <!-- CARGA DE SCRIPTS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script> 
@@ -832,6 +835,10 @@
             'FncFunciones/FncInfografia.js',
             'FncFunciones/FncConvertirPdf.js',
             'FncFunciones/FncExportGraficos.js',
+            'FncFunciones/FncEstadisticaGVdsv.js',
+            'FncFunciones/FncAtestados.js',
+            'FncFunciones/FncEstadisticaGVpj.js',
+            'FncFunciones/FncAtestadosPJ.js',
             'script.js'
         ];
         modules.forEach(function(m) { document.write('<script src="' + m + '?v=' + v + '"><\/script>'); });
