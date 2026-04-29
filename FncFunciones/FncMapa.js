@@ -9,6 +9,14 @@
 // INICIALIZAR MAPA
 // ============================================================
 let currentSearchPopup = null; // Para controlar que solo haya un popup de búsqueda a la vez
+
+// Cerrar panel de resultados de búsqueda
+window._closeSearchPanel = function() {
+    const panel = document.getElementById('search-results-panel');
+    if (panel) { panel.style.display = 'none'; panel.innerHTML = ''; }
+    if (currentSearchPopup) { currentSearchPopup = null; }
+    clearAllHighlights();
+};
 let layerSearchTimeout = null;
 let lastSearchQuery = '';
 let isSearchInputFocused = false;
@@ -38,6 +46,8 @@ function initMap() {
 
         // Fuente de datos (puntos del dashboard)
         map.addSource('puntos', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+        // Inicializar capas del editor de geometrías
+        initDrawLayer();
 
         // Capa heatmap (oculta por defecto)
         map.addLayer({
@@ -254,19 +264,52 @@ function toggle3D() {
 // ============================================================
 
 // Abrir/cerrar menú de capas
+function _closeAllDropdowns() {
+    const ld = document.getElementById('layers-dropdown');
+    if (ld) ld.classList.remove('active');
+    const lBtn = document.getElementById('btn-layers-menu');
+    if (lBtn) lBtn.style.background = '';
+    const dd = document.getElementById('draw-dropdown');
+    if (dd) dd.style.display = 'none';
+    const dBtn = document.getElementById('btn-draw-menu');
+    if (dBtn) dBtn.classList.remove('active');
+}
+
+// Cerrar dropdowns al hacer clic fuera (una sola vez)
+if (!window._dropdownOutsideListenerAdded) {
+    window._dropdownOutsideListenerAdded = true;
+    document.addEventListener('click', (e) => {
+        const insideLayers = e.target.closest('.layer-manager-container');
+        const insideDraw   = e.target.closest('#draw-dropdown') ||
+                             e.target.closest('#btn-draw-menu');
+        if (!insideLayers && !insideDraw) {
+            const dd = document.getElementById('draw-dropdown');
+            const ld = document.getElementById('layers-dropdown');
+            if (dd && dd.style.display === 'block') _closeAllDropdowns();
+            if (ld && ld.classList.contains('active')) {
+                // solo cerrar layers si el clic fue fuera del layer container
+                if (!e.target.closest('.layer-manager-container')) {
+                    ld.classList.remove('active');
+                    const lBtn = document.getElementById('btn-layers-menu');
+                    if (lBtn) lBtn.style.background = '';
+                }
+            }
+        }
+    });
+}
+
 function toggleLayerMenu() {
     const menu = document.getElementById('layers-dropdown');
-    menu.classList.toggle('active');
-    const btn = document.getElementById('btn-layers-menu');
-    btn.style.background = menu.classList.contains('active') ? '#e9ecef' : '';
-    
-    // Si se abre el menú, enfocar el campo de búsqueda
-    if (menu.classList.contains('active')) {
+    const isOpen = menu.classList.contains('active');
+    _closeAllDropdowns();
+    if (!isOpen) {
+        menu.classList.add('active');
+        const btn = document.getElementById('btn-layers-menu');
+        if (btn) btn.style.background = '#e9ecef';
         setTimeout(() => {
             const searchInput = document.getElementById('layer-search');
             if (searchInput && searchInput.style.display !== 'none') {
                 searchInput.focus();
-                // Marcar que estamos en modo de búsqueda
                 isSearchInputFocused = true;
             }
         }, 50);
@@ -287,9 +330,10 @@ function handleGeojsonUpload(input) {
         try {
             const geojson  = JSON.parse(e.target.result);
             const layerId  = 'layer-' + Date.now();
-            const color    = getRandomColor();
+            const color    = getRandomColor(); // Color base por si el feature no tiene uno
             const fileNameClean = file.name.replace(/\.[^/.]+$/, "");
 
+            // Llamamos a la función mejorada que respeta propiedades individuales
             addLayerToMap(layerId, geojson, color, fileNameClean);
 
             mapLayers.push({
@@ -297,12 +341,11 @@ function handleGeojsonUpload(input) {
                 name:    fileNameClean,
                 visible: true,
                 color:   color,
-                geojson: geojson   // CRÍTICO: guardamos la geometría para filtro espacial
+                geojson: geojson 
             });
 
             renderLayerList();
 
-            // Si el filtro espacial está activo, refrescar
             if (document.getElementById('chk-spatial-filter')?.checked) {
                 triggerUpdateWithLoader();
             }
@@ -319,66 +362,89 @@ function handleGeojsonUpload(input) {
 }
 
 // Pintar capa en MapLibre (Relleno + Línea + Click popup)
+// Pintar capa en MapLibre (Relleno + Línea + Puntos + Popups con Foto)
+// Variable global para controlar el popup de hover y evitar duplicados
+let hoverPopup = new maplibregl.Popup({
+    closeButton: false,
+    closeOnClick: false,
+    offset: 15
+});
+
 function addLayerToMap(id, geojson, color, layerName) {
     if (!map) return;
 
     map.addSource(id, { type: 'geojson', data: geojson });
     const beforeLayer = map.getLayer('point-layer') ? 'point-layer' : null;
 
-    // Capa de relleno (solo Polygons)
+    // Capa de relleno (Polígonos)
     map.addLayer({
         id: id + '-fill', type: 'fill', source: id,
         layout: { visibility: 'visible' },
-        paint: { 'fill-color': color, 'fill-opacity': 0.3 },
+        paint: { 
+            'fill-color': ['coalesce', ['get', '_color'], color], 
+            'fill-opacity': 0.3 
+        },
         filter: ['==', '$type', 'Polygon']
     }, beforeLayer);
 
-    // Capa de línea (Polygons + LineStrings)
+    // Capa de línea (Bordes)
     map.addLayer({
         id: id + '-line', type: 'line', source: id,
         layout: { visibility: 'visible', 'line-join': 'round', 'line-cap': 'round' },
-        paint: { 'line-color': color, 'line-width': 3 },
+        paint: { 
+            'line-color': ['coalesce', ['get', '_color'], color], 
+            'line-width': 2 
+        },
         filter: ['in', '$type', 'Polygon', 'LineString']
     }, beforeLayer);
 
-    const layerIds = [id + '-fill', id + '-line'];
+    // Capa de círculos (Puntos)
+    map.addLayer({
+        id: id + '-circle', type: 'circle', source: id,
+        layout: { visibility: 'visible' },
+        paint: {
+            'circle-color': ['coalesce', ['get', '_color'], color],
+            'circle-radius': 6,
+            'circle-stroke-width': 2,
+            'circle-stroke-color': '#fff'
+        },
+        filter: ['==', '$type', 'Point']
+    }, beforeLayer);
 
-    // Click unificado para zonas (prioriza puntos de datos)
-    map.on('click', (e) => {
-        const points = map.queryRenderedFeatures(e.point, { layers: ['point-layer'] });
-        if (points.length > 0) return; // Prioridad: puntos de datos
+    // Definimos qué capas activan el hover
+    const interactiveLayers = [id + '-fill', id + '-circle'];
 
-        const features = map.queryRenderedFeatures(e.point, { layers: layerIds });
-        if (!features.length) return;
+    interactiveLayers.forEach(layerId => {
+        // Cuando el mouse entra en el área
+        map.on('mouseenter', layerId, (e) => {
+            map.getCanvas().style.cursor = 'pointer';
+            
+            const props = e.features[0].properties;
+            // Si el objeto no tiene nombre ni descripción, no mostramos nada
+            if (!props.nombre && !props.Nombre && !props.descripcion) return;
 
-        const p = features[0].properties;
-        const nombre      = p.nombre || p.Nombre || "Sin nombre";
-        const descripcion = p.descripcion || p.Descripcion || "";
+            const html = _buildLayerPopupHTML(props);
+            
+            hoverPopup.setLngLat(e.lngLat)
+                      .setHTML(html)
+                      .addTo(map);
+        });
 
-        let htmlContent = `
-            <div style="padding:8px; font-family:'Inter', sans-serif; color:#32325d; min-width:120px;">
-                <b style="text-transform:uppercase; font-size:13px; display:block; margin-bottom:4px; border-bottom:1px solid #eee; padding-bottom:4px;">
-                    ${nombre}
-                </b>`;
-        if (descripcion) {
-            htmlContent += `<span style="font-size:11px; color:#525f7f; display:block; line-height:1.4;">${descripcion}</span>`;
-        }
-        htmlContent += `</div>`;
+        // Mientras el mouse se mueve dentro del área (el popup sigue al cursor)
+        map.on('mousemove', layerId, (e) => {
+            if (hoverPopup.isOpen()) {
+                hoverPopup.setLngLat(e.lngLat);
+            }
+        });
 
-        new maplibregl.Popup({ offset: 10 })
-            .setLngLat(e.lngLat)
-            .setHTML(htmlContent)
-            .addTo(map);
+        // Cuando el mouse sale del área
+        map.on('mouseleave', layerId, () => {
+            map.getCanvas().style.cursor = '';
+            hoverPopup.remove();
+        });
     });
 
-    // Cursores
-    map.on('mouseenter', id + '-fill', () => {
-        const points = map.queryRenderedFeatures(map.project(map.getCenter()), { layers: ['point-layer'] });
-        if (points.length === 0) map.getCanvas().style.cursor = 'pointer';
-    });
-    map.on('mouseleave', id + '-fill', () => { map.getCanvas().style.cursor = ''; });
-
-    // Zoom automático a los datos de la capa
+    // Ajustar vista a los datos cargados
     try {
         const bounds = new maplibregl.LngLatBounds();
         const extractCoords = (coords) => {
@@ -386,8 +452,8 @@ function addLayerToMap(id, geojson, color, layerName) {
             else coords.forEach(extractCoords);
         };
         geojson.features.forEach(f => { if (f.geometry) extractCoords(f.geometry.coordinates); });
-        if (!bounds.isEmpty()) map.fitBounds(bounds, { padding: 50, maxZoom: 14 });
-    } catch (e) { /* silencioso */ }
+        if (!bounds.isEmpty()) map.fitBounds(bounds, { padding: 50, maxZoom: 15 });
+    } catch (e) {}
 }
 
 // Renderizar lista de capas en el panel
@@ -471,110 +537,185 @@ function searchAndFlyToLayer(query) {
 function performLayerSearch(query) {
     if (!map) return;
     
-    let foundFeatures = []; // Ahora almacenamos todas las features encontradas
-    let foundLayer = null;
+    let foundFeatures = []; 
+    const q = query.toLowerCase().trim();
+    const searchTerms = q.split(' ').filter(term => term.length > 0);
     
+    // --- 1. Buscar en Capas Cargadas (Archivos GeoJSON subidos) ---
     for (const layer of mapLayers) {
         if (!layer.geojson || !layer.geojson.features) continue;
         
         for (const feature of layer.geojson.features) {
             const props = feature.properties || {};
-            const nombre = (props.nombre || props.Nombre || '').toLowerCase();
+            if (Object.keys(props).length === 0) continue; // Saltar si no tiene propiedades
+
+            // Unimos nombre y descripción para la búsqueda
+            const nombre = (props.nombre || props.Nombre || props.name || '').toLowerCase();
             const descripcion = (props.descripcion || props.Descripcion || '').toLowerCase();
-            
-            // BÚSQUEDA EXACTA O PARCIAL PERO MÁS PRECISA
-            // Buscar coincidencias exactas o que comiencen con la búsqueda
-            const searchTerms = query.split(' ').filter(term => term.length > 0);
-            let matches = false;
-            
-            if (searchTerms.length === 1) {
-                // Para una sola palabra: buscar coincidencia exacta o que comience con
-                matches = nombre === query || 
-                         nombre.startsWith(query) || 
-                         descripcion === query ||
-                         descripcion.startsWith(query);
-            } else {
-                // Para múltiples palabras: buscar todas las palabras en el nombre o descripción
-                matches = searchTerms.every(term => 
-                    nombre.includes(term) || descripcion.includes(term)
-                );
-            }
+            const contenidoBusqueda = nombre + " " + descripcion;
+
+            const matches = searchTerms.every(term => contenidoBusqueda.includes(term));
             
             if (matches) {
                 foundFeatures.push({
                     feature: feature,
                     layer: layer,
-                    nombre: nombre,
-                    descripcion: descripcion
+                    sourceType: 'uploaded'
                 });
             }
         }
-        if (foundFeatures.length > 0 && !foundLayer) {
-            foundLayer = layer; // Guardar la primera capa con resultados
+    }
+
+    // --- 2. Buscar en el Editor de Geometrías (Dibujos hechos a mano o cargados ahí) ---
+    if (typeof drawFeatures !== 'undefined') {
+        for (const feature of drawFeatures) {
+            const props = feature.properties || {};
+            const nombre = (props.nombre || '').toLowerCase();
+            const descripcion = (props.descripcion || '').toLowerCase();
+            const contenidoBusqueda = nombre + " " + descripcion;
+
+            const matches = searchTerms.every(term => contenidoBusqueda.includes(term));
+            
+            if (matches) {
+                foundFeatures.push({
+                    feature: feature,
+                    sourceType: 'editor'
+                });
+            }
         }
     }
     
-    if (foundFeatures.length === 0) return;
+    if (foundFeatures.length === 0) {
+        // Opcional: mostrar un aviso de "No encontrado"
+        if (currentSearchPopup) currentSearchPopup.remove();
+        return;
+    }
     
-    // Cerrar popup anterior antes de abrir los nuevos
+    renderSearchResults(foundFeatures);
+}
+// ... funciones anteriores de búsqueda ...
+
+// Pégalo aquí, después de performLayerSearch
+window._flyToSearchResult = (idx) => {
+    const foundFeatures = window._currentFoundFeatures;
+    if (!foundFeatures || !foundFeatures[idx]) return;
+    
+    const item = foundFeatures[idx];
+    const fb = new maplibregl.LngLatBounds();
+    const extract = (c) => {
+        if (typeof c[0] === 'number') fb.extend(c);
+        else c.forEach(extract);
+    };
+    if (item.feature.geometry) extract(item.feature.geometry.coordinates);
+
+    // Efecto visual de pulso
+    _pulseFeature(item);
+
+    // Mostrar popup automáticamente al encontrarlo
+    const html = _buildLayerPopupHTML(item.feature.properties);
+    new maplibregl.Popup({ offset: 10 })
+        .setLngLat(fb.getCenter())
+        .setHTML(html)
+        .addTo(map);
+
+    if (!fb.isEmpty()) {
+        map.fitBounds(fb, { padding: 100, maxZoom: 18, duration: 900, essential: true });
+    }
+};
+
+// ... resto de funciones ...
+// Función auxiliar para mostrar los resultados en el panel
+function renderSearchResults(foundFeatures) {
     if (currentSearchPopup) currentSearchPopup.remove();
-    
-    // Limpiar resaltados anteriores
     clearAllHighlights();
+
+    const bounds = new maplibregl.LngLatBounds();
     
-    try {
-        const bounds = new maplibregl.LngLatBounds();
-        
-        // Calcular bounds para TODAS las features encontradas
-        foundFeatures.forEach(item => {
-            const extractCoords = (coords) => {
-                if (typeof coords[0] === 'number') bounds.extend(coords);
-                else coords.forEach(extractCoords);
-            };
-            if (item.feature.geometry) extractCoords(item.feature.geometry.coordinates);
-        });
-        
-        if (!bounds.isEmpty()) {
-            const center = bounds.getCenter();
-            
-            map.flyTo({
-                center: center,
-                zoom: 17.5,
-                duration: 1200,
-                essential: true
-            });
-            
-            // Resaltar TODAS las features encontradas
-            flashAllFoundFeatures(foundFeatures);
-            
-            // Crear popup con todas las coincidencias
-            let htmlContent = `
-                <div style="padding:8px; font-family:'Inter', sans-serif; color:#32325d; min-width:180px; max-height:300px; overflow-y:auto;">
-                    <b style="text-transform:uppercase; font-size:13px; display:block; margin-bottom:8px; border-bottom:1px solid #eee; padding-bottom:4px;">
-                        Coincidencias encontradas: ${foundFeatures.length}
-                    </b>`;
-            
-            foundFeatures.forEach((item, index) => {
-                const nombre = item.nombre || "Sin nombre";
-                const descripcion = item.descripcion || "";
-                
-                htmlContent += `
-                    <div style="margin-bottom:8px; padding-bottom:8px; border-bottom: ${index < foundFeatures.length - 1 ? '1px solid #f0f0f0' : 'none'}">
-                        <div style="font-weight:600; font-size:12px; color:#5e72e4;">${nombre}</div>
-                        ${descripcion ? `<div style="font-size:11px; color:#525f7f; margin-top:2px;">${descripcion}</div>` : ''}
-                    </div>`;
-            });
-            
-            htmlContent += `</div>`;
-            
-            currentSearchPopup = new maplibregl.Popup({ offset: 10, maxWidth: '250px' })
-                .setLngLat(center)
-                .setHTML(htmlContent)
-                .addTo(map);
-        }
-    } catch (e) {
-        console.warn('Error al navegar a la zona:', e);
+    // Función para obtener el centro de una geometría
+    const getCentroid = (geometry) => {
+        const coords = [];
+        const extract = (c) => {
+            if (typeof c[0] === 'number') { coords.push(c); bounds.extend(c); }
+            else c.forEach(extract);
+        };
+        if (geometry) extract(geometry.coordinates);
+        if (!coords.length) return null;
+        return [
+            coords.reduce((s, c) => s + c[0], 0) / coords.length,
+            coords.reduce((s, c) => s + c[1], 0) / coords.length
+        ];
+    };
+
+    foundFeatures.forEach(item => { item.centroid = getCentroid(item.feature.geometry); });
+
+    // Zoom para ver todos los resultados
+    if (!bounds.isEmpty()) {
+        map.fitBounds(bounds, { padding: 80, maxZoom: 17, duration: 1000 });
     }
+
+    // Resaltar en el mapa
+    flashAllFoundFeatures(foundFeatures);
+
+    // Crear el HTML del panel de resultados
+    let htmlContent = `
+        <div style="font-family:'Inter',sans-serif; color:#32325d; min-width:220px;">
+            <div style="font-weight:800; font-size:11px; text-transform:uppercase; color:#8898aa; margin-bottom:10px; border-bottom:2px solid #5e72e4; padding-bottom:5px;">
+                ✦ ${foundFeatures.length} Resultado(s)
+            </div>
+            <div style="max-height:250px; overflow-y:auto;">`;
+
+    foundFeatures.forEach((item, index) => {
+        const nombre = item.feature.properties.nombre || "Sin nombre";
+        const desc = item.feature.properties.descripcion || "";
+        const tipo = item.sourceType === 'editor' ? '✏️' : '📂';
+
+        htmlContent += `
+            <div onclick="window._flyToSearchResult(${index})" 
+                 style="margin-bottom:8px; padding:8px; border-radius:6px; cursor:pointer; background:#f8f9ff; border:1px solid #e2e8f0;">
+                <div style="font-weight:700; font-size:12px; color:#5e72e4;">${tipo} ${nombre}</div>
+                ${desc ? `<div style="font-size:10px; color:#8898aa;">${desc}</div>` : ''}
+            </div>`;
+    });
+
+    htmlContent += `</div></div>`;
+    window._currentFoundFeatures = foundFeatures;
+
+    const panel = document.getElementById('search-results-panel');
+    if (panel) {
+        panel.innerHTML = `<button onclick="window._closeSearchPanel()" style="position:absolute; top:5px; right:5px; border:none; background:none; cursor:pointer; color:#8898aa;">✕</button>${htmlContent}`;
+        panel.style.display = 'block';
+        currentSearchPopup = { remove: () => { panel.style.display = 'none'; } };
+    }
+}
+
+// Pulso visual temporal en una feature seleccionada del popup
+function _pulseFeature(item) {
+    if (!map || !item || !item.layer) return;
+    const fillLayer = item.layer.id + '-fill';
+    const lineLayer = item.layer.id + '-line';
+    if (!map.getLayer(fillLayer)) return;
+
+    // Flash rápido: blanco → naranja → color resaltado
+    map.setPaintProperty(fillLayer, 'fill-color', '#ffffff');
+    map.setPaintProperty(fillLayer, 'fill-opacity', 0.95);
+    if (map.getLayer(lineLayer)) {
+        map.setPaintProperty(lineLayer, 'line-color', '#ff6b35');
+        map.setPaintProperty(lineLayer, 'line-width', 6);
+    }
+    setTimeout(() => {
+        if (!map.getLayer(fillLayer)) return;
+        map.setPaintProperty(fillLayer, 'fill-color', '#ff6b35');
+        map.setPaintProperty(fillLayer, 'fill-opacity', 0.75);
+        setTimeout(() => {
+            if (!map.getLayer(fillLayer)) return;
+            map.setPaintProperty(fillLayer, 'fill-color', '#FFD700');
+            map.setPaintProperty(fillLayer, 'fill-opacity', 0.8);
+            if (map.getLayer(lineLayer)) {
+                map.setPaintProperty(lineLayer, 'line-color', '#FFD700');
+                map.setPaintProperty(lineLayer, 'line-width', 5);
+            }
+        }, 250);
+    }, 120);
 }
 
 // Limpiar todos los resaltados anteriores
@@ -604,65 +745,27 @@ function clearAllHighlights() {
 function flashAllFoundFeatures(foundItems) {
     if (!map || !foundItems.length) return;
     
-    // Agrupar por capa para optimizar
-    const groupedByLayer = {};
     foundItems.forEach(item => {
-        if (!groupedByLayer[item.layer.id]) {
-            groupedByLayer[item.layer.id] = [];
+        let layerId = "";
+        if (item.sourceType === 'uploaded') {
+            layerId = item.layer.id + '-fill';
+        } else {
+            layerId = 'draw-polygon-fill'; // Capa por defecto del editor
         }
-        groupedByLayer[item.layer.id].push(item);
-    });
-    
-    // Aplicar resaltado a cada grupo
-    Object.keys(groupedByLayer).forEach(layerId => {
-        const items = groupedByLayer[layerId];
-        const layerObj = mapLayers.find(l => l.id === layerId);
-        
-        if (!layerObj) return;
-        
-        const fillLayer = layerId + '-fill';
-        const lineLayer = layerId + '-line';
-        
-        if (!map.getLayer(fillLayer)) return;
-        
-        // Crear filtro para resaltar SOLO las features encontradas
-        const featureConditions = items.map(item => {
-            const featureName = item.feature.properties.nombre || item.feature.properties.Nombre;
-            return ["any", 
-                ["==", ["get", "nombre"], featureName],
-                ["==", ["get", "Nombre"], featureName]
-            ];
-        });
-        
-        // Si hay múltiples condiciones, combinarlas con "any"
-        const highlightFilter = featureConditions.length > 1 
-            ? ["all", ["any", ...featureConditions]] 
-            : ["all", featureConditions[0]];
-        
-        // Aplicar resaltado
-        map.setPaintProperty(fillLayer, 'fill-color', '#FFD700');
-        map.setPaintProperty(fillLayer, 'fill-opacity', 0.8);
-        map.setFilter(fillLayer, highlightFilter);
-        
-        // También resaltar las líneas si existen
-        if (map.getLayer(lineLayer)) {
-            map.setPaintProperty(lineLayer, 'line-color', '#FFD700');
-            map.setPaintProperty(lineLayer, 'line-width', 5);
-        }
-        
-        // Configurar para restaurar después de un tiempo
-        setTimeout(() => {
-            if (map.getLayer(fillLayer)) {
-                map.setFilter(fillLayer, ["all"]);
-                map.setPaintProperty(fillLayer, 'fill-color', layerObj.color);
-                map.setPaintProperty(fillLayer, 'fill-opacity', 0.3);
-            }
+
+        if (map.getLayer(layerId)) {
+            map.setPaintProperty(layerId, 'fill-color', '#FFD700');
+            map.setPaintProperty(layerId, 'fill-opacity', 0.8);
             
-            if (map.getLayer(lineLayer)) {
-                map.setPaintProperty(lineLayer, 'line-color', layerObj.color);
-                map.setPaintProperty(lineLayer, 'line-width', 3);
-            }
-        }, 5000); // Restaurar después de 5 segundos
+            // Restaurar después de 3 segundos
+            setTimeout(() => {
+                if (map.getLayer(layerId)) {
+                    const originalColor = item.layer ? item.layer.color : (item.feature.properties._color || '#5e72e4');
+                    map.setPaintProperty(layerId, 'fill-color', originalColor);
+                    map.setPaintProperty(layerId, 'fill-opacity', 0.3);
+                }
+            }, 3000);
+        }
     });
 }
 
@@ -1128,4 +1231,689 @@ function createRadarEffect(coords) {
         el.style.opacity = "0";
         setTimeout(() => marker.remove(), 1000);
     }, 4000);
+}
+// ═══════════════════════════════════════════════════════════════════════════
+// EDITOR DE GEOMETRÍAS — FncMapa.js
+// Puntos informativos, polígonos, líneas y círculos
+// Guardado/carga en .geojson
+// ═══════════════════════════════════════════════════════════════════════════
+
+const DRAW_SOURCE = 'draw-source';
+const DRAW_LAYERS = {
+    polygon_fill  : 'draw-polygon-fill',
+    polygon_line  : 'draw-polygon-line',
+    line          : 'draw-line',
+    point         : 'draw-point',
+    point_label   : 'draw-point-label',
+    circle_fill   : 'draw-circle-fill',
+    circle_line   : 'draw-circle-line',
+    preview       : 'draw-preview',
+    preview_point : 'draw-preview-point',
+};
+
+let drawMode        = null;   // 'point'|'polygon'|'line'|'circle'|null
+let drawFeatures    = [];     // GeoJSON features guardadas
+let drawTempCoords  = [];     // coords en construcción
+let drawCircleCenter= null;   // centro del círculo
+let _drawMapListeners = {};   // handlers del mapa registrados
+
+// ── Inicializar source y layers del editor ───────────────────────────────
+function initDrawLayer() {
+    if (!map || map.getSource(DRAW_SOURCE)) return;
+
+    map.addSource(DRAW_SOURCE, {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] }
+    });
+
+    // Polígono relleno
+    map.addLayer({ id: DRAW_LAYERS.polygon_fill, type: 'fill', source: DRAW_SOURCE,
+        filter: ['==', ['get', '_type'], 'polygon'],
+        paint: { 'fill-color': ['get', '_color'], 'fill-opacity': 0.3 }
+    });
+    // Polígono borde
+    map.addLayer({ id: DRAW_LAYERS.polygon_line, type: 'line', source: DRAW_SOURCE,
+        filter: ['==', ['get', '_type'], 'polygon'],
+        paint: { 'line-color': ['get', '_color'], 'line-width': 2.5 }
+    });
+    // Línea
+    map.addLayer({ id: DRAW_LAYERS.line, type: 'line', source: DRAW_SOURCE,
+        filter: ['==', ['get', '_type'], 'line'],
+        paint: { 'line-color': ['get', '_color'], 'line-width': 3 }
+    });
+    // Círculo relleno
+    map.addLayer({ id: DRAW_LAYERS.circle_fill, type: 'fill', source: DRAW_SOURCE,
+        filter: ['==', ['get', '_type'], 'circle'],
+        paint: { 'fill-color': ['get', '_color'], 'fill-opacity': 0.25 }
+    });
+    // Círculo borde
+    map.addLayer({ id: DRAW_LAYERS.circle_line, type: 'line', source: DRAW_SOURCE,
+        filter: ['==', ['get', '_type'], 'circle'],
+        paint: { 'line-color': ['get', '_color'], 'line-width': 2.5 }
+    });
+    // Punto
+    map.addLayer({ id: DRAW_LAYERS.point, type: 'circle', source: DRAW_SOURCE,
+        filter: ['==', ['get', '_type'], 'point'],
+        paint: {
+            'circle-color': ['get', '_color'],
+            'circle-radius': 8,
+            'circle-stroke-width': 2,
+            'circle-stroke-color': 'white'
+        }
+    });
+    // Etiqueta punto
+    map.addLayer({ id: DRAW_LAYERS.point_label, type: 'symbol', source: DRAW_SOURCE,
+        filter: ['all', ['==', ['get', '_type'], 'point'], ['!=', ['get', 'nombre'], '']],
+        layout: {
+            'text-field': ['get', 'nombre'],
+            'text-offset': [0, 1.4],
+            'text-anchor': 'top',
+            'text-size': 12,
+            'text-font': ['Open Sans Semibold', 'Arial Unicode MS Bold']
+        },
+        paint: { 'text-color': '#32325d', 'text-halo-color': 'white', 'text-halo-width': 1.5 }
+    });
+    // Capa de preview (dibujo en curso)
+    map.addLayer({ id: DRAW_LAYERS.preview, type: 'line', source: DRAW_SOURCE,
+        filter: ['==', ['get', '_type'], 'preview'],
+        paint: { 'line-color': '#5e72e4', 'line-width': 2, 'line-dasharray': [2, 2] }
+    });
+    map.addLayer({ id: DRAW_LAYERS.preview_point, type: 'circle', source: DRAW_SOURCE,
+        filter: ['==', ['get', '_type'], 'preview_pt'],
+        paint: { 'circle-color': '#5e72e4', 'circle-radius': 5, 'circle-stroke-width': 2, 'circle-stroke-color': 'white' }
+    });
+
+    // Hover popup para puntos
+    initDrawHoverPopup();
+
+    // Click en feature existente → editar
+    [DRAW_LAYERS.polygon_fill, DRAW_LAYERS.line, DRAW_LAYERS.circle_fill, DRAW_LAYERS.point].forEach(layer => {
+        map.on('click', layer, (e) => {
+            if (drawMode) return; // en modo dibujo no editar
+            const f = e.features[0];
+            if (f) showEditPanel(f.properties._id);
+            e.stopPropagation();
+        });
+        map.on('mouseenter', layer, () => { if (!drawMode) map.getCanvas().style.cursor = 'pointer'; });
+        map.on('mouseleave', layer, () => { if (!drawMode) map.getCanvas().style.cursor = ''; });
+    });
+}
+
+// ── Actualizar source con features + preview ─────────────────────────────
+function refreshDrawSource(previewCoords, circleRadius) {
+    if (!map || !map.getSource(DRAW_SOURCE)) return;
+
+    const all = [...drawFeatures];
+
+    // Preview en construcción
+    if (drawMode && drawTempCoords.length > 0) {
+        if (drawMode === 'polygon' && drawTempCoords.length >= 2) {
+            all.push({ type: 'Feature', properties: { _type: 'preview' },
+                geometry: { type: 'LineString', coordinates: [...drawTempCoords, drawTempCoords[0]] }
+            });
+        } else if (drawMode === 'line' && drawTempCoords.length >= 2) {
+            all.push({ type: 'Feature', properties: { _type: 'preview' },
+                geometry: { type: 'LineString', coordinates: drawTempCoords }
+            });
+        } else if (drawMode === 'circle' && drawCircleCenter && circleRadius > 0) {
+            all.push({ type: 'Feature', properties: { _type: 'preview' },
+                geometry: _circleGeometry(drawCircleCenter, circleRadius)
+            });
+        }
+        // Puntos intermedios
+        drawTempCoords.forEach(c => {
+            all.push({ type: 'Feature', properties: { _type: 'preview_pt' },
+                geometry: { type: 'Point', coordinates: c }
+            });
+        });
+    }
+
+    map.getSource(DRAW_SOURCE).setData({ type: 'FeatureCollection', features: all });
+}
+
+// ── Generar polígono círculo aproximado ──────────────────────────────────
+function _circleGeometry(center, radiusKm, steps = 64) {
+    const coords = [];
+    for (let i = 0; i <= steps; i++) {
+        const angle = (i / steps) * 2 * Math.PI;
+        const dx = radiusKm / (111.32 * Math.cos(center[1] * Math.PI / 180));
+        const dy = radiusKm / 110.574;
+        coords.push([center[0] + dx * Math.cos(angle), center[1] + dy * Math.sin(angle)]);
+    }
+    return { type: 'Polygon', coordinates: [coords] };
+}
+
+// ── Modo de dibujo ───────────────────────────────────────────────────────
+function setDrawMode(mode) {
+    if (!map) return;
+    initDrawLayer();
+    stopDrawMode(false); // limpiar anterior sin resetear UI
+    drawMode = mode;
+    drawTempCoords = [];
+    drawCircleCenter = null;
+
+    map.getCanvas().style.cursor = 'crosshair';
+    document.getElementById('draw-btn-stop').style.display = 'block';
+
+    const msgs = {
+        point:   '📍 Clic en el mapa para colocar un punto',
+        polygon: '🔷 Clic para añadir vértices · Doble clic para cerrar',
+        line:    '📏 Clic para añadir puntos · Doble clic para terminar',
+        circle:  '⭕ Clic para el centro · Segundo clic para el radio'
+    };
+    setDrawStatus(msgs[mode] || '');
+
+    // Destacar botón activo
+    ['point','polygon','line','circle'].forEach(m => {
+        const btn = document.getElementById('draw-btn-' + m);
+        if (btn) btn.classList.toggle('draw-tool-active', m === mode);
+    });
+
+    // Registrar handlers
+    _drawMapListeners.click = (e) => onDrawClick(e);
+    _drawMapListeners.dblclick = (e) => onDrawDblClick(e);
+    _drawMapListeners.mousemove = (e) => onDrawMouseMove(e);
+    map.on('click', _drawMapListeners.click);
+    map.on('dblclick', _drawMapListeners.dblclick);
+    map.on('mousemove', _drawMapListeners.mousemove);
+    map.doubleClickZoom.disable();
+}
+
+function stopDrawMode(resetUI = true) {
+    if (_drawMapListeners.click)     map.off('click',     _drawMapListeners.click);
+    if (_drawMapListeners.dblclick)  map.off('dblclick',  _drawMapListeners.dblclick);
+    if (_drawMapListeners.mousemove) map.off('mousemove', _drawMapListeners.mousemove);
+    _drawMapListeners = {};
+    map.getCanvas().style.cursor = '';
+    map.doubleClickZoom.enable();
+    drawMode = null;
+    drawTempCoords = [];
+    drawCircleCenter = null;
+    if (resetUI) {
+        ['point','polygon','line','circle'].forEach(m => {
+            const btn = document.getElementById('draw-btn-' + m);
+            if (btn) btn.classList.remove('draw-tool-active');
+        });
+        const stopBtn = document.getElementById('draw-btn-stop');
+        if (stopBtn) stopBtn.style.display = 'none';
+        setDrawStatus(_td('map_draw_hint'));
+        refreshDrawSource();
+    }
+}
+
+function onDrawClick(e) {
+    const coords = [e.lngLat.lng, e.lngLat.lat];
+
+    if (drawMode === 'point') {
+        const id = 'pt_' + Date.now();
+        drawFeatures.push({
+            type: 'Feature',
+            properties: { _id: id, _type: 'point', _color: '#e74c3c',
+                nombre: '', descripcion: '', imagen: '' },
+            geometry: { type: 'Point', coordinates: coords }
+        });
+        refreshDrawSource();
+        stopDrawMode();
+        setTimeout(() => showEditPanel(id), 100);
+        return;
+    }
+
+    if (drawMode === 'circle') {
+        if (!drawCircleCenter) {
+            drawCircleCenter = coords;
+            drawTempCoords = [coords]; // para que mousemove funcione
+            setDrawStatus('⭕ Ahora clic para definir el radio');
+        } else {
+            const R = 6371;
+            const dLat = (coords[1] - drawCircleCenter[1]) * Math.PI / 180;
+            const dLon = (coords[0] - drawCircleCenter[0]) * Math.PI / 180;
+            const a = Math.sin(dLat/2)**2 + Math.cos(drawCircleCenter[1]*Math.PI/180)
+                * Math.cos(coords[1]*Math.PI/180) * Math.sin(dLon/2)**2;
+            const radiusKm = Math.max(0.01, R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+            const radiusM = Math.round(radiusKm * 1000);
+            const id = 'circ_' + Date.now();
+            drawFeatures.push({
+                type: 'Feature',
+                properties: { _id: id, _type: 'circle', _color: '#9b59b6',
+                    nombre: '', descripcion: '',
+                    _center: drawCircleCenter, _radiusKm: radiusKm, _radiusM: radiusM },
+                geometry: _circleGeometry(drawCircleCenter, radiusKm)
+            });
+            refreshDrawSource();
+            stopDrawMode();
+            setTimeout(() => showEditPanel(id), 100);
+        }
+        return;
+    }
+
+    // polygon / line: añadir vértice
+    drawTempCoords.push(coords);
+    refreshDrawSource();
+}
+
+function onDrawDblClick(e) {
+    e.preventDefault();
+    const coords = [e.lngLat.lng, e.lngLat.lat];
+    drawTempCoords.push(coords);
+
+    if (drawMode === 'polygon' && drawTempCoords.length >= 3) {
+        const id = 'poly_' + Date.now();
+        const ring = [...drawTempCoords, drawTempCoords[0]];
+        drawFeatures.push({
+            type: 'Feature',
+            properties: { _id: id, _type: 'polygon', _color: '#2ecc71',
+                nombre: '', descripcion: '' },
+            geometry: { type: 'Polygon', coordinates: [ring] }
+        });
+        drawTempCoords = [];
+        refreshDrawSource();
+        stopDrawMode();
+        setTimeout(() => showEditPanel(id), 100);
+    } else if (drawMode === 'line' && drawTempCoords.length >= 2) {
+        const id = 'line_' + Date.now();
+        drawFeatures.push({
+            type: 'Feature',
+            properties: { _id: id, _type: 'line', _color: '#e67e22',
+                nombre: '', descripcion: '' },
+            geometry: { type: 'LineString', coordinates: drawTempCoords }
+        });
+        drawTempCoords = [];
+        refreshDrawSource();
+        stopDrawMode();
+        setTimeout(() => showEditPanel(id), 100);
+    }
+}
+
+function onDrawMouseMove(e) {
+    if (!drawMode || drawTempCoords.length === 0) return;
+    const cur = [e.lngLat.lng, e.lngLat.lat];
+
+    if (drawMode === 'circle' && drawCircleCenter) {
+        const R = 6371;
+        const dLat = (cur[1] - drawCircleCenter[1]) * Math.PI / 180;
+        const dLon = (cur[0] - drawCircleCenter[0]) * Math.PI / 180;
+        const a = Math.sin(dLat/2)**2 + Math.cos(drawCircleCenter[1]*Math.PI/180)
+            * Math.cos(cur[1]*Math.PI/180) * Math.sin(dLon/2)**2;
+        const r = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        refreshDrawSource(null, r);
+    } else {
+        const preview = [...drawTempCoords, cur];
+        refreshDrawSource(preview);
+    }
+}
+
+// ── Panel de edición de propiedades ──────────────────────────────────────
+function showEditPanel(featureId) {
+    const f = drawFeatures.find(x => x.properties._id === featureId);
+    if (!f) return;
+    const p = f.properties;
+    const isPoint = p._type === 'point';
+    const panel = document.getElementById('draw-feature-panel');
+    if (!panel) return;
+
+    const typeLabels = { point:_td('map_draw_point'), polygon:_td('map_draw_polygon'), line:_td('map_draw_line'), circle:_td('map_draw_circle') };
+    const typeIcons  = { point:'location-dot', polygon:'draw-polygon', line:'minus', circle:'circle' };
+    const colorOpts  = ['#e74c3c','#e67e22','#2ecc71','#3498db','#9b59b6','#1abc9c','#f1c40f','#e91e63','#607d8b'];
+
+    panel.innerHTML = `
+    <div style="font-family:Arial,sans-serif;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <span style="font-weight:800;font-size:0.88rem;color:#32325d;">
+                <i class="fa-solid fa-${typeIcons[p._type] || 'shapes'}" style="color:#5e72e4;margin-right:5px;"></i>
+                ${typeLabels[p._type] || 'Geometría'}
+            </span>
+            <button onclick="closeEditPanel()" style="background:none;border:none;cursor:pointer;
+                font-size:16px;color:#8898aa;padding:2px 6px;">✕</button>
+        </div>
+
+        <div style="margin-bottom:8px;">
+            <label style="font-size:0.72rem;font-weight:700;color:#8898aa;text-transform:uppercase;
+                letter-spacing:.4px;display:block;margin-bottom:3px;">${_td('map_draw_nombre')}</label>
+            <input id="draw-prop-nombre" value="${escHtml(p.nombre || '')}"
+                placeholder="Nombre del elemento"
+                style="width:100%;padding:6px 8px;border:1px solid #e2e8f0;border-radius:7px;
+                font-size:0.82rem;box-sizing:border-box;outline:none;"
+                oninput="updateDrawFeatureProp('${featureId}','nombre',this.value)">
+        </div>
+
+        <div style="margin-bottom:8px;">
+            <label style="font-size:0.72rem;font-weight:700;color:#8898aa;text-transform:uppercase;
+                letter-spacing:.4px;display:block;margin-bottom:3px;">${_td('map_draw_desc')}</label>
+            <textarea id="draw-prop-desc" rows="2" placeholder="Descripción opcional"
+                style="width:100%;padding:6px 8px;border:1px solid #e2e8f0;border-radius:7px;
+                font-size:0.82rem;box-sizing:border-box;resize:none;outline:none;"
+                oninput="updateDrawFeatureProp('${featureId}','descripcion',this.value)">${escHtml(p.descripcion || '')}</textarea>
+        </div>
+
+        ${isPoint ? `
+        <div style="margin-bottom:8px;">
+            <label style="font-size:0.72rem;font-weight:700;color:#8898aa;text-transform:uppercase;
+                letter-spacing:.4px;display:block;margin-bottom:3px;">${_td('map_draw_imagen')}</label>
+            <div style="display:flex;gap:6px;align-items:center;">
+                <button onclick="document.getElementById('draw-img-file-${featureId}').click()"
+                    style="flex:1;padding:7px 10px;background:#f0f2ff;border:1px solid #5e72e4;
+                    border-radius:7px;cursor:pointer;color:#5e72e4;font-size:0.8rem;
+                    display:flex;align-items:center;gap:6px;justify-content:center;">
+                    <i class="fa-solid fa-folder-open"></i>
+                    ${p.imagen ? _td('map_draw_cambiar') : _td('map_draw_subir')}
+                </button>
+                ${p.imagen ? `<button onclick="updateDrawFeatureProp('${featureId}','imagen',''); showEditPanel('${featureId}')"
+                    style="padding:7px;background:#fff5f5;border:1px solid #f5365c;border-radius:7px;
+                    cursor:pointer;color:#f5365c;font-size:0.8rem;">
+                    <i class="fa-solid fa-trash"></i>
+                </button>` : ''}
+            </div>
+            <input type="file" id="draw-img-file-${featureId}" accept="image/*" style="display:none;"
+                onchange="loadDrawImage('${featureId}',this)">
+            ${p.imagen ? `<div style="position:relative;margin-top:6px;">
+                <img src="${p.imagen}" style="width:100%;border-radius:8px;max-height:100px;
+                    object-fit:cover;display:block;">
+            </div>` : `<p style="font-size:0.72rem;color:#b0bec5;margin-top:4px;text-align:center;">
+                ${_td('map_draw_sin_imagen')}</p>`}
+        </div>` : ''}
+
+        ${p._type === 'circle' && p._center ? `
+        <div style="margin-bottom:8px;">
+            <label style="font-size:0.72rem;font-weight:700;color:#8898aa;text-transform:uppercase;
+                letter-spacing:.4px;display:block;margin-bottom:3px;">
+                ${_td('map_draw_radio')}: <span id="draw-radius-val">${Math.round((p._radiusM||100))}</span> m
+            </label>
+            <input type="range" min="10" max="5000" step="10"
+                value="${p._radiusM || 100}"
+                style="width:100%;accent-color:#5e72e4;"
+                oninput="updateDrawCircleRadius('${featureId}', this.value)">
+        </div>` : ''}
+
+        <div style="margin-bottom:10px;">
+            <label style="font-size:0.72rem;font-weight:700;color:#8898aa;text-transform:uppercase;
+                letter-spacing:.4px;display:block;margin-bottom:5px;">${_td('map_draw_color')}</label>
+            <div style="display:flex;gap:5px;flex-wrap:wrap;">
+                ${colorOpts.map(c => `
+                <div onclick="updateDrawFeatureProp('${featureId}','_color','${c}')"
+                    style="width:22px;height:22px;border-radius:50%;background:${c};cursor:pointer;
+                    border:${p._color===c?'3px solid #32325d':'2px solid transparent'};
+                    transition:border .15s;" title="${c}"></div>`).join('')}
+            </div>
+        </div>
+
+        <div style="display:flex;gap:6px;">
+            <button onclick="closeEditPanel()"
+                style="flex:1;padding:7px;background:#5e72e4;color:white;border:none;border-radius:8px;
+                font-size:0.8rem;font-weight:700;cursor:pointer;">
+                <i class="fa-solid fa-check"></i> ${_td('map_draw_guardar')}
+            </button>
+            <button onclick="deleteDrawFeature('${featureId}')"
+                style="padding:7px 10px;background:#fff5f5;color:#f5365c;border:1px solid #f5365c;
+                border-radius:8px;font-size:0.8rem;cursor:pointer;">
+                <i class="fa-solid fa-trash"></i>
+            </button>
+        </div>
+    </div>`;
+    panel.style.display = 'block';
+}
+
+function closeEditPanel() {
+    const p = document.getElementById('draw-feature-panel');
+    if (p) { p.style.display = 'none'; p.innerHTML = ''; }
+    refreshDrawSource();
+}
+
+function updateDrawFeatureProp(id, key, value) {
+    const f = drawFeatures.find(x => x.properties._id === id);
+    if (!f) return;
+    f.properties[key] = value;
+    if (key === '_color') refreshDrawSource();
+    // Redibujar panel solo si cambia color (para actualizar círculos de color)
+    if (key === '_color') showEditPanel(id);
+}
+
+function deleteDrawFeature(id) {
+    drawFeatures = drawFeatures.filter(x => x.properties._id !== id);
+    closeEditPanel();
+    refreshDrawSource();
+}
+
+function loadDrawImage(featureId, input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        updateDrawFeatureProp(featureId, 'imagen', e.target.result);
+        showEditPanel(featureId); // refrescar panel con imagen
+    };
+    reader.readAsDataURL(file);
+}
+
+// ── Exportar / Cargar GeoJSON ────────────────────────────────────────────
+function saveDrawLayerAsGeojson() {
+    if (!drawFeatures.length) {
+        if (typeof showToast === 'function') showToast(_td('map_draw_toast_export_empty'));
+        return;
+    }
+    // Exportar limpio (sin propiedades internas _type, _id, etc. → mantenerlas para reimportar)
+    const geojson    = { type: 'FeatureCollection', features: drawFeatures };
+    const defaultName = 'eurocop_draw_' + new Date().toISOString().slice(0,10);
+    const userInput   = window.prompt(_td('map_draw_save_prompt') || 'Nombre del archivo:', defaultName);
+    if (userInput === null) return;  // cancelled
+    const fileName    = (userInput.trim() || defaultName).replace(/\.geojson$/i, '') + '.geojson';
+    const blob        = new Blob([JSON.stringify(geojson, null, 2)], { type: 'application/json' });
+    const a           = document.createElement('a');
+    a.href            = URL.createObjectURL(blob);
+    a.download        = fileName;
+    a.click();
+    URL.revokeObjectURL(a.href);
+}
+
+function loadDrawGeojson(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const gj = JSON.parse(e.target.result);
+            if (!gj.features) throw new Error("Formato no válido");
+            
+            initDrawLayer();
+            
+            // Cargamos las features manteniendo todas sus propiedades originales
+            drawFeatures = gj.features.filter(f => f.properties && (f.properties._type || f.properties.nombre));
+            
+            // Si el archivo no tiene _id, se lo generamos para que sea editable
+            drawFeatures.forEach(f => {
+                if (!f.properties._id) f.properties._id = 'loaded_' + Math.random().toString(36).substr(2, 9);
+                // Si no tiene tipo asignado, intentamos deducirlo por su geometría
+                if (!f.properties._type) {
+                    if (f.geometry.type === 'Point') f.properties._type = 'point';
+                    else if (f.geometry.type === 'Polygon') f.properties._type = 'polygon';
+                    else f.properties._type = 'line';
+                }
+            });
+
+            refreshDrawSource();
+
+            // Ajustar vista a los elementos cargados
+            const bounds = new maplibregl.LngLatBounds();
+            const extract = (c) => {
+                if (typeof c[0] === 'number') bounds.extend(c);
+                else c.forEach(extract);
+            };
+            drawFeatures.forEach(f => { if (f.geometry) extract(f.geometry.coordinates); });
+            if (!bounds.isEmpty()) map.fitBounds(bounds, { padding: 60, maxZoom: 17, duration: 800 });
+            
+            if (typeof showToast === 'function') showToast(_td('map_draw_loaded',{n:drawFeatures.length}));
+            
+        } catch (err) { 
+            console.error(err);
+            if (typeof showToast === 'function') showToast(_td('map_draw_error_load')); 
+        }
+        input.value = '';
+    };
+    reader.readAsText(file);
+}
+
+function clearDrawLayer() {
+    if (!drawFeatures.length) return;
+    if (!confirm(_td('map_draw_confirm_clear'))) return;
+    drawFeatures = [];
+    closeEditPanel();
+    refreshDrawSource();
+}
+
+// ── Toggle menú editor ───────────────────────────────────────────────────
+function toggleDrawMenu() {
+    const dd = document.getElementById('draw-dropdown');
+    const btn = document.getElementById('btn-draw-menu');
+    if (!dd) return;
+    const open = dd.style.display === 'block';
+    _closeAllDropdowns();
+    if (!open) {
+        dd.style.display = 'block';
+        if (btn) btn.classList.add('active');
+    }
+}
+
+function setDrawStatus(msg) {
+    const el = document.getElementById('draw-status-msg');
+    if (el) el.textContent = msg;
+}
+
+function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Helper traducción editor de geometrías
+function _td(key, vars) {
+    const lang = typeof currentLang !== 'undefined' ? currentLang : 'es';
+    const tr = (typeof translations !== 'undefined' && translations[lang]) ? translations[lang] : {};
+    let s = tr[key] || (translations['es'] && translations['es'][key]) || key;
+    if (vars) Object.keys(vars).forEach(k => { s = s.replace('{' + k + '}', vars[k]); });
+    return s;
+}
+
+// ── FIX 3: actualizar radio del círculo desde slider ──────────────────
+function updateDrawCircleRadius(featureId, radiusM) {
+    const f = drawFeatures.find(x => x.properties._id === featureId);
+    if (!f || !f.properties._center) return;
+    const rM = parseInt(radiusM);
+    const rKm = rM / 1000;
+    f.properties._radiusM = rM;
+    f.properties._radiusKm = rKm;
+    f.geometry = _circleGeometry(f.properties._center, rKm);
+    refreshDrawSource();
+    // Actualizar label sin re-renderizar panel
+    const lbl = document.getElementById('draw-radius-val');
+    if (lbl) lbl.textContent = rM;
+}
+
+// ── FIX 4: hover popup en puntos informativos ─────────────────────────
+let _drawHoverPopup = null;
+
+function _buildDrawPopupHTML(props) {
+    const nombre = props.nombre || '';
+    const descripcion = props.descripcion || '';
+    const imagen = props.imagen || '';
+    if (!nombre && !descripcion && !imagen) return null;
+    return `
+    <div style="font-family:Arial,sans-serif;min-width:140px;max-width:220px;">
+        ${imagen ? `<img src="${imagen}" style="width:100%;border-radius:6px 6px 0 0;
+            max-height:110px;object-fit:cover;display:block;margin:-8px -8px 8px -8px;">` : ''}
+        ${nombre ? `<div style="font-weight:800;font-size:0.85rem;color:#32325d;
+            margin-bottom:${descripcion?'4px':'0'};">${nombre}</div>` : ''}
+        ${descripcion ? `<div style="font-size:0.78rem;color:#525f7f;line-height:1.4;">
+            ${descripcion}</div>` : ''}
+    </div>`;
+}
+
+function initDrawHoverPopup() {
+    if (!map) return;
+
+    // ── Puntos (coordenadas directas del feature) ──
+    map.on('mouseenter', DRAW_LAYERS.point, (e) => {
+        if (drawMode) return;
+        map.getCanvas().style.cursor = 'pointer';
+        const html = _buildDrawPopupHTML(e.features[0].properties);
+        if (!html) return;
+        if (_drawHoverPopup) _drawHoverPopup.remove();
+        _drawHoverPopup = new maplibregl.Popup({
+            closeButton: false, closeOnClick: false, offset: 14, maxWidth: '240px'
+        }).setLngLat(e.features[0].geometry.coordinates).setHTML(html).addTo(map);
+    });
+    map.on('mouseleave', DRAW_LAYERS.point, () => {
+        map.getCanvas().style.cursor = '';
+        if (_drawHoverPopup) { _drawHoverPopup.remove(); _drawHoverPopup = null; }
+    });
+
+    // ── Polígonos (usar punto del cursor) ──
+    map.on('mouseenter', DRAW_LAYERS.polygon_fill, (e) => {
+        if (drawMode) return;
+        map.getCanvas().style.cursor = 'pointer';
+        const html = _buildDrawPopupHTML(e.features[0].properties);
+        if (!html) return;
+        if (_drawHoverPopup) _drawHoverPopup.remove();
+        _drawHoverPopup = new maplibregl.Popup({
+            closeButton: false, closeOnClick: false, offset: 6, maxWidth: '240px'
+        }).setLngLat(e.lngLat).setHTML(html).addTo(map);
+    });
+    map.on('mousemove', DRAW_LAYERS.polygon_fill, (e) => {
+        if (_drawHoverPopup) _drawHoverPopup.setLngLat(e.lngLat);
+    });
+    map.on('mouseleave', DRAW_LAYERS.polygon_fill, () => {
+        map.getCanvas().style.cursor = '';
+        if (_drawHoverPopup) { _drawHoverPopup.remove(); _drawHoverPopup = null; }
+    });
+
+    // ── Círculos (igual que polígonos) ──
+    map.on('mouseenter', DRAW_LAYERS.circle_fill, (e) => {
+        if (drawMode) return;
+        map.getCanvas().style.cursor = 'pointer';
+        const html = _buildDrawPopupHTML(e.features[0].properties);
+        if (!html) return;
+        if (_drawHoverPopup) _drawHoverPopup.remove();
+        _drawHoverPopup = new maplibregl.Popup({
+            closeButton: false, closeOnClick: false, offset: 6, maxWidth: '240px'
+        }).setLngLat(e.lngLat).setHTML(html).addTo(map);
+    });
+    map.on('mousemove', DRAW_LAYERS.circle_fill, (e) => {
+        if (_drawHoverPopup) _drawHoverPopup.setLngLat(e.lngLat);
+    });
+    map.on('mouseleave', DRAW_LAYERS.circle_fill, () => {
+        map.getCanvas().style.cursor = '';
+        if (_drawHoverPopup) { _drawHoverPopup.remove(); _drawHoverPopup = null; }
+    });
+
+    // ── Líneas (usar punto del cursor) ──
+    map.on('mouseenter', DRAW_LAYERS.line, (e) => {
+        if (drawMode) return;
+        map.getCanvas().style.cursor = 'pointer';
+        const html = _buildDrawPopupHTML(e.features[0].properties);
+        if (!html) return;
+        if (_drawHoverPopup) _drawHoverPopup.remove();
+        _drawHoverPopup = new maplibregl.Popup({
+            closeButton: false, closeOnClick: false, offset: 6, maxWidth: '240px'
+        }).setLngLat(e.lngLat).setHTML(html).addTo(map);
+    });
+    map.on('mousemove', DRAW_LAYERS.line, (e) => {
+        if (_drawHoverPopup) _drawHoverPopup.setLngLat(e.lngLat);
+    });
+    map.on('mouseleave', DRAW_LAYERS.line, () => {
+        map.getCanvas().style.cursor = '';
+        if (_drawHoverPopup) { _drawHoverPopup.remove(); _drawHoverPopup = null; }
+    });
+}
+
+// Genera el contenido HTML para los popups de las capas
+function _buildLayerPopupHTML(props) {
+    const nombre = props.nombre || props.Nombre || props.name || "Sin nombre";
+    const descripcion = props.descripcion || props.Descripcion || "";
+    const imagen = props.imagen || "";
+
+    return `
+        <div style="padding:10px; font-family:'Inter', sans-serif; color:#32325d; min-width:150px; max-width:250px;">
+            ${imagen ? `<img src="${imagen}" style="width:100%; border-radius:4px; margin-bottom:8px; max-height:120px; object-fit:cover; display:block;">` : ''}
+            <b style="text-transform:uppercase; font-size:13px; display:block; margin-bottom:4px; border-bottom:1px solid #eee; padding-bottom:4px;">
+                ${nombre}
+            </b>
+            ${descripcion ? `<span style="font-size:11px; color:#525f7f; display:block; line-height:1.4;">${descripcion}</span>` : ''}
+        </div>`;
 }

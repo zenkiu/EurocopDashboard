@@ -728,10 +728,67 @@ const FncEstadisticaGVpj = (() => {
             });
     }
 
+    // ============================================================
+    // VALIDACIÓN DE DATOS AL CARGAR
+    // Detecta atestados erróneos:
+    //   1. Sin fecha (vacía o "Sin Fecha")
+    //   2. NRO_INFRACCIONES = 0 en todas las filas del atestado
+    // ============================================================
+    function validarDatos() {
+        // Agrupar por referencia (ya viene como ATS2026-5)
+        const byRef = {};
+        _rawData.forEach(r => {
+            if (!byRef[r.ref]) {
+                byRef[r.ref] = {
+                    ref    : r.ref,
+                    fecha  : r.fecha,
+                    filas  : []
+                };
+            }
+            byRef[r.ref].filas.push(r);
+        });
+
+        const errores = [];
+        Object.values(byRef).forEach(at => {
+            const sinFecha = !at.fecha ||
+                at.fecha.trim() === '' ||
+                at.fecha.trim().toLowerCase() === 'sin fecha' ||
+                at.fecha.trim() === '0' ||
+                at.fecha.includes('1900');
+
+            // PJ: solo se considera error la falta de fecha
+            if (!sinFecha) return;
+
+            const delito = at.filas.map(f => f.delito).find(d => d && d.trim()) || '—';
+            errores.push({
+                ref   : at.ref,
+                fecha : at.fecha || '—',
+                delito,
+                causas: ['sin_fecha'],
+                filas : at.filas
+            });
+        });
+
+        // Ordenar: sin fecha primero, luego por referencia descendente
+        // Extraer año y número de la referencia ATS2025-98 → {anyo:2025, num:98}
+        const parseRef = (ref) => {
+            const m = String(ref).match(/ATS(\d{4})-(\d+)/i);
+            return m ? { anyo: parseInt(m[1]), num: parseInt(m[2]) } : { anyo: 0, num: 0 };
+        };
+        errores.sort((a, b) => {
+            const ra = parseRef(a.ref), rb = parseRef(b.ref);
+            if (rb.anyo !== ra.anyo) return rb.anyo - ra.anyo; // año descendente
+            return rb.num - ra.num;                             // número descendente
+        });
+
+        return errores;
+    }
+
     // ── API pública ──────────────────────────────────────────────────────────
     return {
         esArchivoPJ,
         parsearDatos,
+        validarDatos,
         getAños    : ()     => _años,
         getAñoSel  : ()     => _añoSel,
         getMesSel  : ()     => _mesSel,

@@ -76,18 +76,18 @@ const FncAtestadosPJ = (() => {
         <span class="pj-bc-active">${t('actualizar')}</span>
     </div>
 
-    <h2 class="pj-main-title">${t('actualizar')}</h2>
+    <div class="at-title-row">
+        <h2 class="pj-main-title">${t('actualizar')}</h2>
+        <a href="./ArchivosPdf/ATESTADOS_PJ_GOBIERNO_VASCO_REQUISITOS.pdf"
+           target="_blank" class="help-link-title" title="Ver requisitos PJ">
+            <i class="fa-solid fa-circle-info"></i>
+        </a>
+    </div>
 
     <!-- Filtros centrados -->
     <div class="pj-filterbar">
         <div class="pj-filter-item">
-            <label>
-                ${t('municipio')}
-                <a href="./ArchivosPdf/ATESTADOS_PJ_GOBIERNO_VASCO_REQUISITOS.pdf"
-                   target="_blank" class="at-help-link" title="Ver requisitos PJ">
-                    <i class="fa-solid fa-circle-question"></i>
-                </a>
-            </label>
+            <label>${t('municipio')}</label>
             <input class="pj-input" value="${_municipio}" readonly style="width:80px;">
         </div>
         <div class="pj-filter-item">
@@ -229,7 +229,120 @@ const FncAtestadosPJ = (() => {
         if (loader) loader.classList.remove('active');
         document.body.classList.add('pj-active');
         render();
+
+        // Validar y mostrar modal si hay errores
+        const errores = E.validarDatos();
+        if (errores.length > 0) {
+            setTimeout(() => mostrarModalErroresPJ(errores), 400);
+        }
+
         return true;
+    }
+
+    // ============================================================
+    // MODAL DE PREVISUALIZACIÓN DE ATESTADOS ERRÓNEOS (PJ)
+    // ============================================================
+    let _erroresPJ = []; // almacena los errores para impresión
+
+    function mostrarModalErroresPJ(errores) {
+        _erroresPJ = errores; // guardar referencia
+        // Construir lista de atestados sin fecha
+        const rows = errores.map(e => `
+            <tr>
+                <td style="padding:7px 12px;font-weight:700;color:#1a1a2e;font-size:0.85rem;
+                    border-bottom:1px solid #ffe4e4;white-space:nowrap;">${e.ref}</td>
+                <td style="padding:7px 12px;color:#d4380d;font-size:0.82rem;
+                    border-bottom:1px solid #ffe4e4;white-space:nowrap;">Sin Fecha</td>
+                <td style="padding:7px 12px;color:#525f7f;font-size:0.82rem;
+                    border-bottom:1px solid #ffe4e4;">${e.delito !== '—' ? e.delito : '—'}</td>
+            </tr>`).join('');
+
+        const overlay = document.createElement('div');
+        overlay.id = 'atd-err-modal-pj';
+        overlay.style.cssText = `
+            position:fixed; inset:0; z-index:999999;
+            background:rgba(20,20,60,0.6);
+            display:flex; align-items:center; justify-content:center;
+            padding:20px; font-family:Arial,sans-serif;`;
+
+        overlay.innerHTML = `
+        <div style="background:white; border-radius:14px; width:100%; max-width:580px;
+            max-height:85vh; display:flex; flex-direction:column;
+            box-shadow:0 20px 60px rgba(0,0,0,0.35); overflow:hidden;">
+
+            <!-- Cabecera -->
+            <div style="background:linear-gradient(135deg,#f5365c,#c0002a);
+                padding:14px 18px; display:flex; align-items:center;
+                justify-content:space-between; flex-shrink:0;">
+                <div style="display:flex;align-items:center;gap:8px;color:white;
+                    font-weight:800;font-size:0.95rem;">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    Atestados sin fecha suceso · ${errores.length} detectados
+                </div>
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <button onclick="FncAtestadosPJ._printErroresPJ()"
+                        style="padding:5px 12px;border-radius:20px;border:1.5px solid rgba(255,255,255,0.6);
+                        background:rgba(255,255,255,0.15);color:white;font-size:0.75rem;font-weight:700;
+                        cursor:pointer;display:flex;align-items:center;gap:5px;">
+                        <i class="fa-solid fa-print"></i> Imprimir
+                    </button>
+                    <button onclick="document.getElementById('atd-err-modal-pj').remove()"
+                        style="width:28px;height:28px;border-radius:50%;border:none;
+                        background:rgba(255,255,255,0.2);color:white;font-size:14px;
+                        cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+                </div>
+            </div>
+
+            <!-- Contador -->
+            <div style="padding:14px 18px 0;display:flex;gap:10px;flex-shrink:0;">
+                <div style="flex:1;text-align:center;background:#fff5f5;border:1px solid #ffd6d6;
+                    border-radius:10px;padding:10px;">
+                    <div style="font-size:1.8rem;font-weight:900;color:#f5365c;">${errores.length}</div>
+                    <div style="font-size:0.65rem;font-weight:700;color:#8898aa;letter-spacing:.5px;">
+                        SIN FECHA SUCESO</div>
+                </div>
+            </div>
+
+            <!-- Aviso -->
+            <div style="margin:12px 18px 0;padding:8px 12px;background:#fff5f5;
+                border-left:3px solid #f5365c;border-radius:4px;font-size:0.78rem;color:#525f7f;flex-shrink:0;">
+                <i class="fa-solid fa-circle-info" style="color:#f5365c;margin-right:5px;"></i>
+                Revisa estos atestados en el sistema e introduce la fecha del suceso.
+            </div>
+
+            <!-- Tabla scrollable -->
+            <div style="flex:1;overflow-y:auto;padding:12px 18px;min-height:0;">
+                <table style="width:100%;border-collapse:collapse;background:white;
+                    border-radius:8px;overflow:hidden;border:1px solid #fee2e2;">
+                    <thead>
+                        <tr style="background:#f5365c;">
+                            <th style="padding:8px 12px;text-align:left;color:white;
+                                font-size:0.75rem;font-weight:700;white-space:nowrap;">REFERENCIA ATS</th>
+                            <th style="padding:8px 12px;text-align:left;color:white;
+                                font-size:0.75rem;font-weight:700;">FECHA</th>
+                            <th style="padding:8px 12px;text-align:left;color:white;
+                                font-size:0.75rem;font-weight:700;">DELITO</th>
+                        </tr>
+                    </thead>
+                    <tbody style="background:white;">
+                        ${rows}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Footer -->
+            <div style="padding:12px 18px;border-top:1px solid #f0f1f8;
+                display:flex;justify-content:flex-end;flex-shrink:0;background:white;">
+                <button onclick="document.getElementById('atd-err-modal-pj').remove()"
+                    style="padding:8px 24px;background:#5e72e4;color:white;border:none;
+                    border-radius:8px;font-size:0.85rem;font-weight:700;cursor:pointer;">
+                    Entendido
+                </button>
+            </div>
+        </div>`;
+
+        document.body.appendChild(overlay);
+        overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
     }
 
     function salir() {
@@ -640,6 +753,69 @@ const FncAtestadosPJ = (() => {
         });
     }
 
+    function _printErroresPJ() {
+        if (!_erroresPJ.length) return;
+        const fecha = new Date().toLocaleDateString('es-ES');
+        const rows = _erroresPJ.map((e, i) => `
+            <tr style="background:${i%2===0?'#fff5f5':'white'};">
+                <td style="padding:6px 10px;font-weight:700;color:#1a1a2e;border-bottom:1px solid #ffe4e4;">${e.ref}</td>
+                <td style="padding:6px 10px;color:#d4380d;border-bottom:1px solid #ffe4e4;">Sin Fecha</td>
+                <td style="padding:6px 10px;color:#525f7f;border-bottom:1px solid #ffe4e4;">${e.delito !== '—' ? e.delito : '—'}</td>
+            </tr>`).join('');
+
+        const w = window.open('', '_blank', 'width=750,height=600');
+        w.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+        <title>Atestados sin fecha suceso</title>
+        <style>
+            * { margin:0; padding:0; box-sizing:border-box; }
+            body { font-family:Arial,sans-serif; font-size:11px; color:#1a1a2e; padding:16px; }
+            .header { display:flex; justify-content:space-between; align-items:flex-start;
+                border-bottom:3px solid #f5365c; padding-bottom:10px; margin-bottom:14px; }
+            .header-title { font-size:15px; font-weight:900; color:#f5365c; }
+            .header-sub { font-size:10px; color:#525f7f; margin-top:3px; }
+            .header-date { font-size:10px; color:#8898aa; text-align:right; }
+            .badge { display:inline-block; background:#fff5f5; border:1px solid #ffd6d6;
+                border-radius:6px; padding:6px 14px; margin-bottom:12px; }
+            .badge-num { font-size:1.4rem; font-weight:900; color:#f5365c; display:block; }
+            .badge-label { font-size:9px; font-weight:700; color:#8898aa; letter-spacing:.5px; }
+            .notice { font-size:9px; color:#525f7f; background:#fff5f5; border-left:3px solid #f5365c;
+                padding:6px 10px; border-radius:3px; margin-bottom:12px; }
+            table { width:100%; border-collapse:collapse; border:1px solid #ffd6d6; border-radius:6px; }
+            thead tr { background:#f5365c; }
+            thead th { padding:7px 10px; text-align:left; color:white; font-size:10px; font-weight:700; }
+            tbody td { padding:6px 10px; font-size:10px; border-bottom:1px solid #ffe4e4; }
+            .footer { margin-top:12px; font-size:9px; color:#aaaacc;
+                border-top:1px solid #e2e8f0; padding-top:6px; }
+            @media print { @page { size:A4 portrait; margin:1.2cm; } body { padding:0; } }
+        </style></head><body>
+        <div class="header">
+            <div>
+                <div class="header-title">EUROCOP ANALYTICS</div>
+                <div class="header-sub">Atestados PJ sin fecha suceso</div>
+            </div>
+            <div class="header-date">Generado: ${fecha}</div>
+        </div>
+        <div class="badge">
+            <span class="badge-num">${_erroresPJ.length}</span>
+            <span class="badge-label">ATESTADOS SIN FECHA SUCESO</span>
+        </div>
+        <div class="notice">⚠ Revisa estos atestados en el sistema e introduce la fecha del suceso antes de generar el informe.</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>REFERENCIA ATS</th>
+                    <th>FECHA</th>
+                    <th>DELITO</th>
+                </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+        </table>
+        <div class="footer">Generado por Eurocop Analytics · zzenkiu.com</div>
+        <script>window.onload=function(){window.print();window.onafterprint=function(){window.close();};};<\/script>
+        </body></html>`);
+        w.document.close();
+    }
+
     function _onAñoChange(val)  { E.setAñoSel(val); }
     function _onMesChange(val)  { E.setMesSel(val); }
     function _onMostrar()       { render(); }
@@ -650,6 +826,8 @@ const FncAtestadosPJ = (() => {
         init, salir,
         esArchivoPJ : E.esArchivoPJ.bind(E),
         verAtestados, _closeAtestados, _printAtestados,
+        _closeErroresPJ: () => { const m = document.getElementById('atd-err-modal-pj'); if(m) m.remove(); },
+        _printErroresPJ,
         imprimirVista,
         exportarPdf, exportarDocx,
         _onAñoChange, _onMesChange, _onMostrar,

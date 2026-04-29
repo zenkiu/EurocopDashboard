@@ -89,18 +89,18 @@ const FncAtestados = (() => {
         <span class="at-bc-item at-bc-active">${t('actualizar')}</span>
     </div>
 
-    <h2 class="at-main-title">${t('actualizar')}</h2>
+    <div class="at-title-row">
+        <h2 class="at-main-title">${t('actualizar')}</h2>
+        <a href="./ArchivosPdf/ATESTADOS_DSV_GOBIERNO_VASCO_REQUISITOS.pdf"
+           target="_blank" class="help-link-title" title="Ver requisitos DSV">
+            <i class="fa-solid fa-circle-info"></i>
+        </a>
+    </div>
 
     <!-- Filtros -->
     <div class="at-filterbar">
         <div class="at-filter-item">
-            <label>
-                ${t('municipio')}
-                <a href="./ArchivosPdf/ATESTADOS_DSV_GOBIERNO_VASCO_REQUISITOS.pdf"
-                   target="_blank" class="at-help-link" title="Ver requisitos DSV">
-                    <i class="fa-solid fa-circle-question"></i>
-                </a>
-            </label>
+            <label>${t('municipio')}</label>
             <input id="at-municipio" class="at-input" value="${_municipio}" readonly>
         </div>
         <div class="at-filter-item">
@@ -353,7 +353,101 @@ const FncAtestados = (() => {
         if (loader) loader.classList.remove('active');
 
         render();
+
+        // Validar datos y mostrar modal si hay errores
+        const errores = E.validarDatos();
+        if (errores.length > 0) {
+            setTimeout(() => mostrarModalErrores(errores), 400);
+        }
+
         return true;
+    }
+
+    // ============================================================
+    // MODAL DE PREVISUALIZACIÓN DE ATESTADOS ERRÓNEOS
+    // ============================================================
+    function mostrarModalErrores(errores) {
+        const t = E.t.bind(E);
+        const sinFechaCount = errores.filter(e => e.causas.includes('sin_fecha')).length;
+        const totalCeroCount = errores.filter(e => e.causas.includes('total_cero')).length;
+
+        const cards = errores.map(e => {
+            const badgeSinFecha = e.causas.includes('sin_fecha')
+                ? `<span class="atd-err-badge atd-err-fecha"><i class="fa-solid fa-calendar-xmark"></i> Sin fecha</span>` : '';
+            const badgeCero = e.causas.includes('total_cero')
+                ? `<span class="atd-err-badge atd-err-cero"><i class="fa-solid fa-user-slash"></i> Sin personas</span>` : '';
+
+            return `
+            <div class="atd-err-card">
+                <div class="atd-err-card-header">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <i class="fa-solid fa-file-circle-exclamation" style="color:#f5365c;font-size:1rem;"></i>
+                        <strong style="color:#32325d;font-size:0.9rem;">${e.ref}</strong>
+                    </div>
+                    <div style="display:flex;gap:5px;flex-wrap:wrap;">
+                        ${badgeSinFecha}${badgeCero}
+                    </div>
+                </div>
+                <div class="atd-err-card-body">
+                    <span><i class="fa-regular fa-calendar" style="color:#8898aa;width:14px;"></i> <strong>Fecha:</strong> ${e.fecha}</span>
+                    ${e.motivo && e.motivo !== '—' ? `<span><i class="fa-solid fa-tag" style="color:#8898aa;width:14px;"></i> <strong>Motivo:</strong> ${e.motivo}</span>` : ''}
+                </div>
+            </div>`;
+        }).join('');
+
+        const modal = document.createElement('div');
+        modal.id = 'atd-err-modal';
+        modal.className = 'atd-modal-overlay';
+        modal.innerHTML = `
+        <div class="atd-modal" style="max-width:560px;">
+            <div class="atd-modal-header" style="background:linear-gradient(135deg,#f5365c,#d32f7d);">
+                <div class="atd-modal-title">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    Atestados con incidencias · ${errores.length} detectado${errores.length > 1 ? 's' : ''}
+                </div>
+                <button class="atd-btn-close" onclick="FncAtestados._closeErrores()" style="color:white;">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="atd-modal-body">
+                <!-- Resumen -->
+                <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+                    <div class="atd-err-stat">
+                        <span style="font-size:1.6rem;font-weight:900;color:#f5365c;">${errores.length}</span>
+                        <small>ATESTADOS CON ERROR</small>
+                    </div>
+                    ${sinFechaCount > 0 ? `<div class="atd-err-stat">
+                        <span style="font-size:1.6rem;font-weight:900;color:#fb6340;">${sinFechaCount}</span>
+                        <small>SIN FECHA SUCESO</small>
+                    </div>` : ''}
+                    ${totalCeroCount > 0 ? `<div class="atd-err-stat">
+                        <span style="font-size:1.6rem;font-weight:900;color:#8965e0;">${totalCeroCount}</span>
+                        <small>SIN PERSONAS</small>
+                    </div>` : ''}
+                </div>
+
+                <div style="font-size:0.78rem;color:#8898aa;margin-bottom:12px;padding:8px 12px;
+                    background:#fff5f5;border-radius:8px;border-left:3px solid #f5365c;">
+                    <i class="fa-solid fa-circle-info" style="margin-right:5px;"></i>
+                    Estos atestados tienen datos incompletos. Revísalos en el sistema antes de generar el informe.
+                </div>
+
+                <!-- Lista de atestados erróneos -->
+                <div style="max-height:380px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;">
+                    ${cards}
+                </div>
+            </div>
+            <div style="padding:12px 16px;border-top:1px solid #f0f1f8;display:flex;justify-content:flex-end;gap:8px;">
+                <button onclick="FncAtestados._closeErrores()"
+                    style="padding:8px 20px;background:#5e72e4;color:white;border:none;
+                    border-radius:8px;font-size:0.82rem;font-weight:700;cursor:pointer;">
+                    Entendido
+                </button>
+            </div>
+        </div>`;
+
+        document.body.appendChild(modal);
+        modal.addEventListener('click', e => { if (e.target === modal) FncAtestados._closeErrores(); });
     }
 
     function salir() {
@@ -382,6 +476,7 @@ const FncAtestados = (() => {
         exportarPdf, exportarDocx,
         _onAñoChange, _onMesChange, _onMostrar,
         _closeAtestados, _printAtestados,
+        _closeErrores: () => { const m = document.getElementById('atd-err-modal'); if(m) m.remove(); },
     };
 
 })();

@@ -576,12 +576,71 @@ const FncEstadisticaGVdsv = (() => {
         }
     }
 
+    // ============================================================
+    // VALIDACIÓN DE DATOS AL CARGAR
+    // Detecta atestados erróneos:
+    //   1. Sin fecha de suceso (vacía o "Sin Fecha")
+    //   2. Total de personas (víctimas + ilesos) = 0 en TODAS sus filas
+    // ============================================================
+    function validarDatos() {
+        // Agrupar por atestado (numAtestado + anyo)
+        const byAtestado = {};
+        _rawData.forEach(r => {
+            const key = `${r.anyo}-${r.numAtestado}`;
+            if (!byAtestado[key]) {
+                byAtestado[key] = {
+                    ref    : `ATS${r.anyo}-${r.numAtestado}`,
+                    anyo   : r.anyo,
+                    num    : r.numAtestado,
+                    fecha  : r.fecha,
+                    motivo : r.motivo,
+                    filas  : []
+                };
+            }
+            byAtestado[key].filas.push(r);
+        });
+
+        const errores = [];
+        Object.values(byAtestado).forEach(at => {
+            const sinFecha = !at.fecha ||
+                at.fecha.trim() === '' ||
+                at.fecha.trim().toLowerCase() === 'sin fecha' ||
+                at.fecha.trim() === '0' ||
+                at.fecha.includes('1900');
+
+            const totalPersonas = at.filas.reduce(
+                (s, r) => s + r.cv + r.cm + r.ov + r.om + r.pv + r.pm, 0
+            );
+
+            const causas = [];
+            if (sinFecha)          causas.push('sin_fecha');
+            if (totalPersonas === 0) causas.push('total_cero');
+
+            if (causas.length > 0) {
+                errores.push({
+                    ref    : at.ref,
+                    anyo   : at.anyo,
+                    num    : at.num,
+                    fecha  : at.fecha || '—',
+                    motivo : at.motivo || '—',
+                    causas,
+                    filas  : at.filas
+                });
+            }
+        });
+
+        // Ordenar: primero por año desc, luego por número
+        errores.sort((a, b) => b.anyo - a.anyo || a.num - b.num);
+        return errores;
+    }
+
     // ── API pública ──────────────────────────────────────────────────────────
     return {
         // Identificación
         esArchivoAtestados,
         // Ciclo de vida
         parsearDatos,
+        validarDatos,
         // Acceso a estado
         getAños       : ()        => _años,
         getAñoSel     : ()        => _añoSel,

@@ -127,6 +127,12 @@ function completeLoadingProcess(data) {
         FncAtestados.init(data, nombreArchivoSubido);
         return; // FncAtestados toma el control completo
     }
+
+    // Notificar al módulo KPI para detectar si tiene estructura KPI
+    // (no intercepta — solo registra los datos y muestra el botón si corresponde)
+    if (typeof FncKPI !== 'undefined') {
+        FncKPI.onDatosCargados(data, typeof nombreArchivoSubido !== 'undefined' ? nombreArchivoSubido : '');
+    }
     if (typeof showMapping === 'function') showMapping(data);
     const loader = document.getElementById('loading-overlay');
     if (loader) loader.classList.remove('active');

@@ -14,9 +14,15 @@ function changeLanguage(lang) {
     // Si la vista de atestados está activa, redibujarla con el nuevo idioma
     const atView = document.getElementById('atestados-view');
     if (atView && atView.classList.contains('active')) {
-        if (typeof FncAtestadosPJ !== 'undefined' && atView.querySelector('.pj-wrapper')) {
+        // Detectar KPI activo por body.kpi-active o por el wrapper en el DOM
+        const isKpiActive = document.body.classList.contains('kpi-active') ||
+                            atView.querySelector('.kpi-root-layout') ||
+                            atView.querySelector('.kpi-wrapper');
+        if (typeof FncKPI !== 'undefined' && isKpiActive) {
+            FncKPI._rerender();
+        } else if (typeof FncAtestadosPJ !== 'undefined' && atView.querySelector('.pj-wrapper')) {
             FncAtestadosPJ._onMostrar();
-        } else if (typeof FncAtestados !== 'undefined') {
+        } else if (typeof FncAtestados !== 'undefined' && !isKpiActive) {
             FncAtestados._onMostrar();
         }
     }
