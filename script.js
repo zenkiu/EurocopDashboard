@@ -47,6 +47,12 @@ document.addEventListener('DOMContentLoaded', () => {
         versionBadge.textContent = 'v' + EUROCOP_VERSION;
     }
 
+    // 1b. TEXTO INFORMATIVO DE MEMORIAS (desde version.js)
+    const memoriasInfo = document.getElementById('memorias-info-text');
+    if (memoriasInfo && typeof EUROCOP_MEMORIAS_INFO !== 'undefined' && EUROCOP_MEMORIAS_INFO.trim()) {
+        memoriasInfo.textContent = EUROCOP_MEMORIAS_INFO;
+    }
+
     // 2. INICIALIZACIÓN DE IDIOMA
     const langSelect = document.getElementById('lang-selector');
     if (langSelect) {

@@ -112,6 +112,9 @@
                     </a>
                 </div>
 
+                <!-- Texto informativo de memorias (editable en version.js) -->
+                <div id="memorias-info-text" class="memorias-info"></div>
+
                 <div class="brand-footer">
                     <span class="brand-label" data-i18n="brand_powered">Powered by</span>
                     <img src="./ImagenCoorporativa/zzenkiu.png" alt="Zzenkiu" class="brand-logo">
@@ -345,9 +348,24 @@
                     <div class="kpi-icon" style="background: #2dce89;"><i class="fa-solid fa-location-crosshairs"></i></div>
                      <div class="kpi-data"><h3 data-i18n="kpi_zona">Zona</h3><span id="kpi-location">----</span></div>
                 </div>
-                <div class="kpi-card">
+                <div class="kpi-card" style="cursor:default;">
                     <div class="kpi-icon" style="background: #fb6340;"><i class="fa-solid fa-calendar-check"></i></div>
-                    <div class="kpi-data"><h3 data-i18n="kpi_titulo">TÍTULO</h3><span id="card-text-filename">SIN ARCHIVO</span></div>
+                    <div class="kpi-data" style="flex:1;">
+                        <h3 data-i18n="kpi_titulo">TÍTULO</h3>
+                        <span id="card-text-filename">SIN ARCHIVO</span>
+                    </div>
+                    <!-- Botón Visor KPI — visible solo cuando hay datos KPI cargados -->
+                    <button id="btn-visor-kpi" onclick="FncKPI.abrirVisor()"
+                        style="display:none;padding:5px 10px;background:#5e72e4;color:white;
+                        border:none;border-radius:8px;font-size:0.7rem;font-weight:700;
+                        cursor:pointer;white-space:nowrap;align-self:center;margin-left:6px;
+                        transition:background .2s;"
+                        onmouseover="this.style.background='#4a5cc7'"
+                        onmouseout="this.style.background='#5e72e4'"
+                        data-i18n="kpi_visor_btn">
+                        <i class="fa-solid fa-chart-bar" style="margin-right:4px;"></i>
+                        <span data-i18n="kpi_visor_btn">Visor KPI</span>
+                    </button>
                 </div>
                 <!-- KPI Sumatorio — visible solo cuando se mapea campo suma -->
                 <div class="kpi-card" id="kpi-suma-card" style="display:none;">
@@ -562,6 +580,49 @@
             <!-- 3. Herramientas de Mapa -->
             <input type="file" id="input-geojson" accept=".geojson, .json" style="display: none;" onchange="handleGeojsonUpload(this)">
             
+            <!-- EDITOR DE GEOMETRÍAS -->
+            <div class="layer-manager-container" style="position:relative;">
+                <button class="btn-mini" id="btn-draw-menu" onclick="toggleDrawMenu()" title="Editor de Geometrías">
+                    <i class="fa-solid fa-pencil"></i>
+                </button>
+                <div id="draw-dropdown" class="layer-dropdown-content" style="min-width:220px;display:none;">
+                    <div class="layer-header">
+                        <span><i class="fa-solid fa-pencil" style="margin-right:5px;"></i><span data-i18n="map_draw_editor">Editor de Geometrías</span></span>
+                    </div>
+                    <div style="padding:8px;display:flex;flex-direction:column;gap:4px;">
+                        <button class="draw-tool-btn" id="draw-btn-point"    onclick="setDrawMode('point')"   >
+                            <i class="fa-solid fa-location-dot"></i> <span data-i18n="map_draw_point">Punto informativo</span>
+                        </button>
+                        <button class="draw-tool-btn" id="draw-btn-polygon"  onclick="setDrawMode('polygon')" >
+                            <i class="fa-solid fa-draw-polygon"></i> <span data-i18n="map_draw_polygon">Polígono</span>
+                        </button>
+                        <button class="draw-tool-btn" id="draw-btn-line"     onclick="setDrawMode('line')"    >
+                            <i class="fa-solid fa-minus"></i> <span data-i18n="map_draw_line">Línea</span>
+                        </button>
+                        <button class="draw-tool-btn" id="draw-btn-circle"   onclick="setDrawMode('circle')"  >
+                            <i class="fa-regular fa-circle"></i> <span data-i18n="map_draw_circle">Círculo</span>
+                        </button>
+                        <hr style="border:none;border-top:1px solid #eee;margin:4px 0;">
+                        <button class="draw-tool-btn draw-tool-stop" id="draw-btn-stop" onclick="stopDrawMode()" style="display:none;">
+                            <i class="fa-solid fa-stop"></i> <span data-i18n="map_draw_stop">Detener edición</span>
+                        </button>
+                        <button class="draw-tool-btn" onclick="saveDrawLayerAsGeojson()">
+                            <i class="fa-solid fa-download"></i> <span data-i18n="map_draw_export">Exportar .geojson</span>
+                        </button>
+                        <button class="draw-tool-btn" onclick="document.getElementById('input-draw-geojson').click()">
+                            <i class="fa-solid fa-upload"></i> <span data-i18n="map_draw_load">Cargar .geojson</span>
+                        </button>
+                        <button class="draw-tool-btn draw-tool-danger" onclick="clearDrawLayer()">
+                            <i class="fa-solid fa-trash"></i> <span data-i18n="map_draw_clear">Limpiar todo</span>
+                        </button>
+                    </div>
+                    <div style="padding:0 8px 8px;font-size:0.7rem;color:#8898aa;text-align:center;" id="draw-status-msg" data-i18n="map_draw_hint">
+                        Selecciona una herramienta para empezar
+                    </div>
+                </div>
+            </div>
+            <input type="file" id="input-draw-geojson" accept=".geojson,.json" style="display:none;" onchange="loadDrawGeojson(this)">
+
             <button class="btn-mini" id="btn-heatmap" onclick="toggleHeatmap(this)" title="Mapa de Calor">
                 <i class="fa-solid fa-fire"></i>
             </button>
@@ -586,6 +647,15 @@
 
     <div class="canvas-wrapper">
         <div id="main-map"></div>
+        <!-- Panel fijo de resultados de búsqueda GeoJSON (no se mueve con el mapa) -->
+        <div id="search-results-panel" class="search-results-panel" style="display:none;"></div>
+        <!-- Panel editor de geometría (formulario propiedades) -->
+        <div id="draw-feature-panel" style="display:none;position:absolute;bottom:16px;left:50%;
+            transform:translateX(-50%);z-index:300;background:white;border-radius:12px;
+            box-shadow:0 8px 30px rgba(50,50,93,.2);padding:16px;min-width:280px;max-width:340px;
+            border:1px solid #e2e8f0;font-family:Arial,sans-serif;">
+        </div>
+
         <!-- Toast para mensajes del mapa (Cerca de, Hotspots, etc) -->
         <div id="map-toast" class="map-toast"></div>
         <!-- Tabla de calles oculta -->
@@ -839,6 +909,7 @@
             'FncFunciones/FncAtestados.js',
             'FncFunciones/FncEstadisticaGVpj.js',
             'FncFunciones/FncAtestadosPJ.js',
+            'FncFunciones/FncKPI.js',
             'script.js'
         ];
         modules.forEach(function(m) { document.write('<script src="' + m + '?v=' + v + '"><\/script>'); });
