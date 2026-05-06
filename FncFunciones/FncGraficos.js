@@ -390,25 +390,30 @@ function updateCharts(data, selYears) {
             return FRANJA_COLORS[f].border;
         });
 
-        // Plugin: fondo de franja (annotation manual con beforeDraw)
+        // Plugin: fondo de franja + etiquetas en píldoras en la parte INFERIOR del área
         const franjaPlugin = {
             id: 'franjasBg',
             beforeDraw(chart) {
-                const { ctx, chartArea: ca, scales: { x, y } } = chart;
+                const { ctx, chartArea: ca, scales: { x } } = chart;
                 if (!ca) return;
                 ctx.save();
-                // Noche 0-6
-                ctx.fillStyle = FRANJA_COLORS.noche.bg;
-                ctx.fillRect(x.getPixelForValue(0), ca.top, x.getPixelForValue(6) - x.getPixelForValue(0), ca.height);
-                // Mañana 6-14
-                ctx.fillStyle = FRANJA_COLORS.manana.bg;
-                ctx.fillRect(x.getPixelForValue(6), ca.top, x.getPixelForValue(14) - x.getPixelForValue(6), ca.height);
-                // Tarde 14-22
-                ctx.fillStyle = FRANJA_COLORS.tarde.bg;
-                ctx.fillRect(x.getPixelForValue(14), ca.top, x.getPixelForValue(22) - x.getPixelForValue(14), ca.height);
-                // Noche 22-23
-                ctx.fillStyle = FRANJA_COLORS.noche.bg;
-                ctx.fillRect(x.getPixelForValue(22), ca.top, x.getPixelForValue(23) - x.getPixelForValue(22) + 2, ca.height);
+                // Franjas de fondo — sólo el área de datos (sin la zona de etiquetas)
+                const PILL_H = 22; // altura reservada para las píldoras en la parte inferior
+                const drawH  = ca.height - PILL_H;
+
+                const bands = [
+                    { key: 'noche',  from: 0,  to: 6  },
+                    { key: 'manana', from: 6,  to: 14 },
+                    { key: 'tarde',  from: 14, to: 22 },
+                    { key: 'noche',  from: 22, to: 23 },
+                ];
+                bands.forEach(b => {
+                    ctx.fillStyle = FRANJA_COLORS[b.key].bg;
+                    ctx.fillRect(
+                        x.getPixelForValue(b.from), ca.top,
+                        x.getPixelForValue(b.to) - x.getPixelForValue(b.from), drawH
+                    );
+                });
                 ctx.restore();
             },
             afterDraw(chart) {
@@ -416,32 +421,81 @@ function updateCharts(data, selYears) {
                 if (!ca) return;
                 ctx.save();
                 const _t = (typeof translations !== 'undefined' && translations[currentLang]) || {};
+
+                // Configuración de píldoras
+                const PILL_H    = 18;
+                const PILL_R    = 9;   // border-radius
+                const PILL_PAD  = 9;   // padding horizontal
+                const FONT_SIZE = 10;
+                const EMOJI_SIZE = 12;
+                const yBase     = ca.bottom - 2; // justo encima del eje X
+
                 const franjas = [
-                    { emoji: '🌙', text: _t.shift_night     || 'Noche',   from: 0,  to: 6  },
-                    { emoji: '☀️', text: _t.shift_morning   || 'Mañana',  from: 6,  to: 14 },
-                    { emoji: '🌤️', text: _t.shift_afternoon || 'Tarde',   from: 14, to: 22 },
-                    { emoji: '🌙', text: _t.shift_night     || 'Noche',   from: 22, to: 23 },
+                    { emoji: '🌙', text: _t.shift_night     || 'Noche',   from: 0,  to: 6,  textColor: '#6b7280', pillBg: 'rgba(173,181,189,0.35)', border: 'rgba(173,181,189,0.7)' },
+                    { emoji: '☀️', text: _t.shift_morning   || 'Mañana',  from: 6,  to: 14, textColor: '#0369a1', pillBg: 'rgba(17,205,239,0.2)',   border: 'rgba(17,205,239,0.6)'  },
+                    { emoji: '🌤️', text: _t.shift_afternoon || 'Tarde',   from: 14, to: 22, textColor: '#92400e', pillBg: 'rgba(200,145,106,0.22)', border: 'rgba(200,145,106,0.6)' },
+                    { emoji: '🌙', text: _t.shift_night     || 'Noche',   from: 22, to: 23, textColor: '#6b7280', pillBg: 'rgba(173,181,189,0.35)', border: 'rgba(173,181,189,0.7)', short: true },
                 ];
+
                 franjas.forEach(f => {
                     const xFrom = x.getPixelForValue(f.from);
                     const xTo   = x.getPixelForValue(f.to);
                     const xMid  = (xFrom + xTo) / 2;
-                    const width = xTo - xFrom;
-                    if (width < 30) return; // No cabe
-                    // Emoji en una llamada separada (mejora nitidez)
-                    ctx.font = '13px sans-serif';
-                    ctx.textAlign = 'right';
-                    ctx.textBaseline = 'top';
-                    ctx.globalAlpha = 0.85;
-                    ctx.fillStyle = '#333';
-                    ctx.fillText(f.emoji, xMid - 1, ca.top + 4);
-                    // Texto del turno en otra llamada (fuente del sistema, nítida)
-                    ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-                    ctx.textAlign = 'left';
-                    ctx.fillStyle = '#444';
-                    ctx.globalAlpha = 0.75;
-                    ctx.fillText(f.text, xMid + 2, ca.top + 5);
+                    const bandW = xTo - xFrom;
+                    if (bandW < 24) return; // demasiado estrecho, saltar
+
+                    // Medir texto completo
+                    ctx.font = `bold ${FONT_SIZE}px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
+                    const label    = f.short ? f.emoji : (f.emoji + ' ' + f.text);
+                    const textW    = ctx.measureText(f.short ? '' : (' ' + f.text)).width;
+                    const pillW    = Math.min(f.short ? 24 : (EMOJI_SIZE + textW + PILL_PAD * 2), bandW - 6);
+                    const pillX    = xMid - pillW / 2;
+                    const pillY    = yBase - PILL_H;
+
+                    // Fondo de la píldora
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.roundRect
+                        ? ctx.roundRect(pillX, pillY, pillW, PILL_H, PILL_R)
+                        : (() => { ctx.rect(pillX, pillY, pillW, PILL_H); })();
+                    ctx.fillStyle = f.pillBg;
+                    ctx.fill();
+                    ctx.strokeStyle = f.border;
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                    ctx.restore();
+
+                    // Recortar texto al ancho de la píldora
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.rect(pillX + 2, pillY, pillW - 4, PILL_H);
+                    ctx.clip();
+
+                    const textY = pillY + PILL_H / 2;
+                    if (!f.short) {
+                        // Emoji
+                        ctx.font = `${EMOJI_SIZE}px sans-serif`;
+                        ctx.textAlign = 'left';
+                        ctx.textBaseline = 'middle';
+                        ctx.globalAlpha = 0.9;
+                        ctx.fillText(f.emoji, pillX + PILL_PAD, textY);
+                        // Texto
+                        ctx.font = `bold ${FONT_SIZE}px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
+                        ctx.textAlign = 'left';
+                        ctx.fillStyle = f.textColor;
+                        ctx.globalAlpha = 0.95;
+                        ctx.fillText(f.text, pillX + PILL_PAD + EMOJI_SIZE + 3, textY);
+                    } else {
+                        // Solo emoji (franja estrecha 22-23)
+                        ctx.font = `${EMOJI_SIZE}px sans-serif`;
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.globalAlpha = 0.85;
+                        ctx.fillText(f.emoji, xMid, textY);
+                    }
+                    ctx.restore();
                 });
+
                 ctx.globalAlpha = 1;
                 ctx.restore();
             }
@@ -460,8 +514,8 @@ function updateCharts(data, selYears) {
                     borderWidth: 2,
                     fill: false,
                     tension: 0.4,
-                    pointRadius: 5,
-                    pointHoverRadius: 7,
+                    pointRadius: hC.map(v => v === 0 ? 0 : 5),
+                    pointHoverRadius: hC.map(v => v === 0 ? 0 : 7),
                     pointBackgroundColor: pointColors,
                     pointBorderColor: pointColors,
                     segment: {
@@ -491,7 +545,7 @@ function updateCharts(data, selYears) {
                         }
                     }
                 },
-                layout: { padding: { bottom: 10, left: 10, right: 15, top: window.innerWidth < 500 ? 22 : 28 } },
+                layout: { padding: { bottom: 26, left: 10, right: 15, top: 10 } },
                 scales: {
                     x: {
                         ticks: {

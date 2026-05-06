@@ -13,6 +13,14 @@ function safeStr(val) {
     return String(val).trim();
 }
 
+/** Convierte un valor numérico (posiblemente float como 62.0) a string entero limpio */
+function _safeInt(val) {
+    if (val === null || val === undefined || val === "") return "";
+    const n = parseFloat(String(val));
+    if (isNaN(n)) return safeStr(val);
+    return String(Math.round(n));
+}
+
 /** Convierte cualquier valor a float seguro, devuelve 0 si no es número */
 function safeFloat(val) {
     if (val === null || val === undefined || val === "") return 0;
@@ -130,6 +138,7 @@ const config = {
         try {
             let registrosSinFecha     = [];
             let registrosSinCategoria = 0;
+            let registrosSinCategoriaRefs = [];
             finalData = [];
 
             // ── MODO MULTICOLUMNA ──────────────────────────────────
@@ -176,13 +185,17 @@ const config = {
 
                 if (!d) {
                     // Registrar aviso pero NO descartar — usar fecha de fallback
-                    const keyRef = Object.keys(row).find(k => {
-                        const ku = k.toUpperCase();
-                        return ku.includes('REFNUM') || ku.includes('NUMERO') || ku.includes('EXP');
-                    });
-                    const refVal = keyRef ? safeStr(row[keyRef]) : "";
+                    const rNum  = _safeInt(row['REFNUM'])  || _safeInt(row['refnum'])  || "";
+                    const rAnno = _safeInt(row['REFANNO']) || _safeInt(row['refanno']) || "";
+                    const refLabel = (rNum && rAnno)
+                        ? `REF: ${rAnno}-${rNum}`
+                        : (rNum || rAnno)
+                            ? `REF: ${rAnno || rNum}`
+                            : "";
                     registrosSinFecha.push(
-                        refVal ? `Fila ${rowIndex + 2} — REF: ${refVal}` : `Fila ${rowIndex + 2}`
+                        refLabel
+                            ? `Fila ${rowIndex + 2} — ${refLabel}`
+                            : `Fila ${rowIndex + 2}`
                     );
                     d = new Date(FECHA_FALLBACK); // Usar fallback en lugar de descartar
                 }
@@ -203,11 +216,25 @@ const config = {
                 }
 
                 // ── REGISTRO BASE ──
+                // Si existe REFANNO válido, usarlo como año del registro
+                // (ej: FECHA=30/12/2025 con REFANNO=2026 → pertenece a 2026)
+                const refAnnoVal = parseInt(_safeInt(row['REFANNO']) || _safeInt(row['refanno']));
+                const yearFromFecha = d.getFullYear();
+                const recordYear = (!isNaN(refAnnoVal) && refAnnoVal > 1900)
+                    ? refAnnoVal
+                    : yearFromFecha;
+                // Si el año de REFANNO difiere del año de la fecha, el mes real
+                // pertenece al año anterior → usamos mes 1 para que encaje siempre
+                // dentro del año de referencia al filtrar
+                const recordMonth = (recordYear !== yearFromFecha)
+                    ? 1
+                    : d.getMonth() + 1;
+
                 const baseRow = {
                     exp:       safeStr(row[config.exp]) || "N/A",
                     date:      new Date(d),
-                    year:      d.getFullYear(),
-                    month:     d.getMonth() + 1,
+                    year:      recordYear,
+                    month:     recordMonth,
                     hour:      d.getHours(),
                     lat,
                     lon,
@@ -216,12 +243,20 @@ const config = {
                     locManual: config.locManual,
                     sumaVal:   config.suma ? (parseFloat(String(row[config.suma]).replace(',','.')) || 0) : null,
                     sumaIsTime: config.sumaIsTime || false,
-                    refnum:    safeStr(row['REFNUM']),
-                    refanno:   safeStr(row['REFANNO'])
+                    refnum:    _safeInt(row['REFNUM']),
+                    refanno:   _safeInt(row['REFANNO'])
                 };
 
                 if (colFiltro1) baseRow[colFiltro1] = safeStr(row[colFiltro1]);
                 if (colFiltro2) baseRow[colFiltro2] = safeStr(row[colFiltro2]);
+
+                // ── NIVEL IDs para filtro Motivos (TablaHechos) ──
+                const n1 = row['NIVEL1ID'] != null ? parseInt(row['NIVEL1ID']) : null;
+                const n2 = row['NIVEL2ID'] != null ? parseInt(row['NIVEL2ID']) : null;
+                const n3 = row['NIVEL3ID'] != null ? parseInt(row['NIVEL3ID']) : null;
+                if (!isNaN(n1) && n1 > 0) baseRow.nivel1id = n1;
+                if (!isNaN(n2) && n2 > 0) baseRow.nivel2id = n2;
+                if (!isNaN(n3) && n3 > 0) baseRow.nivel3id = n3;
 
                 // ── PUSH ──
                 if (useMultiColumn) {
@@ -235,16 +270,30 @@ const config = {
                     });
                 } else {
                     const catVal = safeStr(row[config.cat]);
-                    if (!catVal) registrosSinCategoria++;
-                    baseRow.cat = catVal || "General";
+                    if (!catVal) {
+                        // Sin categoría → registrar aviso con REF y NO incluir en el dataset
+                        const rNum  = _safeInt(row['REFNUM'])  || _safeInt(row['refnum'])  || "";
+                        const rAnno = _safeInt(row['REFANNO']) || _safeInt(row['refanno']) || "";
+                        const refLabel = (rNum && rAnno) ? `REF: ${rAnno}-${rNum}` : (rNum || rAnno ? `REF: ${rAnno || rNum}` : "");
+                        registrosSinCategoria++;
+                        registrosSinCategoriaRefs.push(
+                            refLabel ? `Fila ${rowIndex + 2} — ${refLabel}` : `Fila ${rowIndex + 2}`
+                        );
+                        return; // saltar este registro
+                    }
+                    baseRow.cat = catVal;
                     finalData.push(baseRow);
                 }
             });
 
             // ── AVISO SI NO HAY DATOS ──
             if (finalData.length === 0) {
-                alert("No se han encontrado registros para procesar. Verifica el archivo.");
+                const colCat = config.cat || "(sin columna)";
+                const hint = registrosSinCategoria > 0
+                    ? `Todos los registros (${registrosSinCategoria}) tienen la columna "${colCat}" vacía.\nVerifica que has seleccionado la columna correcta en CATEGORÍA / TIPO.`
+                    : `No se encontraron registros válidos. Verifica el archivo y el mapeo de columnas.`;
                 if (loadingEl) loadingEl.classList.remove('active');
+                alert(hint);
                 return;
             }
 
@@ -267,6 +316,29 @@ const config = {
             }
 
             setupFilters();
+
+            // ── FILTRO MOTIVOS: construir árbol desde los datos reales ──
+            if (typeof FncTablaHechos !== 'undefined') {
+                const hasNivelIds = finalData.some(r => r.nivel1id || r.nivel2id || r.nivel3id);
+                // Mostrar botón TablaHechos solo si el archivo tiene NIVEL IDs
+                if (typeof FncGestionTablaHechos !== 'undefined') {
+                    FncGestionTablaHechos.mostrarBoton(hasNivelIds);
+                }
+                if (hasNivelIds) {
+                    if (window.TABLA_HECHOS_TREE && window.TABLA_HECHOS_TREE.length) {
+                        FncTablaHechos.init(finalData);
+                    } else {
+                        // Sin tabla cargada: resetear árbol y mostrar aviso
+                        FncTablaHechos.reset();
+                        if (typeof FncGestionTablaHechos !== 'undefined') {
+                            FncGestionTablaHechos.mostrarAvisoSinTabla();
+                        }
+                    }
+                } else {
+                    FncTablaHechos.reset();
+                }
+            }
+
             initMap();
 
             setTimeout(() => {
@@ -281,7 +353,8 @@ const config = {
                 registrosSinFecha.forEach(r => listaAvisos.push(r));
             }
             if (registrosSinCategoria > 0) {
-                listaAvisos.push(`⚠️ ${registrosSinCategoria} registros sin categoría → asignados a "General"`);
+                listaAvisos.push(`⚠️ ${registrosSinCategoria} registros sin categoría → excluidos del análisis`);
+                registrosSinCategoriaRefs.forEach(r => listaAvisos.push(r));
             }
             if (listaAvisos.length > 0) {
                 showRejectedModal(listaAvisos);

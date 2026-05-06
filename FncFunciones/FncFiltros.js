@@ -463,6 +463,18 @@ function updateUI() {
     }
 
     // -----------------------------------------------------------------------
+    // FILTRO MOTIVOS (TablaHechos) — solo si está activo
+    // Actualizar conteos del árbol con los datos filtrados por año/mes/cat
+    // para que los números mostrados coincidan con el dashboard
+    // -----------------------------------------------------------------------
+    if (typeof FncTablaHechos !== 'undefined' && FncTablaHechos.isActive()) {
+        // Actualizar conteos (node.n) para los badges — NO toca _selectedIds
+        FncTablaHechos.updateCounts(filtered);
+        // Filtrar según selección del usuario
+        filtered = FncTablaHechos.applyFilter(filtered);
+    }
+
+    // -----------------------------------------------------------------------
     // [MODIFICADO] APLICAR MULTI-FILTROS DINÁMICOS (Talde, Siglas...)
     // -----------------------------------------------------------------------
     if (typeof FncMultiselect !== 'undefined') {

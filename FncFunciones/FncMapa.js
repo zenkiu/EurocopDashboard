@@ -67,23 +67,18 @@ function initMap() {
         map.on('click', 'point-layer', (e) => {
             const p = e.features[0].properties;
 
-            let direccionHtml = "";
-            if (p.calle && p.calle !== "SIN CALLE / GPS") {
-                const num = (p.numero && p.numero !== "undefined") ? p.numero : "";
-                direccionHtml = `<br><span><b>Dirección:</b> ${p.calle} ${num}</span>`;
-            }
-
-            new maplibregl.Popup({ offset: 10, maxWidth: '250px' })
+            const direccionRow = (p.calle && p.calle !== "SIN CALLE / GPS")
+                ? `<div class="ec-popup-row"><b>Dirección</b>${p.calle}${(p.numero && p.numero !== "undefined") ? ' ' + p.numero : ''}</div>`
+                : '';
+            new maplibregl.Popup({ offset: 10, maxWidth: '270px' })
                 .setLngLat(e.features[0].geometry.coordinates)
                 .setHTML(`
-                    <div style="padding:5px; font-family:'Inter', sans-serif;">
-                        <div style="color:#5e72e4; font-weight:800; font-size:12px; margin-bottom:5px; border-bottom:1px solid #eee;">
-                            REF${p.refanno}-${p.refnum}
-                        </div>
-                        <div style="font-size:11px;">
-                            <span><b>Cat:</b> ${p.cat}</span>
-                            ${direccionHtml}
-                            <br><span><b>Fecha:</b> ${p.fullDate}</span>
+                    <div class="ec-popup">
+                        <div class="ec-popup-ref">REF: ${p.refanno}-${p.refnum}</div>
+                        <div class="ec-popup-body">
+                            <div class="ec-popup-row"><b>Cat</b>${p.cat}</div>
+                            ${direccionRow}
+                            <div class="ec-popup-row"><b>Fecha</b>${p.fullDate}</div>
                         </div>
                     </div>
                 `)
@@ -1815,13 +1810,10 @@ function _buildDrawPopupHTML(props) {
     const imagen = props.imagen || '';
     if (!nombre && !descripcion && !imagen) return null;
     return `
-    <div style="font-family:Arial,sans-serif;min-width:140px;max-width:220px;">
-        ${imagen ? `<img src="${imagen}" style="width:100%;border-radius:6px 6px 0 0;
-            max-height:110px;object-fit:cover;display:block;margin:-8px -8px 8px -8px;">` : ''}
-        ${nombre ? `<div style="font-weight:800;font-size:0.85rem;color:#32325d;
-            margin-bottom:${descripcion?'4px':'0'};">${nombre}</div>` : ''}
-        ${descripcion ? `<div style="font-size:0.78rem;color:#525f7f;line-height:1.4;">
-            ${descripcion}</div>` : ''}
+    <div class="ec-draw-popup">
+        ${imagen ? `<img src="${imagen}" alt="">` : ''}
+        ${nombre ? `<div class="ec-draw-popup-name">${nombre}</div>` : ''}
+        ${descripcion ? `<div class="ec-draw-popup-desc">${descripcion}</div>` : ''}
     </div>`;
 }
 
@@ -1909,11 +1901,9 @@ function _buildLayerPopupHTML(props) {
     const imagen = props.imagen || "";
 
     return `
-        <div style="padding:10px; font-family:'Inter', sans-serif; color:#32325d; min-width:150px; max-width:250px;">
-            ${imagen ? `<img src="${imagen}" style="width:100%; border-radius:4px; margin-bottom:8px; max-height:120px; object-fit:cover; display:block;">` : ''}
-            <b style="text-transform:uppercase; font-size:13px; display:block; margin-bottom:4px; border-bottom:1px solid #eee; padding-bottom:4px;">
-                ${nombre}
-            </b>
-            ${descripcion ? `<span style="font-size:11px; color:#525f7f; display:block; line-height:1.4;">${descripcion}</span>` : ''}
+        <div class="ec-layer-popup">
+            ${imagen ? `<img src="${imagen}" alt="">` : ''}
+            <div class="ec-layer-popup-title">${nombre}</div>
+            ${descripcion ? `<div class="ec-layer-popup-desc">${descripcion}</div>` : ''}
         </div>`;
 }

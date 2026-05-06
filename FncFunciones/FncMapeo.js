@@ -88,7 +88,8 @@ function showMapping(data) {
         } else if (id === 'map-lon') {
             match = headers.find(h => h.toUpperCase() === 'X' || h.toUpperCase().includes('LON') || h.toUpperCase() === 'LNG' || h.toUpperCase() === 'LONGITUD');
         } else if (id === 'map-categoria') {
-            match = headers.find(h => h.toUpperCase().includes('TIPO') || h.toUpperCase().includes('CAT') || h.toUpperCase().includes('HECHO') || h.toUpperCase().includes('CAUSA'));
+            match = headers.find(h => h.toUpperCase() === 'TITULO' || h.toUpperCase() === 'TÍTULO')
+                 || headers.find(h => h.toUpperCase().includes('TIPO') || h.toUpperCase().includes('CAT') || h.toUpperCase().includes('HECHO') || h.toUpperCase().includes('CAUSA'));
         } else if (id === 'map-calle') {
             match = headers.find(h => h.toUpperCase().includes('CALLE') || h.toUpperCase().includes('DIR') || h.toUpperCase().includes('DOMICILIO') || h.toUpperCase().includes('VIA'));
         } else if (id === 'map-suma') {
@@ -233,4 +234,22 @@ function goToMapping() {
         window.scrollTo(0, 0);
         setTimeout(() => { if (typeof map !== 'undefined' && map) map.resize(); }, 300);
     }
+}
+// ============================================================
+// IR A PANTALLA PRINCIPAL (carga de datos)
+// ============================================================
+function goToHome() {
+    const mapping  = document.getElementById('mapping-view');
+    const atView   = document.getElementById('atestados-view');
+
+    // Si estamos en CONFIGURACIÓN → ir a carga de datos
+    if (mapping && mapping.classList.contains('active')) {
+        mapping.classList.remove('active');
+        const upload = document.getElementById('upload-view');
+        if (upload) { upload.classList.add('active'); window.scrollTo(0, 0); }
+        return;
+    }
+
+    // En cualquier otra pantalla → comportamiento original (ir a configuración)
+    goToMapping();
 }

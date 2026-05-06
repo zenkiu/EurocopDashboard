@@ -94,15 +94,45 @@ function closePdfModal() {
 function showRejectedModal(lista) {
     const container = document.getElementById('rejected-list');
     if (container) {
-        container.innerHTML = lista.map(item =>
-            `<div><i class="fa-solid fa-xmark" style="color:#f5365c"></i> ${item}</div>`
-        ).join('');
+        container.innerHTML = lista.map(item => {
+            const isHeader = item.startsWith('⚠️');
+            if (isHeader) {
+                // Línea de resumen — fondo destacado
+                return `<div style="
+                    display:flex; align-items:flex-start; gap:8px;
+                    padding: 8px 10px; margin: 6px 0 2px 0;
+                    background: rgba(245,54,92,0.08);
+                    border-left: 3px solid #f5365c;
+                    border-radius: 6px;
+                    font-weight: 700; font-size: 0.82rem; color: var(--text-dark, #32325d);
+                ">
+                    <span style="flex-shrink:0; margin-top:1px;">⚠️</span>
+                    <span>${item.replace('⚠️ ', '')}</span>
+                </div>`;
+            } else {
+                // Línea de detalle de fila — compacta con código REF
+                const isRef = item.includes('REF');
+                return `<div style="
+                    display:flex; align-items:center; gap:8px;
+                    padding: 5px 10px 5px 22px;
+                    border-bottom: 1px solid var(--border-color, #f0f0f0);
+                    font-size: 0.78rem; color: var(--text-muted, #8898aa);
+                ">
+                    <i class="fa-solid fa-arrow-turn-down-right" style="color:#adb5bd; font-size:10px; flex-shrink:0;"></i>
+                    ${isRef
+                        ? item.replace(/(REF[\w-]+)/, '<code style="background:rgba(94,114,228,0.1);color:#5e72e4;padding:1px 5px;border-radius:4px;font-size:0.75rem;font-weight:700;">$1</code>')
+                        : item
+                    }
+                </div>`;
+            }
+        }).join('');
     }
     document.getElementById('rejected-modal').classList.add('active');
 }
 
 function closeRejectedModal() {
     document.getElementById('rejected-modal').classList.remove('active');
+
 }
 
 // ============================================================
