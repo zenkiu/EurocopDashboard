@@ -38,9 +38,9 @@
                 <i class="fa-solid fa-bars"></i>
             </button>
             
-            <div class="logo">
+            <div class="logo" onclick="goToHome()" style="cursor:pointer" title="Ir a la pantalla de inicio">
                 <span class="logo-icon"><i class="fa-solid fa-shield-halved"></i></span>
-                <span class="logo-text" onclick="goToMapping()" style="cursor:pointer" title="Volver a Configuración">
+                <span class="logo-text">
                     <span data-i18n="nav_title">EUROCOP</span>
                     <span class="hide-mobile" data-i18n="nav_analytics"> ANALYTICS</span>
                     <span class="dot">.</span>
@@ -49,6 +49,15 @@
         </div>
 
         <div class="nav-right">
+            <!-- TOGGLE MODO DÍA/NOCHE -->
+            <button class="btn-theme-toggle" id="btn-theme-toggle" onclick="toggleTheme()" title="Cambiar modo día/noche">
+                <span class="theme-icon" id="theme-icon">🌙</span>
+                <div class="theme-track" id="theme-track">
+                    <div class="theme-thumb"></div>
+                </div>
+                <span id="theme-label">NOCHE</span>
+            </button>
+
             <!-- SELECTOR DE IDIOMA -->
             <select id="lang-selector" class="lang-select" onchange="changeLanguage(this.value)">
                 <option value="es">🔴 ES</option>
@@ -117,7 +126,7 @@
 
                 <div class="brand-footer">
                     <span class="brand-label" data-i18n="brand_powered">Powered by</span>
-                    <img src="./ImagenCoorporativa/zzenkiu.png" alt="Zzenkiu" class="brand-logo">
+                    <img src="./ImagenCoorporativa/zzenkiu.png" alt="Zzenkiu" class="brand-logo theme-logo" data-light="./ImagenCoorporativa/zzenkiu.png" data-dark="./ImagenCoorporativa/zzenkiubn.png">
                     <div id="app-version-badge" class="version-badge"></div> 
                 </div>
             </div>
@@ -204,7 +213,7 @@
             </div>
             
             <div class="action-footer">
-                <button onclick="location.reload()" class="btn-mini" data-i18n="btn_cancel">Cancelar</button>
+
                 <button id="btn-visualizar" class="btn-primary" data-i18n="btn_generate">GENERAR DASHBOARD</button>
             </div>
         </div>
@@ -302,7 +311,7 @@
             </div>
 
             <!-- Filtro de Categorías -->
-            <div class="filter-group">
+            <div class="filter-group" id="filter-group-cats">
                 <label data-i18n="filter_cats">Categorías</label>
                 <div class="custom-dropdown" id="drop-category">
                     <div class="dropdown-header" onclick="toggleDropdown('list-category')">
@@ -326,7 +335,7 @@
             <!-- Contenedor dinámico para Filtros Extra (Multiselect) -->
             <div id="dynamic-filters-container"></div>
 
-            <div style="margin-top: 20px;">
+            <div id="sintesis-container" style="margin-top: 20px;">
                 <button class="btn-ai-infographic" onclick="generateSmartInfographic()">
                     <i class="fa-solid fa-wand-magic-sparkles"></i> 
                     <span data-i18n="btn_ai_infographic">SÍNTESIS</span>
@@ -334,9 +343,14 @@
             </div>
 
             <div class="sidebar-footer">
-                <img src="./ImagenCoorporativa/zzenkiu.png" alt="Zzenkiu" class="sidebar-logo">
+                <img src="./ImagenCoorporativa/zzenkiu.png" alt="Zzenkiu" class="sidebar-logo theme-logo" data-light="./ImagenCoorporativa/zzenkiu.png" data-dark="./ImagenCoorporativa/zzenkiubn.png">
             </div>
         </aside>
+
+        <!-- Divisor arrastrable sidebar ↔ contenido -->
+        <div id="sidebar-resizer" class="sidebar-resizer" title="Arrastra para redimensionar">
+            <div class="sidebar-resizer-handle"></div>
+        </div>
 
         <main class="main-content">
             <div class="kpi-grid">
@@ -809,7 +823,7 @@
             <h1 id="info-title">Informe</h1>
             <p id="info-subtitle" data-i18n="info_subtitle">Análisis de datos filtrados</p>
         </div>
-        <img src="./ImagenCoorporativa/zzenkiu.png" class="header-logo" alt="Logo">
+        <img src="./ImagenCoorporativa/zzenkiu.png" class="header-logo theme-logo" alt="Logo" data-light="./ImagenCoorporativa/zzenkiu.png" data-dark="./ImagenCoorporativa/zzenkiubn.png">
     </div>
 
     <!-- GRID PRINCIPAL -->
@@ -910,9 +924,30 @@
             'FncFunciones/FncEstadisticaGVpj.js',
             'FncFunciones/FncAtestadosPJ.js',
             'FncFunciones/FncKPI.js',
+            'FncFunciones/FncTablaHechos.js',
+            'FncFunciones/FncGestionTablaHechos.js',
             'script.js'
         ];
         modules.forEach(function(m) { document.write('<script src="' + m + '?v=' + v + '"><\/script>'); });
+    </script>
+    <script>
+        // TABLA_HECHOS_TREE: se carga desde localStorage (subida por el usuario)
+        // Si no hay tabla cargada, se define como null para que FncTablaHechos muestre aviso
+        (function() {
+            const stored = localStorage.getItem('eurocop_tabla_hechos');
+            if (stored) {
+                try {
+                    window.TABLA_HECHOS_TREE = JSON.parse(stored);
+                    console.log('[TablaHechos] Cargada desde localStorage:', window.TABLA_HECHOS_TREE.length, 'nodos raíz');
+                } catch(e) {
+                    console.warn('[TablaHechos] Error al parsear localStorage:', e);
+                    window.TABLA_HECHOS_TREE = null;
+                }
+            } else {
+                window.TABLA_HECHOS_TREE = null;
+                console.log('[TablaHechos] Sin tabla cargada en localStorage');
+            }
+        })();
     </script>
 </body>
 </html>

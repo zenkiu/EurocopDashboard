@@ -1,3 +1,92 @@
+
+// ═══════════════════════════════════════════════════════════════
+// TOGGLE MODO DÍA / NOCHE
+// ═══════════════════════════════════════════════════════════════
+(function initTheme() {
+    const LS_KEY = 'eurocop_theme';
+    const DARK  = 'dark';
+    const LIGHT = 'light';
+
+    function applyTheme(theme) {
+        const html   = document.documentElement;
+        const track  = document.getElementById('theme-track');
+        const icon   = document.getElementById('theme-icon');
+        const label  = document.getElementById('theme-label');
+
+        html.setAttribute('data-theme', theme);
+
+        // ── Intercambiar logos según tema ──
+        document.querySelectorAll('.theme-logo').forEach(function(img) {
+            var src = theme === DARK ? img.getAttribute('data-dark') : img.getAttribute('data-light');
+            if (src) img.src = src;
+        });
+
+        if (theme === DARK) {
+            if (track)  { track.classList.remove('day'); }
+            if (icon)   icon.textContent = '🌙';
+            if (label)  label.textContent = 'NOCHE';
+        } else {
+            if (track)  { track.classList.add('day'); }
+            if (icon)   icon.textContent = '☀️';
+            if (label)  label.textContent = 'DÍA';
+        }
+
+        // Actualizar colores de Chart.js si existen gráficos renderizados
+        if (typeof Chart !== 'undefined') {
+            const gridColor = theme === DARK ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)';
+            const tickColor = theme === DARK ? '#484f58' : '#8898aa';
+            Chart.defaults.color = tickColor;
+            Chart.defaults.borderColor = gridColor;
+            // Redibujar todos los gráficos activos
+            Object.values(Chart.instances || {}).forEach(function(chart) {
+                try {
+                    if (chart && chart.options) {
+                        // Actualizar ejes
+                        if (chart.options.scales) {
+                            Object.values(chart.options.scales).forEach(function(scale) {
+                                if (scale.grid) scale.grid.color = gridColor;
+                                if (scale.ticks) scale.ticks.color = tickColor;
+                            });
+                        }
+                        // Actualizar tooltip
+                        if (chart.options.plugins && chart.options.plugins.tooltip) {
+                            var tt = chart.options.plugins.tooltip;
+                            tt.backgroundColor = theme === DARK ? '#1c2128' : '#1a1f36';
+                            tt.titleColor      = theme === DARK ? '#7d8590' : '#8898aa';
+                            tt.bodyColor       = theme === DARK ? '#e6edf3' : '#e8ecff';
+                        }
+                        chart.update('none');
+                    }
+                } catch(e) {}
+            });
+        }
+
+        localStorage.setItem(LS_KEY, theme);
+    }
+
+    // Exponer toggle global
+    window.toggleTheme = function() {
+        var current = document.documentElement.getAttribute('data-theme') || LIGHT;
+        applyTheme(current === DARK ? LIGHT : DARK);
+    };
+
+    // Aplicar tema guardado o preferencia del sistema al cargar
+    var saved = localStorage.getItem(LS_KEY);
+    if (!saved) {
+        saved = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? DARK : LIGHT;
+    }
+
+    // Aplicar inmediatamente (antes del DOMContentLoaded para evitar flash)
+    document.documentElement.setAttribute('data-theme', saved);
+
+    // Actualizar UI del botón cuando el DOM esté listo
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() { applyTheme(saved); });
+    } else {
+        applyTheme(saved);
+    }
+})();
+
 /**
  * EUROCOP ANALYTICS - SCRIPT PRINCIPAL v1.6.9
  * Este archivo solo contiene la inicialización (DOMContentLoaded)
@@ -120,3 +209,108 @@ window.onclick = (e) => {
         }
     }
 };
+
+// ═══════════════════════════════════════════════════════════════
+// SIDEBAR RESIZER — arrastra el divisor para cambiar el ancho
+// ═══════════════════════════════════════════════════════════════
+(function initSidebarResizer() {
+    const LS_KEY = 'eurocop_sidebar_width';
+    const MIN_W  = 180;
+    const MAX_W  = 520;
+    const DEFAULT_W = 260;
+
+    function getSidebar()  { return document.getElementById('sidebar'); }
+    function getResizer()  { return document.getElementById('sidebar-resizer'); }
+
+    // Aplicar ancho guardado al iniciar
+    function applyWidth(w) {
+        const sidebar = getSidebar();
+        if (!sidebar) return;
+        const clamped = Math.min(MAX_W, Math.max(MIN_W, w));
+        sidebar.style.width = clamped + 'px';
+        // Actualizar la variable CSS global para que otros componentes la lean
+        document.documentElement.style.setProperty('--sidebar-width', clamped + 'px');
+        // Forzar resize de Chart.js si existe
+        if (typeof Chart !== 'undefined') {
+            Object.values(Chart.instances || {}).forEach(c => {
+                try { c.resize(); } catch(e) {}
+            });
+        }
+        // Forzar resize de MapLibre si existe
+        if (typeof map !== 'undefined' && map && typeof map.resize === 'function') {
+            try { map.resize(); } catch(e) {}
+        }
+        return clamped;
+    }
+
+    function init() {
+        const resizer = getResizer();
+        if (!resizer) return;
+
+        // Restaurar ancho guardado
+        const saved = parseInt(localStorage.getItem(LS_KEY)) || DEFAULT_W;
+        applyWidth(saved);
+
+        let startX, startW, dragging = false;
+
+        resizer.addEventListener('mousedown', e => {
+            if (e.button !== 0) return;
+            const sidebar = getSidebar();
+            if (!sidebar) return;
+            startX  = e.clientX;
+            startW  = sidebar.offsetWidth;
+            dragging = true;
+            resizer.classList.add('dragging');
+            document.body.style.cursor    = 'col-resize';
+            document.body.style.userSelect = 'none';
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', e => {
+            if (!dragging) return;
+            const delta  = e.clientX - startX;
+            const newW   = applyWidth(startW + delta);
+        });
+
+        document.addEventListener('mouseup', e => {
+            if (!dragging) return;
+            dragging = false;
+            resizer.classList.remove('dragging');
+            document.body.style.cursor     = '';
+            document.body.style.userSelect = '';
+            // Guardar ancho
+            const sidebar = getSidebar();
+            if (sidebar) {
+                localStorage.setItem(LS_KEY, sidebar.offsetWidth);
+            }
+            // Trigger chart resize después de soltar
+            setTimeout(() => {
+                if (typeof Chart !== 'undefined') {
+                    Object.values(Chart.instances || {}).forEach(c => {
+                        try { c.resize(); } catch(e) {}
+                    });
+                }
+                if (typeof map !== 'undefined' && map && typeof map.resize === 'function') {
+                    try { map.resize(); } catch(e) {}
+                }
+                if (typeof window.dispatchEvent === 'function') {
+                    window.dispatchEvent(new Event('resize'));
+                }
+            }, 50);
+        });
+
+        // Doble clic en el resizer → resetear al ancho por defecto
+        resizer.addEventListener('dblclick', () => {
+            applyWidth(DEFAULT_W);
+            localStorage.setItem(LS_KEY, DEFAULT_W);
+            setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
+        });
+    }
+
+    // Esperar a que el DOM esté listo
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+})();
