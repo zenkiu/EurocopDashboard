@@ -544,10 +544,21 @@ function performLayerSearch(query) {
             const props = feature.properties || {};
             if (Object.keys(props).length === 0) continue; // Saltar si no tiene propiedades
 
-            // Unimos nombre y descripción para la búsqueda
-            const nombre = (props.nombre || props.Nombre || props.name || '').toLowerCase();
-            const descripcion = (props.descripcion || props.Descripcion || '').toLowerCase();
-            const contenidoBusqueda = nombre + " " + descripcion;
+            // Unimos todos los campos de texto para la búsqueda (incluye campos de incidencia del editor)
+            const contenidoBusqueda = [
+                props.nombre || props.Nombre || props.name || '',
+                props.descripcion || props.Descripcion || '',
+                props.tipoIncidencia  || '',
+                props.observaciones   || '',
+                props.agente          || '',
+                props.expediente      || '',
+                props.unidad          || '',
+                props.estado          || '',
+                props.notasInternas   || '',
+                props.terminada       || '',
+                props.fechaInicio     || '',
+                props.fechaFin        || ''
+            ].join(' ').toLowerCase();
 
             const matches = searchTerms.every(term => contenidoBusqueda.includes(term));
             
@@ -565,9 +576,21 @@ function performLayerSearch(query) {
     if (typeof drawFeatures !== 'undefined') {
         for (const feature of drawFeatures) {
             const props = feature.properties || {};
-            const nombre = (props.nombre || '').toLowerCase();
-            const descripcion = (props.descripcion || '').toLowerCase();
-            const contenidoBusqueda = nombre + " " + descripcion;
+            // Buscar en TODOS los campos de texto relevantes (incluye campos nuevos de incidencia)
+            const contenidoBusqueda = [
+                props.nombre          || '',
+                props.descripcion     || '',
+                props.tipoIncidencia  || '',
+                props.observaciones   || '',
+                props.agente          || '',
+                props.expediente      || '',
+                props.unidad          || '',
+                props.estado          || '',
+                props.notasInternas   || '',
+                props.terminada       || '',
+                props.fechaInicio     || '',
+                props.fechaFin        || ''
+            ].join(' ').toLowerCase();
 
             const matches = searchTerms.every(term => contenidoBusqueda.includes(term));
             
@@ -660,15 +683,62 @@ function renderSearchResults(foundFeatures) {
             <div style="max-height:250px; overflow-y:auto;">`;
 
     foundFeatures.forEach((item, index) => {
-        const nombre = item.feature.properties.nombre || "Sin nombre";
-        const desc = item.feature.properties.descripcion || "";
+        const p    = item.feature.properties;
+        const nombre      = p.nombre        || _td('map_draw_sin_resultado');
+        const tipoInc     = p.tipoIncidencia|| '';
+        const terminada   = p.terminada     || '';
+        const fechaInicio = p.fechaInicio   || '';
+        const fechaFin    = p.fechaFin      || '';
+        const expediente  = p.expediente    || '';
+        const agente      = p.agente        || '';
+        const estado      = p.estado        || '';
+        const observ      = p.observaciones || p.descripcion || '';
         const tipo = item.sourceType === 'editor' ? '✏️' : '📂';
 
+        // Traducir terminada
+        const terminadaIcon  = terminada === 'SI' ? '✅' : terminada === 'NO' ? '❌' : terminada === 'EN_CURSO' ? '🔄' : '';
+        const terminadaLabel = terminada === 'SI' ? _td('map_draw_terminada_label')
+                             : terminada === 'NO' ? _td('map_draw_no_terminada_label')
+                             : terminada === 'EN_CURSO' ? _td('map_draw_terminada_en_curso') : '';
+
+        // Traducir estado (el valor guardado es siempre en español; buscamos la clave correspondiente)
+        const estadoMap = {
+            'Abierto':   _td('map_draw_estado_abierto'),
+            'Cerrado':   _td('map_draw_estado_cerrado'),
+            'Pendiente': _td('map_draw_estado_pendiente'),
+            'Archivado': _td('map_draw_estado_archivado'),
+            'Derivado':  _td('map_draw_estado_derivado')
+        };
+        const estadoLabel = estadoMap[estado] || estado;
+        const estadoColor = estado === 'Cerrado' || estado === 'Archivado' ? '#7f8c8d' : estado === 'Abierto' ? '#e74c3c' : '#3498db';
+
+        // Traducir tipo incidencia (valor guardado siempre en español)
+        const tipoMap = {
+            'Tráfico':    _td('map_draw_tipo_trafico'),
+            'Accidente':  _td('map_draw_tipo_accidente'),
+            'Robo':       _td('map_draw_tipo_robo'),
+            'Vandalismo': _td('map_draw_tipo_vandalismo'),
+            'Altercado':  _td('map_draw_tipo_altercado'),
+            'Incendio':   _td('map_draw_tipo_incendio'),
+            'Servicio':   _td('map_draw_tipo_servicio'),
+            'Otro':       _td('map_draw_tipo_otro')
+        };
+        const tipoLabel = tipoMap[tipoInc] || tipoInc;
+
         htmlContent += `
-            <div onclick="window._flyToSearchResult(${index})" 
-                 style="margin-bottom:8px; padding:8px; border-radius:6px; cursor:pointer; background:#f8f9ff; border:1px solid #e2e8f0;">
-                <div style="font-weight:700; font-size:12px; color:#5e72e4;">${tipo} ${nombre}</div>
-                ${desc ? `<div style="font-size:10px; color:#8898aa;">${desc}</div>` : ''}
+            <div onclick="window._flyToSearchResult(${index})"
+                 style="margin-bottom:8px; padding:8px; border-radius:6px; cursor:pointer; background:#f8f9ff; border:1px solid #e2e8f0; transition:background .15s;"
+                 onmouseover="this.style.background='#eef0ff'" onmouseout="this.style.background='#f8f9ff'">
+                <div style="font-weight:700; font-size:12px; color:#5e72e4; margin-bottom:3px;">${tipo} ${nombre}</div>
+                ${tipoLabel ? `<div style="font-size:10px; font-weight:700; color:#5e72e4; text-transform:uppercase; letter-spacing:.3px;">⚠️ ${tipoLabel}</div>` : ''}
+                ${(fechaInicio || fechaFin) ? `<div style="font-size:10px; color:#8898aa; margin-top:2px;">
+                    ${fechaInicio ? '📅 ' + fechaInicio : ''} ${fechaFin ? '→ ' + fechaFin : ''}
+                </div>` : ''}
+                ${terminadaLabel ? `<div style="font-size:10px; color:#555; margin-top:2px;">${terminadaIcon} ${terminadaLabel}</div>` : ''}
+                ${estadoLabel ? `<div style="font-size:10px; color:${estadoColor}; font-weight:600; margin-top:2px;">📋 ${estadoLabel}</div>` : ''}
+                ${expediente ? `<div style="font-size:10px; color:#555; margin-top:2px;">📄 ${expediente}</div>` : ''}
+                ${agente ? `<div style="font-size:10px; color:#555; margin-top:2px;">👮 ${agente}</div>` : ''}
+                ${observ ? `<div style="font-size:10px; color:#8898aa; margin-top:3px; border-top:1px solid #eee; padding-top:3px;">${observ.length > 80 ? observ.slice(0,80)+'…' : observ}</div>` : ''}
             </div>`;
     });
 
@@ -1444,7 +1514,9 @@ function onDrawClick(e) {
         drawFeatures.push({
             type: 'Feature',
             properties: { _id: id, _type: 'point', _color: '#e74c3c',
-                nombre: '', descripcion: '', imagen: '' },
+                nombre: '', descripcion: '', imagen: '',
+                tipoIncidencia: '', fechaInicio: '', fechaFin: '', terminada: '',
+                observaciones: '', agente: '', expediente: '', unidad: '', estado: '', notasInternas: '' },
             geometry: { type: 'Point', coordinates: coords }
         });
         refreshDrawSource();
@@ -1470,7 +1542,9 @@ function onDrawClick(e) {
             drawFeatures.push({
                 type: 'Feature',
                 properties: { _id: id, _type: 'circle', _color: '#9b59b6',
-                    nombre: '', descripcion: '',
+                    nombre: '', descripcion: '', imagen: '',
+                    tipoIncidencia: '', fechaInicio: '', fechaFin: '', terminada: '',
+                    observaciones: '', agente: '', expediente: '', unidad: '', estado: '', notasInternas: '',
                     _center: drawCircleCenter, _radiusKm: radiusKm, _radiusM: radiusM },
                 geometry: _circleGeometry(drawCircleCenter, radiusKm)
             });
@@ -1497,7 +1571,9 @@ function onDrawDblClick(e) {
         drawFeatures.push({
             type: 'Feature',
             properties: { _id: id, _type: 'polygon', _color: '#2ecc71',
-                nombre: '', descripcion: '' },
+                nombre: '', descripcion: '', imagen: '',
+                tipoIncidencia: '', fechaInicio: '', fechaFin: '', terminada: '',
+                observaciones: '', agente: '', expediente: '', unidad: '', estado: '', notasInternas: '' },
             geometry: { type: 'Polygon', coordinates: [ring] }
         });
         drawTempCoords = [];
@@ -1509,7 +1585,9 @@ function onDrawDblClick(e) {
         drawFeatures.push({
             type: 'Feature',
             properties: { _id: id, _type: 'line', _color: '#e67e22',
-                nombre: '', descripcion: '' },
+                nombre: '', descripcion: '', imagen: '',
+                tipoIncidencia: '', fechaInicio: '', fechaFin: '', terminada: '',
+                observaciones: '', agente: '', expediente: '', unidad: '', estado: '', notasInternas: '' },
             geometry: { type: 'LineString', coordinates: drawTempCoords }
         });
         drawTempCoords = [];
@@ -1538,7 +1616,7 @@ function onDrawMouseMove(e) {
 }
 
 // ── Panel de edición de propiedades ──────────────────────────────────────
-function showEditPanel(featureId) {
+function showEditPanel(featureId, activeTab) {
     const f = drawFeatures.find(x => x.properties._id === featureId);
     if (!f) return;
     const p = f.properties;
@@ -1546,105 +1624,233 @@ function showEditPanel(featureId) {
     const panel = document.getElementById('draw-feature-panel');
     if (!panel) return;
 
+    if (!activeTab) activeTab = panel._activeTab || 'datos';
+    panel._activeTab = activeTab;
+
     const typeLabels = { point:_td('map_draw_point'), polygon:_td('map_draw_polygon'), line:_td('map_draw_line'), circle:_td('map_draw_circle') };
     const typeIcons  = { point:'location-dot', polygon:'draw-polygon', line:'minus', circle:'circle' };
     const colorOpts  = ['#e74c3c','#e67e22','#2ecc71','#3498db','#9b59b6','#1abc9c','#f1c40f','#e91e63','#607d8b'];
 
-    panel.innerHTML = `
-    <div style="font-family:Arial,sans-serif;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-            <span style="font-weight:800;font-size:0.88rem;color:#32325d;">
-                <i class="fa-solid fa-${typeIcons[p._type] || 'shapes'}" style="color:#5e72e4;margin-right:5px;"></i>
-                ${typeLabels[p._type] || 'Geometría'}
-            </span>
-            <button onclick="closeEditPanel()" style="background:none;border:none;cursor:pointer;
-                font-size:16px;color:#8898aa;padding:2px 6px;">✕</button>
+    const tabActive   = 'flex:1;padding:8px 4px;background:white;border:none;border-bottom:2px solid #5e72e4;font-size:0.75rem;font-weight:700;color:#5e72e4;cursor:pointer;letter-spacing:.3px;transition:all .15s;';
+    const tabInactive = 'flex:1;padding:8px 4px;background:#f4f6fb;border:none;border-bottom:2px solid #e2e8f0;font-size:0.75rem;font-weight:600;color:#8898aa;cursor:pointer;letter-spacing:.3px;transition:all .15s;';
+    const tabStyle = (tab) => tab === activeTab ? tabActive : tabInactive;
+
+    const lbl = 'font-size:0.72rem;font-weight:700;color:#8898aa;text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:3px;';
+    const inp = 'width:100%;padding:6px 8px;border:1px solid #e2e8f0;border-radius:7px;font-size:0.82rem;box-sizing:border-box;outline:none;background:white;';
+    const row = 'margin-bottom:9px;';
+
+    // Opciones de tipo incidencia usando traducciones
+    const tiposIncidencia = [
+        ['Tráfico',    _td('map_draw_tipo_trafico')],
+        ['Accidente',  _td('map_draw_tipo_accidente')],
+        ['Robo',       _td('map_draw_tipo_robo')],
+        ['Vandalismo', _td('map_draw_tipo_vandalismo')],
+        ['Altercado',  _td('map_draw_tipo_altercado')],
+        ['Incendio',   _td('map_draw_tipo_incendio')],
+        ['Servicio',   _td('map_draw_tipo_servicio')],
+        ['Otro',       _td('map_draw_tipo_otro')]
+    ];
+
+    // Opciones de estado
+    const estadosOpts = [
+        ['Abierto',   _td('map_draw_estado_abierto')],
+        ['Cerrado',   _td('map_draw_estado_cerrado')],
+        ['Pendiente', _td('map_draw_estado_pendiente')],
+        ['Archivado', _td('map_draw_estado_archivado')],
+        ['Derivado',  _td('map_draw_estado_derivado')]
+    ];
+
+    // ══════════════════════════════════════════════════════
+    // PESTAÑA 1 — DATOS (Incidencia + Documentación)
+    // ══════════════════════════════════════════════════════
+    const tabDatos = `
+        <div style="${row}">
+            <label style="${lbl}">${_td('map_draw_tipo_incidencia')}</label>
+            <select style="${inp}" onchange="updateDrawFeatureProp('${featureId}','tipoIncidencia',this.value)">
+                <option value="">${_td('map_draw_tipo_placeholder')}</option>
+                ${tiposIncidencia.map(([val, label]) =>
+                    `<option value="${val}" ${(p.tipoIncidencia||'')==val?'selected':''}>${label}</option>`
+                ).join('')}
+            </select>
+        </div>
+        <div style="${row}">
+            <label style="${lbl}">${_td('map_draw_nombre_ref')}</label>
+            <input value="${escHtml(p.nombre || '')}" placeholder="${_td('map_draw_nombre_ref')}"
+                style="${inp}" oninput="updateDrawFeatureProp('${featureId}','nombre',this.value)">
+        </div>
+        <div style="display:flex;gap:6px;${row}">
+            <div style="flex:1;">
+                <label style="${lbl}">${_td('map_draw_fecha_inicio')}</label>
+                <input type="date" value="${p.fechaInicio||''}" style="${inp}"
+                    onchange="updateDrawFeatureProp('${featureId}','fechaInicio',this.value)">
+            </div>
+            <div style="flex:1;">
+                <label style="${lbl}">${_td('map_draw_fecha_fin')}</label>
+                <input type="date" value="${p.fechaFin||''}" style="${inp}"
+                    onchange="updateDrawFeatureProp('${featureId}','fechaFin',this.value)">
+            </div>
+        </div>
+        <div style="${row}">
+            <label style="${lbl}">${_td('map_draw_terminada')}</label>
+            <select style="${inp}" onchange="updateDrawFeatureProp('${featureId}','terminada',this.value)">
+                <option value="">${_td('map_draw_tipo_placeholder')}</option>
+                <option value="SI"       ${(p.terminada||'')==='SI'      ?'selected':''}>✅ ${_td('map_draw_terminada_si')}</option>
+                <option value="NO"       ${(p.terminada||'')==='NO'      ?'selected':''}>❌ ${_td('map_draw_terminada_no')}</option>
+                <option value="EN_CURSO" ${(p.terminada||'')==='EN_CURSO'?'selected':''}>🔄 ${_td('map_draw_terminada_en_curso')}</option>
+            </select>
+        </div>
+        <div style="${row}">
+            <label style="${lbl}">${_td('map_draw_observaciones')}</label>
+            <textarea rows="3" placeholder="${_td('map_draw_observaciones_ph')}"
+                style="${inp}resize:none;"
+                oninput="updateDrawFeatureProp('${featureId}','observaciones',this.value)">${escHtml(p.observaciones || '')}</textarea>
         </div>
 
-        <div style="margin-bottom:8px;">
-            <label style="font-size:0.72rem;font-weight:700;color:#8898aa;text-transform:uppercase;
-                letter-spacing:.4px;display:block;margin-bottom:3px;">${_td('map_draw_nombre')}</label>
-            <input id="draw-prop-nombre" value="${escHtml(p.nombre || '')}"
-                placeholder="Nombre del elemento"
-                style="width:100%;padding:6px 8px;border:1px solid #e2e8f0;border-radius:7px;
-                font-size:0.82rem;box-sizing:border-box;outline:none;"
-                oninput="updateDrawFeatureProp('${featureId}','nombre',this.value)">
+        <div style="border-top:1px dashed #e2e8f0;margin:10px 0 10px;"></div>
+
+        <div style="${row}">
+            <label style="${lbl}">${_td('map_draw_agente')}</label>
+            <input value="${escHtml(p.agente || '')}" placeholder="${_td('map_draw_agente_ph')}"
+                style="${inp}" oninput="updateDrawFeatureProp('${featureId}','agente',this.value)">
+        </div>
+        <div style="${row}">
+            <label style="${lbl}">${_td('map_draw_expediente')}</label>
+            <input value="${escHtml(p.expediente || '')}" placeholder="${_td('map_draw_expediente_ph')}"
+                style="${inp}" oninput="updateDrawFeatureProp('${featureId}','expediente',this.value)">
+        </div>
+        <div style="${row}">
+            <label style="${lbl}">${_td('map_draw_unidad')}</label>
+            <input value="${escHtml(p.unidad || '')}" placeholder="${_td('map_draw_unidad_ph')}"
+                style="${inp}" oninput="updateDrawFeatureProp('${featureId}','unidad',this.value)">
+        </div>
+        <div style="${row}">
+            <label style="${lbl}">${_td('map_draw_estado')}</label>
+            <select style="${inp}" onchange="updateDrawFeatureProp('${featureId}','estado',this.value)">
+                <option value="">${_td('map_draw_tipo_placeholder')}</option>
+                ${estadosOpts.map(([val, label]) =>
+                    `<option value="${val}" ${(p.estado||'')==val?'selected':''}>${label}</option>`
+                ).join('')}
+            </select>
+        </div>
+        <div style="${row}">
+            <label style="${lbl}">${_td('map_draw_notas')}</label>
+            <textarea rows="2" placeholder="${_td('map_draw_notas_ph')}"
+                style="${inp}resize:none;"
+                oninput="updateDrawFeatureProp('${featureId}','notasInternas',this.value)">${escHtml(p.notasInternas || '')}</textarea>
+        </div>
+        ${p._type === 'circle' && p._center ? `
+        <div style="${row}">
+            <label style="${lbl}">${_td('map_draw_radio')}: <span id="draw-radius-val">${Math.round((p._radiusM||100))}</span> m</label>
+            <input type="range" min="10" max="5000" step="10" value="${p._radiusM || 100}"
+                style="width:100%;accent-color:#5e72e4;"
+                oninput="updateDrawCircleRadius('${featureId}', this.value)">
+        </div>` : ''}`;
+
+    // ══════════════════════════════════════════════════════
+    // PESTAÑA 2 — ASPECTO (Color + Imagen)
+    // ══════════════════════════════════════════════════════
+    const tabAspecto = `
+        <div style="${row}">
+            <label style="${lbl}">${_td('map_draw_color_geometria')}</label>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">
+                ${colorOpts.map(c => `
+                <div onclick="updateDrawFeatureProp('${featureId}','_color','${c}')"
+                    style="width:28px;height:28px;border-radius:50%;background:${c};cursor:pointer;
+                    border:${p._color===c?'3px solid #32325d':'2px solid transparent'};
+                    box-shadow:${p._color===c?'0 0 0 2px white inset':''};
+                    transition:border .15s;" title="${c}"></div>`).join('')}
+            </div>
+            ${p._color ? `<div style="margin-top:8px;display:flex;align-items:center;gap:6px;">
+                <div style="width:14px;height:14px;border-radius:50%;background:${p._color};border:1px solid #ccc;"></div>
+                <span style="font-size:0.75rem;color:#555;">${_td('map_draw_color_actual')}: <b>${p._color}</b></span>
+            </div>` : ''}
         </div>
 
-        <div style="margin-bottom:8px;">
-            <label style="font-size:0.72rem;font-weight:700;color:#8898aa;text-transform:uppercase;
-                letter-spacing:.4px;display:block;margin-bottom:3px;">${_td('map_draw_desc')}</label>
-            <textarea id="draw-prop-desc" rows="2" placeholder="Descripción opcional"
-                style="width:100%;padding:6px 8px;border:1px solid #e2e8f0;border-radius:7px;
-                font-size:0.82rem;box-sizing:border-box;resize:none;outline:none;"
-                oninput="updateDrawFeatureProp('${featureId}','descripcion',this.value)">${escHtml(p.descripcion || '')}</textarea>
-        </div>
+        <div style="border-top:1px dashed #e2e8f0;margin:10px 0 10px;"></div>
 
         ${isPoint ? `
-        <div style="margin-bottom:8px;">
-            <label style="font-size:0.72rem;font-weight:700;color:#8898aa;text-transform:uppercase;
-                letter-spacing:.4px;display:block;margin-bottom:3px;">${_td('map_draw_imagen')}</label>
-            <div style="display:flex;gap:6px;align-items:center;">
+        <div style="${row}">
+            <label style="${lbl}">${_td('map_draw_imagen')}</label>
+            <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">
                 <button onclick="document.getElementById('draw-img-file-${featureId}').click()"
-                    style="flex:1;padding:7px 10px;background:#f0f2ff;border:1px solid #5e72e4;
+                    style="flex:1;padding:8px 10px;background:#f0f2ff;border:1px solid #5e72e4;
                     border-radius:7px;cursor:pointer;color:#5e72e4;font-size:0.8rem;
                     display:flex;align-items:center;gap:6px;justify-content:center;">
                     <i class="fa-solid fa-folder-open"></i>
                     ${p.imagen ? _td('map_draw_cambiar') : _td('map_draw_subir')}
                 </button>
-                ${p.imagen ? `<button onclick="updateDrawFeatureProp('${featureId}','imagen',''); showEditPanel('${featureId}')"
-                    style="padding:7px;background:#fff5f5;border:1px solid #f5365c;border-radius:7px;
+                ${p.imagen ? `<button onclick="updateDrawFeatureProp('${featureId}','imagen',''); showEditPanel('${featureId}','aspecto')"
+                    style="padding:8px 10px;background:#fff5f5;border:1px solid #f5365c;border-radius:7px;
                     cursor:pointer;color:#f5365c;font-size:0.8rem;">
                     <i class="fa-solid fa-trash"></i>
                 </button>` : ''}
             </div>
             <input type="file" id="draw-img-file-${featureId}" accept="image/*" style="display:none;"
                 onchange="loadDrawImage('${featureId}',this)">
-            ${p.imagen ? `<div style="position:relative;margin-top:6px;">
-                <img src="${p.imagen}" style="width:100%;border-radius:8px;max-height:100px;
-                    object-fit:cover;display:block;">
-            </div>` : `<p style="font-size:0.72rem;color:#b0bec5;margin-top:4px;text-align:center;">
-                ${_td('map_draw_sin_imagen')}</p>`}
-        </div>` : ''}
+            ${p.imagen
+                ? `<img src="${p.imagen}" style="width:100%;border-radius:8px;max-height:140px;object-fit:cover;display:block;box-shadow:0 2px 8px rgba(0,0,0,.12);">`
+                : `<div style="border:2px dashed #e2e8f0;border-radius:8px;padding:18px;text-align:center;">
+                    <i class="fa-solid fa-image" style="font-size:1.5rem;color:#d0d7e3;margin-bottom:6px;"></i>
+                    <p style="font-size:0.72rem;color:#b0bec5;margin:0;">${_td('map_draw_sin_imagen')}</p>
+                   </div>`}
+        </div>` : `
+        <div style="border:2px dashed #e2e8f0;border-radius:8px;padding:16px;text-align:center;margin-bottom:8px;">
+            <i class="fa-solid fa-image" style="font-size:1.3rem;color:#d0d7e3;margin-bottom:5px;"></i>
+            <p style="font-size:0.75rem;color:#b0bec5;margin:0;">${_td('map_draw_img_solo_puntos')}</p>
+        </div>`}`;
 
-        ${p._type === 'circle' && p._center ? `
-        <div style="margin-bottom:8px;">
-            <label style="font-size:0.72rem;font-weight:700;color:#8898aa;text-transform:uppercase;
-                letter-spacing:.4px;display:block;margin-bottom:3px;">
-                ${_td('map_draw_radio')}: <span id="draw-radius-val">${Math.round((p._radiusM||100))}</span> m
-            </label>
-            <input type="range" min="10" max="5000" step="10"
-                value="${p._radiusM || 100}"
-                style="width:100%;accent-color:#5e72e4;"
-                oninput="updateDrawCircleRadius('${featureId}', this.value)">
-        </div>` : ''}
+    // ══════════════════════════════════════════════════════
+    // RENDER PANEL
+    // ══════════════════════════════════════════════════════
+    panel.innerHTML = `
+    <div style="font-family:Arial,sans-serif;width:320px;">
 
-        <div style="margin-bottom:10px;">
-            <label style="font-size:0.72rem;font-weight:700;color:#8898aa;text-transform:uppercase;
-                letter-spacing:.4px;display:block;margin-bottom:5px;">${_td('map_draw_color')}</label>
-            <div style="display:flex;gap:5px;flex-wrap:wrap;">
-                ${colorOpts.map(c => `
-                <div onclick="updateDrawFeatureProp('${featureId}','_color','${c}')"
-                    style="width:22px;height:22px;border-radius:50%;background:${c};cursor:pointer;
-                    border:${p._color===c?'3px solid #32325d':'2px solid transparent'};
-                    transition:border .15s;" title="${c}"></div>`).join('')}
-            </div>
+        <!-- HEADER -->
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <span style="font-weight:800;font-size:0.88rem;color:#32325d;">
+                <i class="fa-solid fa-${typeIcons[p._type] || 'shapes'}" style="color:#5e72e4;margin-right:5px;"></i>
+                ${typeLabels[p._type] || 'Geometría'}
+            </span>
+            <button onclick="closeEditPanel()" style="background:none;border:none;cursor:pointer;
+                font-size:16px;color:#8898aa;padding:2px 6px;line-height:1;">✕</button>
         </div>
 
-        <div style="display:flex;gap:6px;">
+        <!-- PESTAÑAS (2) -->
+        <div style="display:flex;border-bottom:2px solid #e2e8f0;margin-bottom:12px;">
+            <button style="${tabStyle('datos')}" onclick="showEditPanel('${featureId}','datos')">
+                <i class="fa-solid fa-triangle-exclamation" style="margin-right:4px;"></i>${_td('map_draw_tab_datos')}
+            </button>
+            <button style="${tabStyle('aspecto')}" onclick="showEditPanel('${featureId}','aspecto')">
+                <i class="fa-solid fa-palette" style="margin-right:4px;"></i>${_td('map_draw_tab_aspecto')}
+            </button>
+        </div>
+
+        <!-- CONTENIDO con scroll -->
+        <div style="max-height:calc(65vh - 200px);min-height:200px;overflow-y:auto;overflow-x:hidden;padding-right:3px;">
+            ${activeTab === 'datos'   ? tabDatos   : ''}
+            ${activeTab === 'aspecto' ? tabAspecto : ''}
+        </div>
+
+        <!-- FOOTER -->
+        <div style="display:flex;gap:6px;margin-top:12px;padding-top:10px;border-top:1px solid #f0f0f0;">
             <button onclick="closeEditPanel()"
-                style="flex:1;padding:7px;background:#5e72e4;color:white;border:none;border-radius:8px;
-                font-size:0.8rem;font-weight:700;cursor:pointer;">
+                style="flex:1;padding:8px;background:#5e72e4;color:white;border:none;border-radius:8px;
+                font-size:0.82rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;">
                 <i class="fa-solid fa-check"></i> ${_td('map_draw_guardar')}
             </button>
             <button onclick="deleteDrawFeature('${featureId}')"
-                style="padding:7px 10px;background:#fff5f5;color:#f5365c;border:1px solid #f5365c;
-                border-radius:8px;font-size:0.8rem;cursor:pointer;">
+                style="padding:8px 12px;background:#fff5f5;color:#f5365c;border:1px solid #f5365c;
+                border-radius:8px;font-size:0.82rem;cursor:pointer;">
                 <i class="fa-solid fa-trash"></i>
             </button>
         </div>
     </div>`;
     panel.style.display = 'block';
+    // Resetear scroll al inicio cada vez que se abre/cambia pestaña
+    requestAnimationFrame(() => {
+        const scrollDiv = panel.querySelector('div[style*="overflow-y:auto"]');
+        if (scrollDiv) scrollDiv.scrollTop = 0;
+    });
 }
 
 function closeEditPanel() {
@@ -1674,7 +1880,7 @@ function loadDrawImage(featureId, input) {
     const reader = new FileReader();
     reader.onload = (e) => {
         updateDrawFeatureProp(featureId, 'imagen', e.target.result);
-        showEditPanel(featureId); // refrescar panel con imagen
+        showEditPanel(featureId, 'aspecto'); // refrescar panel con imagen
     };
     reader.readAsDataURL(file);
 }
@@ -1722,6 +1928,12 @@ function loadDrawGeojson(input) {
                     else if (f.geometry.type === 'Polygon') f.properties._type = 'polygon';
                     else f.properties._type = 'line';
                 }
+                // Garantizar que los campos nuevos existen (compatibilidad con GeoJSONs antiguos)
+                const camposNuevos = ['tipoIncidencia','fechaInicio','fechaFin','terminada',
+                    'observaciones','agente','expediente','unidad','estado','notasInternas','imagen'];
+                camposNuevos.forEach(campo => {
+                    if (f.properties[campo] === undefined) f.properties[campo] = '';
+                });
             });
 
             refreshDrawSource();
@@ -1805,15 +2017,57 @@ function updateDrawCircleRadius(featureId, radiusM) {
 let _drawHoverPopup = null;
 
 function _buildDrawPopupHTML(props) {
-    const nombre = props.nombre || '';
-    const descripcion = props.descripcion || '';
-    const imagen = props.imagen || '';
-    if (!nombre && !descripcion && !imagen) return null;
+    const nombre        = props.nombre        || '';
+    const descripcion   = props.descripcion   || '';
+    const imagen        = props.imagen        || '';
+    const tipoInc       = props.tipoIncidencia|| '';
+    const fechaInicio   = props.fechaInicio   || '';
+    const fechaFin      = props.fechaFin      || '';
+    const terminada     = props.terminada     || '';
+    const observaciones = props.observaciones || '';
+    const agente        = props.agente        || '';
+    const expediente    = props.expediente    || '';
+    const estado        = props.estado        || '';
+
+    const hasIncidencia = tipoInc || fechaInicio || fechaFin || terminada || observaciones || agente || expediente || estado;
+    if (!nombre && !descripcion && !imagen && !hasIncidencia) return null;
+
+    const terminadaColor = terminada === 'SI' ? '#2ecc71' : terminada === 'EN_CURSO' ? '#f39c12' : terminada === 'NO' ? '#e74c3c' : '#aaa';
+    const terminadaIcon  = terminada === 'SI' ? '✅' : terminada === 'EN_CURSO' ? '🔄' : terminada === 'NO' ? '❌' : '';
+    const terminadaLabel = terminada === 'SI' ? _td('map_draw_terminada_label')
+                         : terminada === 'NO' ? _td('map_draw_no_terminada_label')
+                         : terminada === 'EN_CURSO' ? _td('map_draw_terminada_en_curso') : '';
+    const estadoColor    = estado === 'Cerrado' || estado === 'Archivado' ? '#7f8c8d' : estado === 'Abierto' ? '#e74c3c' : '#3498db';
+    const estadoMap2 = { 'Abierto':_td('map_draw_estado_abierto'), 'Cerrado':_td('map_draw_estado_cerrado'),
+        'Pendiente':_td('map_draw_estado_pendiente'), 'Archivado':_td('map_draw_estado_archivado'), 'Derivado':_td('map_draw_estado_derivado') };
+    const estadoLabel2 = estadoMap2[estado] || estado;
+    const tipoMap2 = { 'Tráfico':_td('map_draw_tipo_trafico'), 'Accidente':_td('map_draw_tipo_accidente'),
+        'Robo':_td('map_draw_tipo_robo'), 'Vandalismo':_td('map_draw_tipo_vandalismo'),
+        'Altercado':_td('map_draw_tipo_altercado'), 'Incendio':_td('map_draw_tipo_incendio'),
+        'Servicio':_td('map_draw_tipo_servicio'), 'Otro':_td('map_draw_tipo_otro') };
+    const tipoLabel2 = tipoMap2[tipoInc] || tipoInc;
+
     return `
     <div class="ec-draw-popup">
         ${imagen ? `<img src="${imagen}" alt="">` : ''}
+        ${tipoLabel2 ? `<div style="font-size:0.68rem;font-weight:700;color:#5e72e4;text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px;">
+            <i class="fa-solid fa-triangle-exclamation" style="margin-right:3px;"></i>${tipoLabel2}
+        </div>` : ''}
         ${nombre ? `<div class="ec-draw-popup-name">${nombre}</div>` : ''}
-        ${descripcion ? `<div class="ec-draw-popup-desc">${descripcion}</div>` : ''}
+        ${(fechaInicio || fechaFin) ? `<div style="font-size:0.72rem;color:#8898aa;margin-top:3px;">
+            ${fechaInicio ? `📅 <b>Inicio:</b> ${fechaInicio}` : ''}
+            ${fechaFin    ? `&nbsp;&nbsp;🏁 <b>Fin:</b> ${fechaFin}` : ''}
+        </div>` : ''}
+        ${terminadaLabel ? `<div style="font-size:0.72rem;color:${terminadaColor};margin-top:3px;font-weight:600;">
+            ${terminadaIcon} ${terminadaLabel}
+        </div>` : ''}
+        ${estadoLabel2 ? `<div style="font-size:0.72rem;color:${estadoColor};margin-top:2px;">
+            📋 <b>${_td('map_draw_estado')}:</b> ${estadoLabel2}
+        </div>` : ''}
+        ${expediente ? `<div style="font-size:0.72rem;color:#555;margin-top:2px;">📄 ${expediente}</div>` : ''}
+        ${agente ? `<div style="font-size:0.72rem;color:#555;margin-top:2px;">👮 ${agente}</div>` : ''}
+        ${observaciones ? `<div class="ec-draw-popup-desc" style="margin-top:4px;border-top:1px solid #eee;padding-top:4px;">${observaciones}</div>` : ''}
+        ${descripcion && !observaciones ? `<div class="ec-draw-popup-desc">${descripcion}</div>` : ''}
     </div>`;
 }
 

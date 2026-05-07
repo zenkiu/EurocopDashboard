@@ -233,7 +233,10 @@ function updateCharts(data, selYears) {
                         grid: { display: false },
                         ticks: {
                             color: function(ctx) {
-                                if (temporalView !== 'daily') return '#525f7f';
+                                // Color base adaptado al tema día/noche
+                                const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                                const baseColor = isDark ? '#7d8590' : '#525f7f';
+                                if (temporalView !== 'daily') return baseColor;
                                 const label = ctx.chart.data.labels[ctx.index] || '';
                                 const parts = label.split(' ');
                                 const [dd, mm, yy] = parts[0] ? parts[0].split('/').map(Number) : [0,0,0];
@@ -243,7 +246,7 @@ function updateCharts(data, selYears) {
                                     if (dow === 6) return '#f5365c'; // Sábado  → rojo
                                     if (dow === 0) return '#5e72e4'; // Domingo → azul
                                 }
-                                return '#525f7f';
+                                return baseColor;
                             },
                             font: function(ctx) {
                                 if (temporalView !== 'daily') return {};
@@ -258,7 +261,23 @@ function updateCharts(data, selYears) {
                             }
                         }
                     },
-                    y: { stacked: chartTimelineType === 'bar', beginAtZero: true, ticks: { precision: 0 } },
+                    y: {
+                        stacked: chartTimelineType === 'bar',
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0,
+                            color: function() {
+                                const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                                return isDark ? '#7d8590' : '#525f7f';
+                            }
+                        },
+                        grid: {
+                            color: function() {
+                                const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                                return isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.06)';
+                            }
+                        }
+                    },
                     ...extraScales
                 }
             }
@@ -651,7 +670,7 @@ function generateTimelineNarrative() {
         li.style.justifyContent = 'space-between';
         li.style.alignItems = 'center';
         li.style.padding = '10px 15px';
-        li.style.borderBottom = '1px solid #f0f0f0';
+        li.style.borderBottom = '1px solid var(--border-color, #f0f0f0)';
         li.style.fontSize = '0.9rem';
 
         // Barra visual de porcentaje relativo al máximo
@@ -659,13 +678,13 @@ function generateTimelineNarrative() {
         
         li.innerHTML = `
             <div style="display:flex; align-items:center; gap:10px; flex:1;">
-                <div style="font-weight:700; color:#525f7f; width:80px;">${item.label}</div>
-                <div style="flex:1; background:#e9ecef; height:6px; border-radius:3px; max-width:150px;">
-                    <div style="width:${percent}%; background:#5e72e4; height:100%; border-radius:3px;"></div>
+                <div style="font-weight:700; color:var(--text-dark,#525f7f); width:80px;">${item.label}</div>
+                <div style="flex:1; background:var(--border-color,#e9ecef); height:6px; border-radius:3px; max-width:150px; opacity:0.6;">
+                    <div style="width:${percent}%; background:#5e72e4; height:100%; border-radius:3px; opacity:1;"></div>
                 </div>
             </div>
-            <div style="font-weight:600; color:#32325d;">
-                ${item.value.toLocaleString()} <span style="font-size:0.75rem; color:#8898aa; font-weight:400;">${txtRecords}</span>
+            <div style="font-weight:600; color:var(--text-dark,#32325d);">
+                ${item.value.toLocaleString()} <span style="font-size:0.75rem; color:var(--text-muted,#8898aa); font-weight:400;">${txtRecords}</span>
             </div>
         `;
         ul.appendChild(li);
