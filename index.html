@@ -664,9 +664,10 @@
         <!-- Panel fijo de resultados de búsqueda GeoJSON (no se mueve con el mapa) -->
         <div id="search-results-panel" class="search-results-panel" style="display:none;"></div>
         <!-- Panel editor de geometría (formulario propiedades) -->
-        <div id="draw-feature-panel" style="display:none;position:absolute;bottom:16px;left:50%;
-            transform:translateX(-50%);z-index:300;background:white;border-radius:12px;
-            box-shadow:0 8px 30px rgba(50,50,93,.2);padding:16px;min-width:280px;max-width:340px;
+        <div id="draw-feature-panel" style="display:none;position:absolute;top:50%;left:50%;
+            transform:translate(-50%,-50%);z-index:300;background:white;border-radius:12px;
+            box-shadow:0 8px 30px rgba(50,50,93,.25);padding:16px;min-width:300px;max-width:360px;
+            max-height:calc(100% - 32px);overflow:hidden;
             border:1px solid #e2e8f0;font-family:Arial,sans-serif;">
         </div>
 
@@ -751,21 +752,21 @@
                 <h3><i class="fa-solid fa-list-ul"></i> <span data-i18n="narrative_title">Análisis Narrativo</span></h3>
                 <button onclick="document.getElementById('narrative-modal').classList.remove('active')" class="btn-close-pdf" style="color:white;"><i class="fa-solid fa-xmark"></i></button>
             </div>
-            <div class="pdf-body" style="padding: 20px; overflow-y: auto; background: #f8f9fe;">
-                <h4 data-i18n="narrative_summary" style="font-size: 0.8rem; font-weight: 800; border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-bottom: 15px;"></h4>
+            <div class="pdf-body" style="padding: 20px; overflow-y: auto; background: var(--bg-light, #f8f9fe);">
+                <h4 data-i18n="narrative_summary" style="font-size: 0.8rem; font-weight: 800; color: var(--text-dark); border-bottom: 1px solid var(--border-color, #ddd); padding-bottom: 5px; margin-bottom: 15px;"></h4>
                 <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 25px;">
-                    <div style="background: white; padding: 10px; border-radius: 8px; text-align: center; border-top: 3px solid #2dce89;">
+                    <div style="background: var(--card-bg-2, white); padding: 10px; border-radius: 8px; text-align: center; border-top: 3px solid #2dce89;">
                         <small data-i18n="narrative_max"></small><div id="narrative-max-val" style="font-size: 1.1rem; font-weight: 800;"></div><small id="narrative-max-lbl" style="color: #2dce89; font-weight: 600;"></small>
                     </div>
-                    <div style="background: white; padding: 10px; border-radius: 8px; text-align: center; border-top: 3px solid #f5365c;">
+                    <div style="background: var(--card-bg-2, white); padding: 10px; border-radius: 8px; text-align: center; border-top: 3px solid #f5365c;">
                         <small data-i18n="narrative_min"></small><div id="narrative-min-val" style="font-size: 1.1rem; font-weight: 800;"></div><small id="narrative-min-lbl" style="color: #f5365c; font-weight: 600;"></small>
                     </div>
-                    <div style="background: white; padding: 10px; border-radius: 8px; text-align: center; border-top: 3px solid #11cdef;">
+                    <div style="background: var(--card-bg-2, white); padding: 10px; border-radius: 8px; text-align: center; border-top: 3px solid #11cdef;">
                         <small data-i18n="narrative_avg"></small><div id="narrative-avg-val" style="font-size: 1.1rem; font-weight: 800;"></div><small data-i18n="narrative_records" style="color: #11cdef;"></small>
                     </div>
                 </div>
                 <h4 data-i18n="narrative_chronology" style="font-size: 0.8rem; font-weight: 800; border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-bottom: 15px;"></h4>
-                <div id="narrative-list-container" style="background: white; border-radius: 8px; padding: 10px;"></div>
+                <div id="narrative-list-container" style="background: var(--card-bg-2, white); border-radius: 8px; padding: 10px;"></div>
             </div>
         </div>
     </div>

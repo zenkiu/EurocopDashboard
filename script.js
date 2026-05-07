@@ -38,19 +38,24 @@
 
         // Actualizar colores de Chart.js si existen gráficos renderizados
         if (typeof Chart !== 'undefined') {
-            const gridColor = theme === DARK ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)';
-            const tickColor = theme === DARK ? '#484f58' : '#8898aa';
+            const gridColor = theme === DARK ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+            const tickColor = theme === DARK ? '#7d8590' : '#8898aa'; // más claro en dark
             Chart.defaults.color = tickColor;
             Chart.defaults.borderColor = gridColor;
             // Redibujar todos los gráficos activos
             Object.values(Chart.instances || {}).forEach(function(chart) {
                 try {
                     if (chart && chart.options) {
-                        // Actualizar ejes
+                        // Actualizar ejes — pero NO sobreescribir si el tick.color es una función
+                        // (el timeline usa callbacks para colorear días de semana)
                         if (chart.options.scales) {
                             Object.values(chart.options.scales).forEach(function(scale) {
-                                if (scale.grid) scale.grid.color = gridColor;
-                                if (scale.ticks) scale.ticks.color = tickColor;
+                                if (scale.grid && typeof scale.grid.color !== 'function') {
+                                    scale.grid.color = gridColor;
+                                }
+                                if (scale.ticks && typeof scale.ticks.color !== 'function') {
+                                    scale.ticks.color = tickColor;
+                                }
                             });
                         }
                         // Actualizar tooltip
@@ -86,9 +91,20 @@
 
     // Actualizar UI del botón cuando el DOM esté listo
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', function() { applyTheme(saved); });
+        document.addEventListener('DOMContentLoaded', function() {
+            applyTheme(saved);
+            // Inicializar Chart.defaults según tema guardado
+            if (typeof Chart !== 'undefined') {
+                Chart.defaults.color      = saved === DARK ? '#7d8590' : '#8898aa';
+                Chart.defaults.borderColor = saved === DARK ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+            }
+        });
     } else {
         applyTheme(saved);
+        if (typeof Chart !== 'undefined') {
+            Chart.defaults.color      = saved === DARK ? '#7d8590' : '#8898aa';
+            Chart.defaults.borderColor = saved === DARK ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+        }
     }
 })();
 
