@@ -12,6 +12,7 @@
         const track  = document.getElementById('theme-track');
         const icon   = document.getElementById('theme-icon');
         const label  = document.getElementById('theme-label');
+        const btn    = document.getElementById('btn-theme-toggle');
 
         html.setAttribute('data-theme', theme);
 
@@ -21,14 +22,18 @@
             if (src) img.src = src;
         });
 
+        // ── Etiquetas i18n del toggle ──
+        const _t = (typeof translations !== 'undefined' && translations[currentLang]) || {};
         if (theme === DARK) {
             if (track)  { track.classList.remove('day'); }
             if (icon)   icon.textContent = '🌙';
-            if (label)  label.textContent = 'NOCHE';
+            if (label)  label.textContent = _t.theme_night  || 'NOCHE';
+            if (btn)    btn.title = _t.theme_toggle_title || 'Cambiar modo día/noche';
         } else {
             if (track)  { track.classList.add('day'); }
             if (icon)   icon.textContent = '☀️';
-            if (label)  label.textContent = 'DÍA';
+            if (label)  label.textContent = _t.theme_day    || 'DÍA';
+            if (btn)    btn.title = _t.theme_toggle_title || 'Cambiar modo día/noche';
         }
 
         // Actualizar colores de Chart.js si existen gráficos renderizados

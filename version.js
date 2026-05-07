@@ -1,6 +1,6 @@
 /* --- CONTROL DE VERSIONES CENTRALIZADO --- */
 /* Cambia este valor para actualizar Cache y UI */
-const EUROCOP_VERSION = "3.10.9";
+const EUROCOP_VERSION = "3.10.10";
 
 /* --- TEXTO DE MEMORIAS (editable) --- */
 const EUROCOP_MEMORIAS_INFO =
