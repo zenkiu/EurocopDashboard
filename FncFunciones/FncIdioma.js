@@ -109,6 +109,55 @@ function applyLanguage(lang) {
         updateUI();
     }
 
-    // 8. Liberar bloqueo tras un tick (garantiza que el DOM ya se estabilizó)
+    // 8. Refrescar etiqueta del toggle día/noche
+    const themeLabel = document.getElementById('theme-label');
+    const themeBtn   = document.getElementById('btn-theme-toggle');
+    const isDark     = document.documentElement.getAttribute('data-theme') === 'dark';
+    if (themeLabel) themeLabel.textContent = isDark ? (t.theme_night || 'NOCHE') : (t.theme_day || 'DÍA');
+    if (themeBtn)   themeBtn.title = t.theme_toggle_title || 'Cambiar modo día/noche';
+
+    // 9. Refrescar panel de motivos (títulos y botones)
+    const motivosTitle = document.querySelector('.motivos-label');
+    if (motivosTitle) {
+        const svgEl = motivosTitle.querySelector('svg');
+        motivosTitle.textContent = t.motivos_title || 'MOTIVOS';
+        if (svgEl) motivosTitle.prepend(svgEl);
+    }
+    const sizeLabel = document.getElementById('motivos-size-label');
+    if (sizeLabel) {
+        const sizeBtn = document.getElementById('motivos-size-btn');
+        const isReduced = sizeBtn && sizeBtn.classList.contains('reduced');
+        sizeLabel.textContent = isReduced ? (t.motivos_reduce || 'Reducir') : (t.motivos_expand || 'Ampliar');
+    }
+    const searchInput = document.querySelector('.motivos-search-input');
+    if (searchInput) searchInput.placeholder = t.motivos_search || 'Buscar y filtrar…';
+    const clearBtn = document.getElementById('motivos-clear-search');
+    if (clearBtn) clearBtn.title = t.motivos_clear_title || 'Limpiar búsqueda';
+    // Refrescar toolbar buttons
+    const tbBtns = document.querySelectorAll('.motivos-tb-btn');
+    tbBtns.forEach(btn => {
+        const svg = btn.querySelector('svg');
+        if (btn.classList.contains('motivos-tb-danger')) {
+            btn.textContent = t.motivos_select_none || 'Ninguno';
+        } else if (!btn.classList.contains('motivos-tb-danger')) {
+            btn.textContent = t.motivos_select_all || 'Todo';
+        }
+        if (svg) btn.prepend(svg);
+    });
+    // Refrescar _updateStatus si FncTablaHechos está disponible
+    if (typeof FncTablaHechos !== 'undefined' && typeof FncTablaHechos._updateStatusPublic === 'function') {
+        FncTablaHechos._updateStatusPublic();
+    }
+
+    // 10. Refrescar panel de preview de motivos si está abierto
+    const mppEmpty = document.querySelector('#mpp-body .mpp-empty');
+    if (mppEmpty) mppEmpty.textContent = t.mpp_empty || 'Sin registros visibles con los filtros actuales';
+
+    // 10. Refrescar title de badges del árbol de motivos
+    document.querySelectorAll('.motivos-node-count').forEach(el => {
+        el.title = t.mpp_badge_title || 'Ver registros de este nodo';
+    });
+
+    // 11. Liberar bloqueo tras un tick (garantiza que el DOM ya se estabilizó)
     requestAnimationFrame(() => { window._filterResetInProgress = false; });
 }

@@ -612,9 +612,13 @@ const FncEstadisticaGVdsv = (() => {
                 (s, r) => s + r.cv + r.cm + r.ov + r.om + r.pv + r.pm, 0
             );
 
+            // TG-1 = Accidente sin víctimas → total_cero es esperado, no es error
+            const motivoUpper = String(at.motivo || '').toUpperCase();
+            const esSinVictimas = motivoUpper.includes('TG-1') || motivoUpper.includes('SIN VICTIM');
+
             const causas = [];
-            if (sinFecha)          causas.push('sin_fecha');
-            if (totalPersonas === 0) causas.push('total_cero');
+            if (sinFecha) causas.push('sin_fecha');
+            if (totalPersonas === 0 && !esSinVictimas) causas.push('total_cero');
 
             if (causas.length > 0) {
                 errores.push({

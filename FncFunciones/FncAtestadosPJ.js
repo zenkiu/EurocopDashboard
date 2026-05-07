@@ -25,9 +25,10 @@ const FncAtestadosPJ = (() => {
         const optsAño = años.map(a =>
             `<option value="${a}" ${a === añoSel ? 'selected' : ''}>${a}</option>`
         ).join('');
-        const optsMes = meses.map((m, i) =>
-            `<option value="${i+1}" ${(i+1) === mesSel ? 'selected' : ''}>${m}</option>`
-        ).join('');
+        const optsMes = `<option value="0" ${mesSel === 0 ? 'selected' : ''}>${t('todos_meses') || 'TODOS'}</option>` +
+            meses.map((m, i) =>
+                `<option value="${i+1}" ${(i+1) === mesSel ? 'selected' : ''}>${m}</option>`
+            ).join('');
 
         // Función de celda numérica con resaltado
         function hlTd(v, cls='') {
@@ -245,98 +246,78 @@ const FncAtestadosPJ = (() => {
     let _erroresPJ = []; // almacena los errores para impresión
 
     function mostrarModalErroresPJ(errores) {
-        _erroresPJ = errores; // guardar referencia
-        // Construir lista de atestados sin fecha
+        _erroresPJ = errores;
+        const lang = typeof currentLang !== 'undefined' ? currentLang : 'es';
+        const tr   = (typeof translations !== 'undefined' && translations[lang]) || {};
+        const _s   = (key, vars={}) => {
+            let t = tr[key] || key;
+            Object.entries(vars).forEach(([k,v]) => { t = t.replace(`{${k}}`, v); });
+            return t;
+        };
+
         const rows = errores.map(e => `
-            <tr>
-                <td style="padding:7px 12px;font-weight:700;color:#1a1a2e;font-size:0.85rem;
-                    border-bottom:1px solid #ffe4e4;white-space:nowrap;">${e.ref}</td>
-                <td style="padding:7px 12px;color:#d4380d;font-size:0.82rem;
-                    border-bottom:1px solid #ffe4e4;white-space:nowrap;">Sin Fecha</td>
-                <td style="padding:7px 12px;color:#525f7f;font-size:0.82rem;
-                    border-bottom:1px solid #ffe4e4;">${e.delito !== '—' ? e.delito : '—'}</td>
+            <tr class="atd-err-tr">
+                <td class="atd-err-td-ref">${e.ref}</td>
+                <td class="atd-err-td-fecha">
+                    <span style="color:#fb6340;font-weight:700;">${_s('atd_pj_sin_fecha')}</span>
+                </td>
+                <td class="atd-err-td-motivo">${e.delito !== '—' ? e.delito : '—'}</td>
             </tr>`).join('');
 
         const overlay = document.createElement('div');
         overlay.id = 'atd-err-modal-pj';
-        overlay.style.cssText = `
-            position:fixed; inset:0; z-index:999999;
-            background:rgba(20,20,60,0.6);
-            display:flex; align-items:center; justify-content:center;
-            padding:20px; font-family:Arial,sans-serif;`;
+        overlay.className = 'atd-modal-overlay';
 
         overlay.innerHTML = `
-        <div style="background:white; border-radius:14px; width:100%; max-width:580px;
-            max-height:85vh; display:flex; flex-direction:column;
-            box-shadow:0 20px 60px rgba(0,0,0,0.35); overflow:hidden;">
-
-            <!-- Cabecera -->
-            <div style="background:linear-gradient(135deg,#f5365c,#c0002a);
-                padding:14px 18px; display:flex; align-items:center;
-                justify-content:space-between; flex-shrink:0;">
-                <div style="display:flex;align-items:center;gap:8px;color:white;
-                    font-weight:800;font-size:0.95rem;">
+        <div class="atd-modal atd-err-modal-wide">
+            <div class="atd-modal-header" style="background:linear-gradient(135deg,#f5365c,#c0002a);">
+                <div class="atd-modal-title">
                     <i class="fa-solid fa-triangle-exclamation"></i>
-                    Atestados sin fecha suceso · ${errores.length} detectados
+                    ${_s('atd_pj_err_title', { n: errores.length })}
                 </div>
                 <div style="display:flex;gap:8px;align-items:center;">
                     <button onclick="FncAtestadosPJ._printErroresPJ()"
                         style="padding:5px 12px;border-radius:20px;border:1.5px solid rgba(255,255,255,0.6);
                         background:rgba(255,255,255,0.15);color:white;font-size:0.75rem;font-weight:700;
                         cursor:pointer;display:flex;align-items:center;gap:5px;">
-                        <i class="fa-solid fa-print"></i> Imprimir
+                        <i class="fa-solid fa-print"></i> ${tr.imprimir || 'Imprimir'}
                     </button>
-                    <button onclick="document.getElementById('atd-err-modal-pj').remove()"
-                        style="width:28px;height:28px;border-radius:50%;border:none;
-                        background:rgba(255,255,255,0.2);color:white;font-size:14px;
-                        cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+                    <button class="atd-btn-close" onclick="FncAtestadosPJ._closeErroresPJ()" style="color:white;">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
                 </div>
             </div>
 
-            <!-- Contador -->
-            <div style="padding:14px 18px 0;display:flex;gap:10px;flex-shrink:0;">
-                <div style="flex:1;text-align:center;background:#fff5f5;border:1px solid #ffd6d6;
-                    border-radius:10px;padding:10px;">
-                    <div style="font-size:1.8rem;font-weight:900;color:#f5365c;">${errores.length}</div>
-                    <div style="font-size:0.65rem;font-weight:700;color:#8898aa;letter-spacing:.5px;">
-                        SIN FECHA SUCESO</div>
+            <div class="atd-modal-body">
+                <div style="display:flex;gap:10px;margin-bottom:14px;">
+                    <div class="atd-err-stat">
+                        <span style="font-size:1.8rem;font-weight:900;color:#f5365c;">${errores.length}</span>
+                        <small>${_s('atd_err_sin_fecha')}</small>
+                    </div>
+                </div>
+
+                <div class="atd-err-info-box">
+                    <i class="fa-solid fa-circle-info"></i>
+                    ${_s('atd_pj_err_aviso')}
+                </div>
+
+                <div class="atd-err-table-wrap">
+                    <table class="atd-err-table">
+                        <thead>
+                            <tr>
+                                <th>${_s('atd_pj_col_ref')}</th>
+                                <th>${_s('atd_pj_col_fecha')}</th>
+                                <th>${_s('atd_pj_col_delito')}</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>
                 </div>
             </div>
 
-            <!-- Aviso -->
-            <div style="margin:12px 18px 0;padding:8px 12px;background:#fff5f5;
-                border-left:3px solid #f5365c;border-radius:4px;font-size:0.78rem;color:#525f7f;flex-shrink:0;">
-                <i class="fa-solid fa-circle-info" style="color:#f5365c;margin-right:5px;"></i>
-                Revisa estos atestados en el sistema e introduce la fecha del suceso.
-            </div>
-
-            <!-- Tabla scrollable -->
-            <div style="flex:1;overflow-y:auto;padding:12px 18px;min-height:0;">
-                <table style="width:100%;border-collapse:collapse;background:white;
-                    border-radius:8px;overflow:hidden;border:1px solid #fee2e2;">
-                    <thead>
-                        <tr style="background:#f5365c;">
-                            <th style="padding:8px 12px;text-align:left;color:white;
-                                font-size:0.75rem;font-weight:700;white-space:nowrap;">REFERENCIA ATS</th>
-                            <th style="padding:8px 12px;text-align:left;color:white;
-                                font-size:0.75rem;font-weight:700;">FECHA</th>
-                            <th style="padding:8px 12px;text-align:left;color:white;
-                                font-size:0.75rem;font-weight:700;">DELITO</th>
-                        </tr>
-                    </thead>
-                    <tbody style="background:white;">
-                        ${rows}
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Footer -->
-            <div style="padding:12px 18px;border-top:1px solid #f0f1f8;
-                display:flex;justify-content:flex-end;flex-shrink:0;background:white;">
-                <button onclick="document.getElementById('atd-err-modal-pj').remove()"
-                    style="padding:8px 24px;background:#5e72e4;color:white;border:none;
-                    border-radius:8px;font-size:0.85rem;font-weight:700;cursor:pointer;">
-                    Entendido
+            <div class="atd-err-footer">
+                <button onclick="FncAtestadosPJ._closeErroresPJ()" class="atd-err-btn-ok">
+                    ${_s('atd_err_entendido')}
                 </button>
             </div>
         </div>`;

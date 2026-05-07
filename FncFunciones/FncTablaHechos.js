@@ -382,32 +382,34 @@ const FncTablaHechos = (() => {
         const allRec  = _totalRecords;
         const todoSel = selIds === allIds;
         const nadaSel = selIds === 0;
+        const _t = (typeof translations !== 'undefined' && translations[currentLang]) || {};
 
         // Pill label
         const lbl = document.getElementById(LABEL_ID);
         if (lbl) {
-            if (todoSel)      lbl.textContent = 'Todos los motivos';
-            else if (nadaSel) lbl.textContent = 'Ningún motivo';
-            else              lbl.textContent = `${selIds.toLocaleString('es')} motivos`;
+            if (todoSel)      lbl.textContent = _t.motivos_all  || 'Todos los motivos';
+            else if (nadaSel) lbl.textContent = _t.motivos_none || 'Ningún motivo';
+            else              lbl.textContent = (_t.motivos_n   || '{n} motivos').replace('{n}', selIds.toLocaleString('es'));
         }
 
-        // Badge — siempre muestra el número de REGISTROS que cubre la selección
-        // "Todo" → total de registros con motivo; "Parcial" → registros filtrados
+        // Badge
         const badge = document.getElementById('motivos-total-badge');
         if (badge) {
             badge.textContent = nadaSel ? '0' : selRec.toLocaleString('es');
             badge.className   = 'motivos-pill-count' +
                 (todoSel ? ' ok' : nadaSel ? ' none' : ' partial');
             badge.title = todoSel
-                ? `${allRec.toLocaleString('es')} registros totales`
-                : `${selRec.toLocaleString('es')} de ${allRec.toLocaleString('es')} registros`;
+                ? (_t.motivos_total_regs   || '{n} registros totales').replace('{n}', allRec.toLocaleString('es'))
+                : (_t.motivos_partial_regs || '{sel} de {total} registros')
+                    .replace('{sel}', selRec.toLocaleString('es'))
+                    .replace('{total}', allRec.toLocaleString('es'));
         }
 
-        // Info toolbar — muestra reducción cuando hay filtro activo
+        // Info toolbar
         const info = document.getElementById('motivos-sel-info');
         if (info) {
             info.textContent = todoSel ? '' :
-                nadaSel ? 'Sin datos' :
+                nadaSel ? (_t.motivos_no_data || 'Sin datos') :
                 `${selRec.toLocaleString('es')} / ${allRec.toLocaleString('es')}`;
         }
     }
@@ -634,14 +636,23 @@ const FncTablaHechos = (() => {
         try {
             const ids   = JSON.parse(el.getAttribute('data-ids') || '[]');
             const label = el.getAttribute('data-label') || '';
+            // Toggle: si el panel ya está abierto con este mismo nodo → cerrar
+            const panel = document.getElementById('motivos-preview-panel');
+            if (panel && panel.classList.contains('open')) {
+                const currentLabel = document.getElementById('mpp-label');
+                if (currentLabel && currentLabel.textContent === label) {
+                    _closePreview();
+                    return;
+                }
+            }
             _showPreview(ids, label, e);
         } catch(err) { console.error('Preview parse error:', err); }
     }
 
     function _showPreview(ids, nodeLabel, e) {
         if (e) { e.stopPropagation(); e.preventDefault(); }
+        const _t = (typeof translations !== 'undefined' && translations[currentLang]) || {};
 
-        // Obtener datos filtrados actualmente (los visibles en el dashboard)
         const source = (typeof lastFilteredData !== 'undefined' && lastFilteredData)
             ? lastFilteredData
             : (typeof finalData !== 'undefined' ? finalData : []);
@@ -652,7 +663,6 @@ const FncTablaHechos = (() => {
             return id && idSet.has(id);
         });
 
-        // Construir o reutilizar el panel
         let panel = document.getElementById('motivos-preview-panel');
         if (!panel) {
             panel = document.createElement('div');
@@ -664,7 +674,7 @@ const FncTablaHechos = (() => {
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0">
                             <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
                         </svg>
-                        <span id="mpp-label">Registros</span>
+                        <span id="mpp-label">${_t.mpp_title || 'Registros'}</span>
                     </div>
                     <div style="display:flex;align-items:center;gap:6px;">
                         <span id="mpp-count" class="mpp-count-badge">0</span>
@@ -675,17 +685,16 @@ const FncTablaHechos = (() => {
             document.body.appendChild(panel);
         }
 
-        // Rellenar contenido
         document.getElementById('mpp-label').textContent = nodeLabel;
         document.getElementById('mpp-count').textContent = rows.length.toLocaleString('es');
 
         const body = document.getElementById('mpp-body');
 
         if (rows.length === 0) {
-            body.innerHTML = `<div class="mpp-empty">Sin registros visibles con los filtros actuales</div>`;
+            body.innerHTML = `<div class="mpp-empty">${_t.mpp_empty || 'Sin registros visibles con los filtros actuales'}</div>`;
         } else {
             const rowsHtml = rows.map(r => {
-                const ref  = (r.refanno && r.refnum) ? `REF: ${r.refanno}-${r.refnum}` : (r.refanno || r.refnum || '—');
+                const ref   = (r.refanno && r.refnum) ? `REF: ${r.refanno}-${r.refnum}` : (r.refanno || r.refnum || '—');
                 const fecha = r.date ? r.date.toLocaleDateString('es-ES', { day:'2-digit', month:'2-digit', year:'numeric' }) : '—';
                 const hora  = r.date ? r.date.toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' }) : '';
                 const calle = (r.calle && r.calle !== 'SIN CALLE / GPS') ? r.calle : '—';
@@ -701,7 +710,6 @@ const FncTablaHechos = (() => {
             body.innerHTML = `<div class="mpp-list">${rowsHtml}</div>`;
         }
 
-        // Mostrar panel
         panel.classList.add('open');
     }
 
@@ -723,5 +731,6 @@ const FncTablaHechos = (() => {
         _selectAll, _clearAll, _collapseAll,
         _onSearch, _clearSearch, _startResize, _toggleSize,
         _showPreview, _closePreview, _showPreviewFromEl,
+        _updateStatusPublic: _updateStatus,
     };
 })();

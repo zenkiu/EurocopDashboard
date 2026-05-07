@@ -288,10 +288,12 @@ const config = {
 
             // ── AVISO SI NO HAY DATOS ──
             if (finalData.length === 0) {
+                const _t3 = (typeof translations !== 'undefined' && translations[currentLang]) || {};
                 const colCat = config.cat || "(sin columna)";
                 const hint = registrosSinCategoria > 0
-                    ? `Todos los registros (${registrosSinCategoria}) tienen la columna "${colCat}" vacía.\nVerifica que has seleccionado la columna correcta en CATEGORÍA / TIPO.`
-                    : `No se encontraron registros válidos. Verifica el archivo y el mapeo de columnas.`;
+                    ? (_t3.err_no_records_cat || 'Todos los registros ({n}) tienen la columna "{col}" vacía.\nVerifica que has seleccionado la columna correcta en CATEGORÍA / TIPO.')
+                        .replace('{n}', registrosSinCategoria).replace('{col}', colCat)
+                    : (_t3.err_no_records || 'No se encontraron registros válidos. Verifica el archivo y el mapeo de columnas.');
                 if (loadingEl) loadingEl.classList.remove('active');
                 alert(hint);
                 return;
@@ -348,12 +350,17 @@ const config = {
 
             // ── MODAL DE AVISOS (fechas vacías / sin categoría) ──
             const listaAvisos = [];
+            const _t2 = (typeof translations !== 'undefined' && translations[currentLang]) || {};
             if (registrosSinFecha.length > 0) {
-                listaAvisos.push(`⚠️ ${registrosSinFecha.length} registros sin fecha válida → asignados al 01/01/${fallbackYear}`);
+                const msg = (_t2.warn_no_date || '{n} registros sin fecha válida → asignados al 01/01/{year}')
+                    .replace('{n}', registrosSinFecha.length).replace('{year}', fallbackYear);
+                listaAvisos.push(`⚠️ ${msg}`);
                 registrosSinFecha.forEach(r => listaAvisos.push(r));
             }
             if (registrosSinCategoria > 0) {
-                listaAvisos.push(`⚠️ ${registrosSinCategoria} registros sin categoría → excluidos del análisis`);
+                const msg = (_t2.warn_no_cat || '{n} registros sin categoría → excluidos del análisis')
+                    .replace('{n}', registrosSinCategoria);
+                listaAvisos.push(`⚠️ ${msg}`);
                 registrosSinCategoriaRefs.forEach(r => listaAvisos.push(r));
             }
             if (listaAvisos.length > 0) {

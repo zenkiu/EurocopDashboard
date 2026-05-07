@@ -367,87 +367,97 @@ const FncAtestados = (() => {
     // MODAL DE PREVISUALIZACIÓN DE ATESTADOS ERRÓNEOS
     // ============================================================
     function mostrarModalErrores(errores) {
-        const t = E.t.bind(E);
-        const sinFechaCount = errores.filter(e => e.causas.includes('sin_fecha')).length;
+        const lang = typeof currentLang !== 'undefined' ? currentLang : 'es';
+        const tr   = (typeof translations !== 'undefined' && translations[lang]) || {};
+        const _s   = (key, vars={}) => {
+            let t = tr[key] || key;
+            Object.entries(vars).forEach(([k,v]) => { t = t.replace(`{${k}}`, v); });
+            return t;
+        };
+
+        const sinFechaCount  = errores.filter(e => e.causas.includes('sin_fecha')).length;
         const totalCeroCount = errores.filter(e => e.causas.includes('total_cero')).length;
 
-        const cards = errores.map(e => {
-            const badgeSinFecha = e.causas.includes('sin_fecha')
-                ? `<span class="atd-err-badge atd-err-fecha"><i class="fa-solid fa-calendar-xmark"></i> Sin fecha</span>` : '';
-            const badgeCero = e.causas.includes('total_cero')
-                ? `<span class="atd-err-badge atd-err-cero"><i class="fa-solid fa-user-slash"></i> Sin personas</span>` : '';
+        const filas = errores.map(e => {
+            const esSinFecha = e.causas.includes('sin_fecha');
+            const esSinPers  = e.causas.includes('total_cero');
+            const fechaHtml  = esSinFecha
+                ? `<span style="color:#fb6340;font-weight:700;">${_s('atd_pj_sin_fecha')}</span>`
+                : `<span>${e.fecha}</span>`;
+            const causaHtml = [
+                esSinFecha ? `<span class="atd-err-badge atd-err-fecha"><i class="fa-solid fa-calendar-xmark"></i> ${_s('atd_err_badge_fecha')}</span>` : '',
+                esSinPers  ? `<span class="atd-err-badge atd-err-cero"><i class="fa-solid fa-user-slash"></i> ${_s('atd_err_badge_personas')}</span>` : '',
+            ].filter(Boolean).join(' ');
 
-            return `
-            <div class="atd-err-card">
-                <div class="atd-err-card-header">
-                    <div style="display:flex;align-items:center;gap:8px;">
-                        <i class="fa-solid fa-file-circle-exclamation" style="color:#f5365c;font-size:1rem;"></i>
-                        <strong style="color:#32325d;font-size:0.9rem;">${e.ref}</strong>
-                    </div>
-                    <div style="display:flex;gap:5px;flex-wrap:wrap;">
-                        ${badgeSinFecha}${badgeCero}
-                    </div>
-                </div>
-                <div class="atd-err-card-body">
-                    <span><i class="fa-regular fa-calendar" style="color:#8898aa;width:14px;"></i> <strong>Fecha:</strong> ${e.fecha}</span>
-                    ${e.motivo && e.motivo !== '—' ? `<span><i class="fa-solid fa-tag" style="color:#8898aa;width:14px;"></i> <strong>Motivo:</strong> ${e.motivo}</span>` : ''}
-                </div>
-            </div>`;
+            return `<tr class="atd-err-tr">
+                <td class="atd-err-td-ref">${e.ref}</td>
+                <td class="atd-err-td-fecha">${fechaHtml}</td>
+                <td class="atd-err-td-motivo">${e.motivo || '—'}</td>
+                <td class="atd-err-td-causa">${causaHtml}</td>
+            </tr>`;
         }).join('');
+
+        const titulo = _s('atd_err_title', {
+            n: errores.length,
+            s: errores.length !== 1 ? 's' : ''
+        });
 
         const modal = document.createElement('div');
         modal.id = 'atd-err-modal';
         modal.className = 'atd-modal-overlay';
         modal.innerHTML = `
-        <div class="atd-modal" style="max-width:560px;">
+        <div class="atd-modal atd-err-modal-wide">
             <div class="atd-modal-header" style="background:linear-gradient(135deg,#f5365c,#d32f7d);">
                 <div class="atd-modal-title">
                     <i class="fa-solid fa-triangle-exclamation"></i>
-                    Atestados con incidencias · ${errores.length} detectado${errores.length > 1 ? 's' : ''}
+                    ${titulo}
                 </div>
                 <button class="atd-btn-close" onclick="FncAtestados._closeErrores()" style="color:white;">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
             <div class="atd-modal-body">
-                <!-- Resumen -->
-                <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+                <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
                     <div class="atd-err-stat">
                         <span style="font-size:1.6rem;font-weight:900;color:#f5365c;">${errores.length}</span>
-                        <small>ATESTADOS CON ERROR</small>
+                        <small>${_s('atd_err_total')}</small>
                     </div>
                     ${sinFechaCount > 0 ? `<div class="atd-err-stat">
                         <span style="font-size:1.6rem;font-weight:900;color:#fb6340;">${sinFechaCount}</span>
-                        <small>SIN FECHA SUCESO</small>
+                        <small>${_s('atd_err_sin_fecha')}</small>
                     </div>` : ''}
                     ${totalCeroCount > 0 ? `<div class="atd-err-stat">
                         <span style="font-size:1.6rem;font-weight:900;color:#8965e0;">${totalCeroCount}</span>
-                        <small>SIN PERSONAS</small>
+                        <small>${_s('atd_err_sin_personas')}</small>
                     </div>` : ''}
                 </div>
-
-                <div style="font-size:0.78rem;color:#8898aa;margin-bottom:12px;padding:8px 12px;
-                    background:#fff5f5;border-radius:8px;border-left:3px solid #f5365c;">
-                    <i class="fa-solid fa-circle-info" style="margin-right:5px;"></i>
-                    Estos atestados tienen datos incompletos. Revísalos en el sistema antes de generar el informe.
+                <div class="atd-err-info-box">
+                    <i class="fa-solid fa-circle-info"></i>
+                    ${_s('atd_err_aviso')}
                 </div>
-
-                <!-- Lista de atestados erróneos -->
-                <div style="max-height:380px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;">
-                    ${cards}
+                <div class="atd-err-table-wrap">
+                    <table class="atd-err-table">
+                        <thead>
+                            <tr>
+                                <th>${_s('atd_err_col_ref')}</th>
+                                <th>${_s('atd_err_col_fecha')}</th>
+                                <th>${_s('atd_err_col_motivo')}</th>
+                                <th>${_s('atd_err_col_incidencia')}</th>
+                            </tr>
+                        </thead>
+                        <tbody>${filas}</tbody>
+                    </table>
                 </div>
             </div>
-            <div style="padding:12px 16px;border-top:1px solid #f0f1f8;display:flex;justify-content:flex-end;gap:8px;">
-                <button onclick="FncAtestados._closeErrores()"
-                    style="padding:8px 20px;background:#5e72e4;color:white;border:none;
-                    border-radius:8px;font-size:0.82rem;font-weight:700;cursor:pointer;">
-                    Entendido
+            <div class="atd-err-footer">
+                <button onclick="FncAtestados._closeErrores()" class="atd-err-btn-ok">
+                    ${_s('atd_err_entendido')}
                 </button>
             </div>
         </div>`;
 
         document.body.appendChild(modal);
-        modal.addEventListener('click', e => { if (e.target === modal) FncAtestados._closeErrores(); });
+        modal.addEventListener('click', ev => { if (ev.target === modal) FncAtestados._closeErrores(); });
     }
 
     function salir() {

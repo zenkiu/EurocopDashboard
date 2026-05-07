@@ -146,11 +146,11 @@ const FncEstadisticaGVpj = (() => {
                     { key: 'pat_danos',     label: 'Daños',
                       match: ['daños'] },
                     { key: 'pat_vehiculos', label: 'Sustracción de vehículos a motor',
-                      match: ['sustracción de vehículos'] },
+                      match: ['sustracción de vehículos', 'sustracci'] },
                     { key: 'pat_estafa',    label: 'Estafa',
                       match: ['estafa'] },
                     { key: 'pat_otras',     label: 'Otras infracciones contra el patrimonio',
-                      match: ['otras infracc. patrimonio', 'robo con fuerza'] },
+                      match: ['otras infracc. patrimonio', 'otras infracciones contra el patrimonio'] },
                 ]
             },
             {
@@ -297,16 +297,18 @@ const FncEstadisticaGVpj = (() => {
             _rawData.filter(r => r.anyo === _añoSel).map(r => r.mes)
         )].filter(Boolean).sort((a, b) => b - a);
         const mesActual = hoy.getMonth() + 1;
-        _mesSel = mesesConDatos.includes(mesActual)
-            ? mesActual
-            : (mesesConDatos[0] || mesActual);
+        // Si el mes actual tiene datos → usarlo. Si no → TODOS (0)
+        _mesSel = mesesConDatos.includes(mesActual) ? mesActual : 0;
     }
 
     // ============================================================
     // CÁLCULO DE ESTADÍSTICAS
     // ============================================================
     function calcular(anyo, mes) {
-        const filas = _rawData.filter(r => r.anyo === anyo && r.mes === mes);
+        // mes=0 → TODOS los meses del año (incluye registros sin fecha mes=0)
+        const filas = mes === 0
+            ? _rawData.filter(r => r.anyo === anyo)
+            : _rawData.filter(r => r.anyo === anyo && r.mes === mes);
         const cats  = getCategorias();
 
         // Inicializar estructura de resultados
@@ -385,7 +387,7 @@ const FncEstadisticaGVpj = (() => {
         const lang      = typeof currentLang !== 'undefined' ? currentLang : 'es';
         const meses     = MESES[lang] || MESES.es;
         const stats     = calcular(añoSel, mesSel);
-        const nombreMes = meses[mesSel - 1] || mesSel;
+        const nombreMes = mesSel === 0 ? (t('todos_meses') || 'TODOS') : (meses[mesSel - 1] || mesSel);
         const fecha     = new Date().toLocaleDateString('es-ES',
             { day: '2-digit', month: '2-digit', year: 'numeric' });
 
@@ -550,7 +552,7 @@ const FncEstadisticaGVpj = (() => {
         const lang      = typeof currentLang !== 'undefined' ? currentLang : 'es';
         const meses     = MESES[lang] || MESES.es;
         const stats     = calcular(añoSel, mesSel);
-        const nombreMes = meses[mesSel - 1] || mesSel;
+        const nombreMes = mesSel === 0 ? (t('todos_meses') || 'TODOS') : (meses[mesSel - 1] || mesSel);
         const fecha     = new Date().toLocaleDateString('es-ES',
             { day: '2-digit', month: '2-digit', year: 'numeric' });
 
@@ -719,7 +721,7 @@ const FncEstadisticaGVpj = (() => {
     // ── Datos individuales por atestado (para el modal) ────────────────────────
     function getAtestadosDelMes(anyo, mes) {
         return _rawData
-            .filter(r => r.anyo === anyo && r.mes === mes && r.delito)
+            .filter(r => r.anyo === anyo && (mes === 0 || r.mes === mes) && r.delito)
             .sort((a, b) => {
                 // Ordenar por referencia ATS (numérico)
                 const numA = parseInt(a.ref.replace(/\D/g, '')) || 0;
