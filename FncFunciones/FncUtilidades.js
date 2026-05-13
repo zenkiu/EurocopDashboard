@@ -46,16 +46,19 @@ function showToast(message, duration = 6000) {
 // MODALES PDF / IMAGEN
 // ============================================================
 function openPdfModal(fileName, title) {
-    document.getElementById('pdf-modal-title').innerHTML = `<i class="fa-solid fa-file-pdf"></i> ${title}`;
-    let versionParam = (typeof EUROCOP_VERSION !== 'undefined') ? EUROCOP_VERSION : new Date().getTime();
+    const titleEl = document.getElementById('pdf-modal-title');
+    if (titleEl) titleEl.innerHTML = `<i class="fa-solid fa-file-pdf"></i> ${title}`;
 
     const iframe = document.getElementById('pdf-frame');
-    const img   = document.getElementById('img-frame');
+    const img    = document.getElementById('img-frame');
 
     if (img)    img.style.display = 'none';
     if (iframe) {
         iframe.style.display = 'block';
-        iframe.src = "./ArchivosPdf/" + fileName + "?v=" + versionParam;
+        // Codificar solo los espacios y caracteres especiales del nombre de archivo
+        const encodedFile = fileName.replace(/ /g, '_');
+        iframe.src = "./ArchivosPdf/" + encodedFile;
+        iframe.onerror = null; // sin fallback externo
     }
     document.getElementById('pdf-modal').classList.add('active');
 }
@@ -74,6 +77,16 @@ function openImageModal(path, title) {
         img.style.display = 'block';
     }
     modal.classList.add('active');
+}
+
+function togglePdfMaximize() {
+    const content = document.getElementById('pdf-modal-content');
+    const icon    = document.getElementById('icon-pdf-maximize');
+    if (!content) return;
+    const isMax = content.classList.toggle('pdf-modal-maximized');
+    if (icon) {
+        icon.className = isMax ? 'fa-solid fa-compress' : 'fa-solid fa-expand';
+    }
 }
 
 function closePdfModal() {

@@ -243,18 +243,140 @@ function toggleHeatmap(btn) {
         : '<i class="fa-solid fa-fire"></i>';
 }
 
+// ════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════
+// EDIFICIOS 3D — fill-extrusion + terreno DEM + iluminación
+// Basado en técnica OpenFreeMap con render_height OSM
+// ════════════════════════════════════════════════════════════
+let _buildings3DActive = false;
+
 function toggle3D() {
-    const p    = map.getPitch();
-    const is3D = p > 0;
-    map.easeTo({ pitch: is3D ? 0 : 60, bearing: is3D ? 0 : -20, duration: 1000 });
+    _buildings3DActive = !_buildings3DActive;
     const btn = document.getElementById('btn-3d');
-    if (btn) {
-        btn.style.background = is3D ? '' : '#e9ecef';
-        btn.style.color      = is3D ? '' : '#32325d';
+
+    if (_buildings3DActive) {
+        if (btn) { btn.style.background = '#e9ecef'; btn.style.color = '#32325d'; }
+        map.easeTo({ pitch: 58, bearing: -25, duration: 900 });
+        map.once('idle', _add3D);
+    } else {
+        if (btn) { btn.style.background = ''; btn.style.color = ''; }
+        map.easeTo({ pitch: 0, bearing: 0, duration: 900 });
+        _remove3D();
     }
 }
 
-// ============================================================
+function _add3D() {
+    if (map.getLayer('ec-buildings-3d')) return;
+
+    // ── A) TERRENO 3D (relieve DEM) ──────────────────────────
+    if (!map.getSource('ec-terrain-dem')) {
+        map.addSource('ec-terrain-dem', {
+            type:     'raster-dem',
+            url:      'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png',
+            tileSize: 256,
+            maxzoom:  14,
+            encoding: 'terrarium'
+        });
+    }
+    map.setTerrain({ source: 'ec-terrain-dem', exaggeration: 1.4 });
+
+    // ── B) LUZ SOLAR según hora del día ──────────────────────
+    const h = new Date().getHours();
+    let lightPos, lightColor, lightIntensity;
+    if      (h >= 6  && h < 9)  { lightPos=[1.2,90,20]; lightColor='#ffe0b0'; lightIntensity=0.6;  }
+    else if (h >= 9  && h < 17) { lightPos=[1.2,80,30]; lightColor='white';   lightIntensity=0.85; }
+    else if (h >= 17 && h < 20) { lightPos=[1.2,70,15]; lightColor='#ffcc88'; lightIntensity=0.55; }
+    else if (h >= 20 && h < 23) { lightPos=[1.2,60,10]; lightColor='#8899bb'; lightIntensity=0.3;  }
+    else                         { lightPos=[1.2,50, 5]; lightColor='#445577'; lightIntensity=0.15; }
+
+    map.setLight({ anchor:'map', position:lightPos, color:lightColor, intensity:lightIntensity });
+
+    // ── C) EDIFICIOS fill-extrusion ───────────────────────────
+    // Detectar source con building dinámicamente
+    const style   = map.getStyle();
+    let srcName   = null;
+    let srcLayer  = 'building';
+    for (const l of style.layers) {
+        if ((l['source-layer']==='building' || l['source-layer']==='buildings')
+             && map.getSource(l.source)) {
+            srcName  = l.source;
+            srcLayer = l['source-layer'];
+            break;
+        }
+    }
+    // Fallback: fuente openfreemap si el estilo base no tiene buildings
+    if (!srcName) {
+        if (!map.getSource('openmaptiles')) {
+            map.addSource('openmaptiles', {
+                type: 'vector',
+                url:  'https://tiles.openfreemap.org/planet'
+            });
+        }
+        srcName  = 'openmaptiles';
+        srcLayer = 'building';
+    }
+
+    // Insertar debajo de las etiquetas para que no las tape
+    const labelLayer = style.layers.find(l =>
+        l.type==='symbol' && l.layout && l.layout['text-field']
+    );
+    const beforeId = labelLayer ? labelLayer.id : undefined;
+
+    map.addLayer({
+        id:            'ec-buildings-3d',
+        type:          'fill-extrusion',
+        source:         srcName,
+        'source-layer': srcLayer,
+        minzoom:        14,
+        paint: {
+            // Color según altura — tierra → piedra → gris urbano
+            'fill-extrusion-color': [
+                'interpolate', ['linear'],
+                ['coalesce', ['get','render_height'], ['get','height'], 0],
+                0,  '#ddccaa',
+                10, '#b8a97c',
+                30, '#8a7a5c',
+                60, '#5c6a7a'
+            ],
+            // Altura animada al acercarse — usa render_height de OSM × multiplicador
+            'fill-extrusion-height': [
+                'interpolate', ['linear'], ['zoom'],
+                14, 0,
+                15, ['*', 2.5,
+                    ['coalesce',
+                        ['get','render_height'], ['get','height'],
+                        ['*', ['coalesce',['get','levels'],2], 3.5]
+                    ]
+                ]
+            ],
+            // Base del edificio (para edificios elevados sobre terreno)
+            'fill-extrusion-base': [
+                'case', ['has','render_min_height'],
+                ['*', 2.5, ['get','render_min_height']],
+                0
+            ],
+            'fill-extrusion-opacity':           0.95,
+            'fill-extrusion-vertical-gradient': true   // sombra gradiente en fachadas
+        }
+    }, beforeId);
+}
+
+function _remove3D() {
+    if (map.getLayer('ec-buildings-3d')) map.removeLayer('ec-buildings-3d');
+    // Quitar terreno
+    try { map.setTerrain(null); } catch(e) {}
+    // Restaurar luz neutra
+    try { map.setLight({ anchor:'viewport', color:'white', intensity:0.5 }); } catch(e) {}
+}
+
+// ════════════════════════════════════════════════════════════
+// VEHÍCULOS — eliminado según petición del usuario
+// ════════════════════════════════════════════════════════════
+function toggleVehicles() {
+    // Funcionalidad desactivada
+    const btn = document.getElementById('btn-vehicles');
+    if (btn) btn.style.display = 'none';
+}
 // GESTOR DE CAPAS GEOJSON
 // ============================================================
 

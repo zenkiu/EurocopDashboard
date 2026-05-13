@@ -91,7 +91,7 @@ const FncAtestados = (() => {
 
     <div class="at-title-row">
         <h2 class="at-main-title">${t('actualizar')}</h2>
-        <a href="./ArchivosPdf/ATESTADOS_DSV_GOBIERNO_VASCO_REQUISITOS.pdf"
+        <a href="#" onclick="openPdfModal('ATESTADOS_DSV_GOBIERNO_VASCO_REQUISITOS.pdf', 'Requisitos DSV'); return false;"
            target="_blank" class="help-link-title" title="Ver requisitos DSV">
             <i class="fa-solid fa-circle-info"></i>
         </a>

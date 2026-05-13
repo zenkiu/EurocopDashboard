@@ -10,6 +10,58 @@ let tempDateColumn = null;
 // ============================================================
 // INICIALIZACIÓN DEL DROP ZONE
 // ============================================================
+
+/**
+ * Muestra un mensaje amigable en la zona de carga (sin alert del navegador).
+ * type: 'warning' | 'error' | 'info'
+ */
+function _showFileMessage(title, message, type) {
+    const icons   = { warning: '⚠️', error: '❌', info: 'ℹ️' };
+    const colors  = { warning: '#f39c12', error: '#e74c3c', info: '#5e72e4' };
+    const bgColors = { warning: '#fffbf0', error: '#fff5f5', info: '#f0f2ff' };
+    const color   = colors[type]  || colors.info;
+    const bg      = bgColors[type] || bgColors.info;
+    const icon    = icons[type]   || icons.info;
+
+    // Intentar mostrar en el dropzone o crear un toast
+    const dropzone = document.getElementById('drop-zone') || document.getElementById('dropzone') || document.getElementById('upload-area');
+    if (dropzone) {
+        // Insertar mensaje encima del dropzone
+        let msgBox = document.getElementById('_ec_file_msg');
+        if (!msgBox) {
+            msgBox = document.createElement('div');
+            msgBox.id = '_ec_file_msg';
+            dropzone.parentNode.insertBefore(msgBox, dropzone);
+        }
+        msgBox.innerHTML = `
+            <div style="display:flex;align-items:flex-start;gap:12px;padding:14px 16px;
+                background:${bg};border:1px solid ${color};border-radius:10px;
+                margin-bottom:12px;font-family:Arial,sans-serif;">
+                <span style="font-size:1.3rem;line-height:1;">${icon}</span>
+                <div>
+                    <div style="font-weight:800;font-size:0.85rem;color:${color};margin-bottom:3px;">${title}</div>
+                    <div style="font-size:0.8rem;color:#525f7f;line-height:1.4;">${message}</div>
+                </div>
+                <button onclick="document.getElementById('_ec_file_msg').innerHTML=''"
+                    style="margin-left:auto;background:none;border:none;cursor:pointer;
+                    color:#aaa;font-size:1rem;padding:0 4px;line-height:1;">✕</button>
+            </div>`;
+        // Auto-ocultar tras 8 segundos
+        setTimeout(() => { if (msgBox) msgBox.innerHTML = ''; }, 8000);
+    } else {
+        // Fallback: toast flotante
+        let toast = document.createElement('div');
+        toast.style.cssText = `position:fixed;top:80px;left:50%;transform:translateX(-50%);
+            z-index:9999;padding:14px 20px;background:${bg};border:1px solid ${color};
+            border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,.15);max-width:420px;
+            font-family:Arial,sans-serif;text-align:center;`;
+        toast.innerHTML = `<div style="font-weight:800;color:${color};">${icon} ${title}</div>
+            <div style="font-size:0.8rem;color:#525f7f;margin-top:5px;">${message}</div>`;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 8000);
+    }
+}
+
 function initCargaArchivo() {
     const dropZone = document.getElementById('drop-zone');
     const fileInput = document.getElementById('file-input');
@@ -59,7 +111,16 @@ function processFile(file) {
                 const firstSheet = wb.SheetNames[0];
                 let data = XLSX.utils.sheet_to_json(wb.Sheets[firstSheet], { defval: "" });
 
-                if (data.length === 0) throw new Error("El archivo está vacío");
+                // --- [ PASO 0: VERIFICAR QUE HAY DATOS ] ---
+                if (data.length === 0) {
+                    if (loader) loader.classList.remove('active');
+                    _showFileMessage(
+                        _td('file_empty_title') || 'Archivo sin datos',
+                        _td('file_empty_msg')   || 'El archivo se ha leído correctamente pero no contiene filas de datos. Comprueba que el Excel tiene registros además de la cabecera.',
+                        'warning'
+                    );
+                    return;
+                }
 
                 // --- [ PASO 1: DETECTAR COLUMNA DE FECHA ] ---
                 const analysis = analyzeYearsInDataset(data);
@@ -78,13 +139,27 @@ function processFile(file) {
                     return; 
                 }
                 
+                // --- [ PASO 4: VERIFICAR QUE QUEDAN DATOS TRAS FILTRAR FUTUROS ] ---
+                if (data.length === 0) {
+                    if (loader) loader.classList.remove('active');
+                    _showFileMessage(
+                        _td('file_empty_title') || 'Archivo sin datos',
+                        _td('file_future_msg')  || 'El archivo solo contiene registros con fecha futura y han sido descartados. Comprueba las fechas del Excel.',
+                        'warning'
+                    );
+                    return;
+                }
                 // Si es pequeño, procesamos los datos ya limpios de años futuros
                 completeLoadingProcess(data);
 
             } catch (error) {
                 console.error("Error:", error);
-                alert("Error al procesar el archivo.");
                 if (loader) loader.classList.remove('active');
+                _showFileMessage(
+                    _td('file_error_title') || 'Error al procesar el archivo',
+                    _td('file_error_msg')   || 'No se ha podido leer el archivo. Asegúrate de que es un Excel (.xlsx / .xls) válido y no está dañado.',
+                    'error'
+                );
             }
         };
         reader.readAsArrayBuffer(file);

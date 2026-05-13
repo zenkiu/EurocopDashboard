@@ -315,6 +315,19 @@ function renderStreetsTable(data) {
 
     if (mostrarSubtotales) flushGrupo();
 
+    // ── Fila TOTAL GENERAL ──
+    const grandTotalCalles = tableStreetsDataCache.reduce((s, r) => s + r.count, 0);
+    const lblTotal = (typeof _td === 'function') ? (_td('streets_total') || 'TOTAL') : 'TOTAL';
+    html += `
+        <tr style="background:linear-gradient(90deg,#3d4db7,#5e72e4);border-top:2px solid #2d3a9e;">
+            <td style="font-weight:900;color:white;text-align:left;padding-left:8px;font-size:0.85rem;letter-spacing:.5px;">
+                ⬛ ${lblTotal}
+            </td>
+            <td style="font-weight:900;color:white;text-align:right;font-size:0.95rem;">
+                ${grandTotalCalles.toLocaleString()}
+            </td>
+        </tr>`;
+
     container.innerHTML = html + `</tbody></table>`;
     updateSortIcons(currentSortStreets.col, '#table-streets-view', currentSortStreets);
 }
@@ -481,6 +494,24 @@ function exportStreetsToPdf() {
         }
     });
 
+    // ── Fila TOTAL GENERAL ──
+    {
+        const grandTotalPdf = tableStreetsDataCache.reduce((s, r) => s + r.count, 0);
+        const lblTotalPdf   = T('streets_total') || 'TOTAL';
+        const totalRowH = rowH + 1;
+        if (y + totalRowH > pageH - 15) { doc.addPage(); y = drawTableHeader(13); }
+        doc.setFillColor(61, 77, 183);
+        doc.rect(marginL, y, contentW, totalRowH, 'F');
+        doc.setFillColor(30, 40, 120);
+        doc.rect(marginL, y, 1.5, totalRowH, 'F');
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        doc.setTextColor(255, 255, 255);
+        doc.text(lblTotalPdf, marginL + 5, y + 5.2);
+        doc.text(grandTotalPdf.toLocaleString('es-ES'), marginL + colWName + colWReg - 3, y + 5.2, { align: 'right' });
+        y += totalRowH;
+    }
+
     // ── Footer ──
     const totalPags = doc.getNumberOfPages();
     for (let p = 1; p <= totalPags; p++) {
@@ -604,6 +635,34 @@ function exportStreetsToDocx() {
         }
     }).join('');
 
+    // Fila TOTAL GENERAL para DOCX
+    const grandTotalDocx = tableStreetsDataCache.reduce((s, r) => s + r.count, 0);
+    const lblTotalDocx   = T('streets_total') || 'TOTAL';
+    const filaTotalDocx  = `
+    <w:tr>
+      <w:trPr><w:shd w:val="clear" w:color="auto" w:fill="3D4DB7"/></w:trPr>
+      <w:tc>
+        <w:tcPr><w:shd w:val="clear" w:color="auto" w:fill="3D4DB7"/>
+          <w:tcW w:w="7500" w:type="dxa"/>
+        </w:tcPr>
+        <w:p><w:pPr><w:jc w:val="left"/></w:pPr>
+          <w:r><w:rPr><w:b/><w:color w:val="FFFFFF"/><w:sz w:val="18"/></w:rPr>
+            <w:t xml:space="preserve">${lblTotalDocx}</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+      <w:tc>
+        <w:tcPr><w:shd w:val="clear" w:color="auto" w:fill="3D4DB7"/>
+          <w:tcW w:w="1360" w:type="dxa"/>
+        </w:tcPr>
+        <w:p><w:pPr><w:jc w:val="right"/></w:pPr>
+          <w:r><w:rPr><w:b/><w:color w:val="FFFFFF"/><w:sz w:val="18"/></w:rPr>
+            <w:t>${grandTotalDocx.toLocaleString()}</w:t>
+          </w:r>
+        </w:p>
+      </w:tc>
+    </w:tr>`;
+
     const docXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:document xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas"
   xmlns:mo="http://schemas.microsoft.com/office/mac/office/2008/main"
@@ -708,6 +767,7 @@ function exportStreetsToDocx() {
     </w:tr>
 
     ${filas}
+    ${filaTotalDocx}
   </w:tbl>
 
   <!-- Pie -->

@@ -79,7 +79,7 @@ const FncAtestadosPJ = (() => {
 
     <div class="at-title-row">
         <h2 class="pj-main-title">${t('actualizar')}</h2>
-        <a href="./ArchivosPdf/ATESTADOS_PJ_GOBIERNO_VASCO_REQUISITOS.pdf"
+        <a href="#" onclick="openPdfModal('ATESTADOS_PJ_GOBIERNO_VASCO_REQUISITOS.pdf', 'Requisitos PJ'); return false;"
            target="_blank" class="help-link-title" title="Ver requisitos PJ">
             <i class="fa-solid fa-circle-info"></i>
         </a>
