@@ -4728,3 +4728,16 @@ canvas, .maplibregl-canvas, img, svg, video, input[type="range"] {
 [data-theme="dark"] .data-table tbody tr:hover td {
     background-color: var(--table-row-hover) !important;
 }
+
+/* ── PDF Modal — estado maximizado ─────────────────────────── */
+#pdf-modal-content.pdf-modal-maximized {
+    width: 100vw !important;
+    height: 100vh !important;
+    max-width: 100vw !important;
+    max-height: 100vh !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+}
+#pdf-modal-content {
+    transition: width .25s, height .25s, border-radius .25s;
+}

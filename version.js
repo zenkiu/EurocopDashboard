@@ -7,4 +7,5 @@ const EUROCOP_MEMORIAS_INFO =
     "📦 v3.10.8 · 06/05/2026\n" +
     "1.TABLA HECHOS: Carga de 2 tabla de hechos (motivos).\n" +
     "2.MODO Dia/Noche.\n" +
-    "3.MAPA: Mejora con posibilidad Edicion Geometrias.";
+    "3.Mapa 3D.\n" +
+    "4.MAPA: Mejora con posibilidad Edicion Geometrias.";

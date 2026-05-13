@@ -649,9 +649,11 @@
                 <i class="fa-solid fa-earth-americas"></i>
             </button>
 
-            <button class="btn-mini" id="btn-3d" onclick="toggle3D()" data-i18n-title="map_btn_3d" title="Vista 3D">
-                <i class="fa-solid fa-cube"></i>
+            <button class="btn-mini" id="btn-3d" onclick="toggle3D()" data-i18n-title="map_btn_3d" title="Vista 3D / Edificios">
+                <i class="fa-solid fa-building"></i>
             </button>
+
+            <!-- btn-vehicles desactivado -->
             
             <button class="btn-maximize" onclick="toggleFullscreen('container-map')">
                 <i class="fa-solid fa-expand"></i>
@@ -803,10 +805,17 @@
 
     <!-- OTROS MODALES (PDF, Errores, Registros) -->
     <div id="pdf-modal" class="pdf-modal-overlay">
-        <div class="pdf-modal-content">
+        <div class="pdf-modal-content" id="pdf-modal-content">
             <div class="pdf-header">
                 <h3 id="pdf-modal-title"><i class="fa-solid fa-image"></i></h3>
-                <button onclick="closePdfModal()" class="btn-close-pdf"><i class="fa-solid fa-xmark"></i></button>
+                <div style="display:flex;gap:6px;align-items:center;">
+                    <button onclick="togglePdfMaximize()" id="btn-pdf-maximize" class="btn-close-pdf" title="Maximizar / Restaurar">
+                        <i class="fa-solid fa-expand" id="icon-pdf-maximize"></i>
+                    </button>
+                    <button onclick="closePdfModal()" class="btn-close-pdf" title="Cerrar">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
             </div>
             <div class="pdf-body" style="background: #333; display: flex; align-items: center; justify-content: center; overflow: hidden;">
                 <iframe src="" id="pdf-frame" frameborder="0" style="display:none; width:100%; height:100%;"></iframe>
@@ -899,6 +908,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script> 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
     <script src="https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js"></script>
     <script src="languages.js"></script>
     <script>
