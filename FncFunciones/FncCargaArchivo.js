@@ -100,16 +100,63 @@ function processFile(file) {
 
     setTimeout(() => {
         const reader = new FileReader();
+        // CSV: leer como texto; Excel: leer como ArrayBuffer
+        const isCSV = /\.csv$/i.test(file.name);
+        if (isCSV) {
+            reader.readAsText(file, 'UTF-8');
+        } else {
+            reader.readAsArrayBuffer(file);
+        }
+
         reader.onload = (e) => {
             try {
                 if (typeof nombreArchivoSubido !== 'undefined') {
                     nombreArchivoSubido = file.name.replace(/\.[^/.]+$/, "").toUpperCase();
                 }
 
-                const dataArr = new Uint8Array(e.target.result);
-                const wb = XLSX.read(dataArr, { type: 'array', cellDates: true });
-                const firstSheet = wb.SheetNames[0];
-                let data = XLSX.utils.sheet_to_json(wb.Sheets[firstSheet], { defval: "" });
+                let data;
+
+                if (isCSV) {
+                    // ── CSV: PapaParse con detección automática de separador ──
+                    const text = e.target.result;
+                    // Detectar separador: ; o , o \t
+                    const firstLine = text.split('\n')[0] || '';
+                    const delim = firstLine.includes(';') ? ';'
+                                : firstLine.includes('\t') ? '\t' : ',';
+
+                    const parsed = Papa.parse(text, {
+                        delimiter:     delim,
+                        header:        true,
+                        skipEmptyLines: true,
+                        transformHeader: h => h.trim(),
+                        transform: (val) => val.trim()
+                    });
+
+                    if (parsed.errors.length > 0) {
+                        console.warn('[CSV] Errores de parseo:', parsed.errors.slice(0,3));
+                    }
+
+                    // Normalizar comas decimales → puntos en campos numéricos
+                    data = (parsed.data || []).map(row => {
+                        const out = {};
+                        for (const [k, v] of Object.entries(row)) {
+                            // Convertir "38,87" → 38.87 si parece número
+                            if (typeof v === 'string' && /^-?\d+,\d+$/.test(v.trim())) {
+                                out[k] = v.trim().replace(',', '.');
+                            } else {
+                                out[k] = v;
+                            }
+                        }
+                        return out;
+                    });
+
+                } else {
+                    // ── Excel: XLSX ──────────────────────────────────────────
+                    const dataArr = new Uint8Array(e.target.result);
+                    const wb = XLSX.read(dataArr, { type: 'array', cellDates: true });
+                    const firstSheet = wb.SheetNames[0];
+                    data = XLSX.utils.sheet_to_json(wb.Sheets[firstSheet], { defval: '' });
+                }
 
                 // --- [ PASO 0: VERIFICAR QUE HAY DATOS ] ---
                 if (data.length === 0) {
@@ -162,7 +209,6 @@ function processFile(file) {
                 );
             }
         };
-        reader.readAsArrayBuffer(file);
     }, 200);
 }
 
