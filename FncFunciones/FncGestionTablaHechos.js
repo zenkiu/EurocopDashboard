@@ -202,12 +202,25 @@ const FncGestionTablaHechos = (() => {
 
     // ── Construir árbol desde datos del Excel ─────────────────────────────
     function _buildTree(data) {
-        // Columnas esperadas: RUTA_COMPLETA, NIVEL5_ID
+        // Columnas esperadas: RUTA_COMPLETA + NIVELn_ID (n = 1..5)
+        // El "leafId" de cada fila es el ID del nivel más profundo que tenga valor,
+        // ya que no todas las filas llegan hasta NIVEL5 (algunas son NIVEL2, NIVEL3...).
         const root = {};
+        let validRows = 0;
+
         data.forEach(row => {
-            const ruta    = String(row['RUTA_COMPLETA'] || '').trim();
-            const leafId  = parseInt(row['NIVEL5_ID']);
-            if (!ruta || isNaN(leafId)) return;
+            const ruta = String(row['RUTA_COMPLETA'] || '').trim();
+            if (!ruta) return;
+
+            // Buscar el ID más profundo disponible (NIVEL5 → NIVEL1)
+            let leafId = NaN;
+            for (let lvl = 5; lvl >= 1; lvl--) {
+                const v = parseInt(row['NIVEL' + lvl + '_ID']);
+                if (!isNaN(v)) { leafId = v; break; }
+            }
+            if (isNaN(leafId)) return;
+
+            validRows++;
             const parts = ruta.split(' + ').map(p => p.trim()).filter(Boolean);
             let node = root;
             parts.forEach((label, i) => {
@@ -217,6 +230,8 @@ const FncGestionTablaHechos = (() => {
                 node = node[label]._ch;
             });
         });
+
+        console.log(`[FncGestionTablaHechos] Filas válidas procesadas: ${validRows} / ${data.length}`);
 
         function toArray(nodeMap) {
             return Object.entries(nodeMap).map(([label, data]) => ({

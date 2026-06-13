@@ -258,6 +258,22 @@ const config = {
                 if (!isNaN(n2) && n2 > 0) baseRow.nivel2id = n2;
                 if (!isNaN(n3) && n3 > 0) baseRow.nivel3id = n3;
 
+                // ── Fallback: si no hay NIVEL IDs, generar desde CBMOTIVOAPERTURA ──
+                // Permite usar archivos de atestados GV sin columnas de ID explícitas
+                if (!baseRow.nivel1id && !baseRow.nivel2id && !baseRow.nivel3id) {
+                    const cbMotivo = row['CBMOTIVOAPERTURA'] || row['CBMOTIVO'] || row['MOTIVO'] || '';
+                    if (cbMotivo) {
+                        // Generar ID numérico estable a partir del texto (hash simple)
+                        let hash = 0;
+                        for (let ci = 0; ci < String(cbMotivo).length; ci++) {
+                            hash = ((hash << 5) - hash) + String(cbMotivo).charCodeAt(ci);
+                            hash |= 0;
+                        }
+                        baseRow.nivel1id = Math.abs(hash) % 90000 + 10000; // 5 dígitos positivos
+                        baseRow._cbMotivo = String(cbMotivo).trim();
+                    }
+                }
+
                 // ── PUSH ──
                 if (useMultiColumn) {
                     columnsForCategories.forEach(colName => {
@@ -330,10 +346,36 @@ const config = {
                     if (window.TABLA_HECHOS_TREE && window.TABLA_HECHOS_TREE.length) {
                         FncTablaHechos.init(finalData);
                     } else {
-                        // Sin tabla cargada: resetear árbol y mostrar aviso
-                        FncTablaHechos.reset();
-                        if (typeof FncGestionTablaHechos !== 'undefined') {
-                            FncGestionTablaHechos.mostrarAvisoSinTabla();
+                        // Sin tabla cargada: intentar construir árbol dinámico desde _cbMotivo
+                        const hasCbMotivo = finalData.some(r => r._cbMotivo);
+                        if (hasCbMotivo) {
+                            // Construir árbol dinámico con la estructura exacta que espera FncTablaHechos
+                            // Estructura de nodo: { l: label, i: id_nodo, d: [ids_datos], c: [] }
+                            // Cada registro tiene un nivel1id único por motivo.
+                            // d[] debe contener ese mismo id para que el conteo funcione.
+                            const nodeMap = new Map(); // nivel1id → nodo
+                            finalData.forEach(r => {
+                                if (!r._cbMotivo || !r.nivel1id) return;
+                                if (!nodeMap.has(r.nivel1id)) {
+                                    nodeMap.set(r.nivel1id, {
+                                        l: r._cbMotivo,   // label del nodo
+                                        i: r.nivel1id,    // id del nodo
+                                        d: [r.nivel1id],  // ids de datos que pertenecen (= el propio id)
+                                        c: []             // sin hijos
+                                    });
+                                }
+                            });
+                            const dynamicTree = Array.from(nodeMap.values());
+                            if (dynamicTree.length > 0) {
+                                window.TABLA_HECHOS_TREE = dynamicTree;
+                                FncTablaHechos.init(finalData);
+                            }
+                        } else {
+                            // Sin tabla ni motivos: resetear y mostrar aviso
+                            FncTablaHechos.reset();
+                            if (typeof FncGestionTablaHechos !== 'undefined') {
+                                FncGestionTablaHechos.mostrarAvisoSinTabla();
+                            }
                         }
                     }
                 } else {

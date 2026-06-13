@@ -232,6 +232,11 @@ function toggleSatelite(btn) {
     map.setLayoutProperty('satellite-layer', 'visibility', isSatelite ? 'visible' : 'none');
     btn.style.background = isSatelite ? '#5e72e4' : '';
     btn.style.color      = isSatelite ? '#fff'    : '';
+
+    // Mantener edificios siempre encima (al final del stack)
+    if (_buildings3DActive && map.getLayer('ec-buildings-3d')) {
+        try { map.moveLayer('ec-buildings-3d'); } catch(e) {}
+    }
 }
 
 function toggleHeatmap(btn) {
@@ -291,12 +296,26 @@ function _add3D() {
         });
     }
 
-    // Insertar antes de las etiquetas
-    const style      = map.getStyle();
-    const labelLayer = style.layers.find(l =>
-        l.type === 'symbol' && l.layout && l.layout['text-field']
-    );
-    const beforeId = labelLayer ? labelLayer.id : undefined;
+    const style = map.getStyle();
+
+    // Determinar dónde insertar:
+    // - En modo satélite: ENCIMA de satellite-layer (que es raster y tapa todo)
+    // - En modo normal: ANTES de la primera capa de etiquetas
+    let beforeId;
+    if (isSatelite && map.getLayer('satellite-layer')) {
+        // Insertar justo después de satellite-layer — necesitamos la capa que va tras ella
+        const allLayers = style.layers.map(l => l.id);
+        const satIdx = allLayers.indexOf('satellite-layer');
+        beforeId = satIdx >= 0 && satIdx < allLayers.length - 1
+            ? allLayers[satIdx + 1]
+            : undefined;
+    } else {
+        // Modo normal: antes de la primera capa de símbolos/etiquetas
+        const labelLayer = style.layers.find(l =>
+            l.type === 'symbol' && l.layout && l.layout['text-field']
+        );
+        beforeId = labelLayer ? labelLayer.id : undefined;
+    }
 
     map.addLayer({
         id:             'ec-buildings-3d',
@@ -306,7 +325,8 @@ function _add3D() {
         minzoom:         14,
         paint: {
             'fill-extrusion-color': [
-                'interpolate', ['linear'], ['get', 'render_height'],
+                'interpolate', ['linear'],
+                ['coalesce', ['get', 'render_height'], ['get', 'height'], 0],
                 0,  '#e8a04a',
                 10, '#d4903a',
                 30, '#b87030',
@@ -315,37 +335,36 @@ function _add3D() {
             'fill-extrusion-height': [
                 'interpolate', ['linear'], ['zoom'],
                 14, 0,
-                15, ['get', 'render_height']
+                15, ['coalesce',
+                    ['get', 'render_height'], ['get', 'height'],
+                    ['*', ['coalesce', ['get', 'levels'], 2], 3.5]
+                ]
             ],
             'fill-extrusion-base': [
                 'case',
                 ['has', 'render_min_height'], ['get', 'render_min_height'],
                 0
             ],
-            'fill-extrusion-opacity':           0.95,
+            'fill-extrusion-opacity':           0.92,
             'fill-extrusion-vertical-gradient': true
         }
     }, beforeId);
 
-    // Mover capas de datos debajo de los edificios
+    // Orden: satellite → heat/point → edificios (edificios tapan datos, efecto realista)
     try {
-        const refId = labelLayer ? labelLayer.id : undefined;
-        if (map.getLayer('heat-layer'))  map.moveLayer('heat-layer',  refId);
-        if (map.getLayer('point-layer')) map.moveLayer('point-layer', refId);
-        if (map.getLayer('heat-layer'))  map.setPaintProperty('heat-layer', 'heatmap-opacity', 0.7);
+        // Mover edificios al final del stack (encima de todo, incluido heat y point)
+        map.moveLayer('ec-buildings-3d');  // sin beforeId = al final
+        // Reducir opacidad del heatmap en 3D para que se intuya bajo los edificios
+        if (map.getLayer('heat-layer')) map.setPaintProperty('heat-layer', 'heatmap-opacity', 0.85);
     } catch(e) {}
 }
 function _remove3D() {
     if (map.getLayer('ec-buildings-3d')) map.removeLayer('ec-buildings-3d');
-    // Quitar terreno
     try { map.setTerrain(null); } catch(e) {}
-    // Restaurar luz neutra
     try { map.setLight({ anchor:'viewport', color:'white', intensity:0.5 }); } catch(e) {}
-    // heat-layer y point-layer vuelven a su posición natural (al final del stack)
+    // Restaurar opacidad y mover al final del stack
     try {
-        if (map.getLayer('heat-layer'))  map.moveLayer('heat-layer');
-        if (map.getLayer('point-layer')) map.moveLayer('point-layer');
-        map.setPaintProperty('heat-layer', 'heatmap-opacity', 1.0);
+        if (map.getLayer('heat-layer')) map.setPaintProperty('heat-layer', 'heatmap-opacity', 1.0);
     } catch(e) {}
 }
 
