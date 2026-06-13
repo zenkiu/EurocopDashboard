@@ -4,8 +4,7 @@ const EUROCOP_VERSION = "3.10.10";
 
 /* --- TEXTO DE MEMORIAS (editable) --- */
 const EUROCOP_MEMORIAS_INFO =
-    "📦 v3.10.10 · 06/05/2026\n" +
-    "Corregido carga archivos .csv\n" +
-    "TABLA HECHOS: Carga de 2 tabla de hechos (motivos).\n" +
-    "MODO Dia/Noche.\n" +
-    "MAPA: Mejora con posibilidad Edicion Geometrias.";
+    "📦 v3.10.10 · 13/06/2026\n" +
+    "1.TABLA HECHOS: Carga de 2 tabla de hechos (motivos).\n" +
+    "2.MODO Dia/Noche.\n" +
+    "3.MAPA: Mejora con posibilidad Edicion Geometrias.";
