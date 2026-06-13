@@ -3446,13 +3446,25 @@ body.kpi-active > *:not(#atestados-view):not(.navbar):not(#mobile-overlay):not(#
 .motivos-pill.active .motivos-chevron { transform: rotate(180deg); }
 
 /* Panel desplegable */
+/* Wrapper relativo para que el panel flote sin empujar el resto de filtros */
+.motivos-dropdown {
+    position: relative;
+}
+
 .motivos-panel {
+    position: absolute;
+    top: calc(100% + 5px);
+    left: 0;
+    right: 0;
+    z-index: 60;               /* por encima de Años/Meses/Categoría */
+    max-height: 70vh;
     background: var(--card-bg);
     border: 2px solid #5e72e4;
     border-radius: 10px;
-    margin-top: 5px;
-    box-shadow: 0 0 0 4px rgba(94,114,228,.18), 0 0 14px rgba(94,114,228,.22);
+    box-shadow: 0 8px 28px rgba(0,0,0,.18), 0 0 0 4px rgba(94,114,228,.18), 0 0 14px rgba(94,114,228,.22);
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
 /* Buscador */
@@ -3558,12 +3570,14 @@ body.kpi-active > *:not(#atestados-view):not(.navbar):not(#mobile-overlay):not(#
 /* Scroll del árbol */
 .motivos-tree-scroll {
     max-height: 310px;
+    min-height: 80px;
     overflow-y: auto;
     overflow-x: hidden;
     padding: 6px 6px 4px;
     scrollbar-width: thin;
     scrollbar-color: var(--accent-blue) transparent;
     transition: max-height .05s;
+    flex: 1 1 auto;
 }
 .motivos-tree-scroll::-webkit-scrollbar { width: 4px; }
 .motivos-tree-scroll::-webkit-scrollbar-track { background: transparent; }
