@@ -256,20 +256,46 @@ const FncTablaHechos = (() => {
     }
 
     // ─── Toggle panel ────────────────────────────────────────────────────
+    let _outsideClickHandler = null;
+
     function _togglePanel(pill) {
         const panel = document.getElementById('motivos-panel');
         if (!panel) return;
         const isOpen = panel.style.display !== 'none';
-        // Cerrar otros dropdowns
-        document.querySelectorAll('.dropdown-content').forEach(d => d.style.display = 'none');
+        // Cerrar otros dropdowns SIN tocar su display inline
+        // (usar removeProperty para no dejar un display:none inline que
+        //  bloquee permanentemente la clase .active de toggleDropdown)
+        document.querySelectorAll('.dropdown-content.active').forEach(d => d.classList.remove('active'));
+        // Limpiar display:none inline residual de bugs anteriores
+        document.querySelectorAll('.dropdown-content').forEach(d => {
+            if (d.style.display === 'none') d.style.removeProperty('display');
+        });
         if (isOpen) {
-            panel.style.display = 'none';
-            pill.classList.remove('active');
+            _closePanel(panel, pill);
         } else {
             panel.style.display = 'block';
             panel.classList.add('motivos-panel-open');
             pill.classList.add('active');
             document.getElementById(SEARCH_ID)?.focus();
+
+            // Cerrar al hacer clic fuera del panel/pill
+            _outsideClickHandler = (ev) => {
+                if (!panel.contains(ev.target) && !pill.contains(ev.target)) {
+                    _closePanel(panel, pill);
+                }
+            };
+            // Usar setTimeout para no capturar el propio click que abrió el panel
+            setTimeout(() => document.addEventListener('click', _outsideClickHandler), 0);
+        }
+    }
+
+    function _closePanel(panel, pill) {
+        panel.style.display = 'none';
+        panel.classList.remove('motivos-panel-open');
+        pill.classList.remove('active');
+        if (_outsideClickHandler) {
+            document.removeEventListener('click', _outsideClickHandler);
+            _outsideClickHandler = null;
         }
     }
 
