@@ -1,10 +1,10 @@
 /* --- CONTROL DE VERSIONES CENTRALIZADO --- */
 /* Cambia este valor para actualizar Cache y UI */
-const EUROCOP_VERSION = "3.10.11";
+const EUROCOP_VERSION = "3.10.12";
 
 /* --- TEXTO DE MEMORIAS (editable) --- */
 const EUROCOP_MEMORIAS_INFO =
-    "📦 v3.10.11 · 06/05/2026\n" +
+    "📦 v3.10.12 · 15/06/2026\n" +
     "1.TABLA HECHOS: Carga de 2 tabla de hechos (motivos).\n" +
     "2.MODO Dia/Noche.\n" +
     "3.MAPA: Mejora con posibilidad Edicion Geometrias.";
