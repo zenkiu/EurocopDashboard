@@ -13,7 +13,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <!-- ESTILOS MAPA: MapLibre GL JS -->
-    <link href="https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.css" rel="stylesheet" />
+    <link href="vendor/maplibre-gl/maplibre-gl.css" rel="stylesheet" />
     
     <!-- CONTROL DE VERSIONES Y CARGA CSS -->
     <script src="version.js"></script>
@@ -119,6 +119,11 @@
                         <i class="fa-solid fa-file-zipper"></i>
                         <span data-i18n="btn_memorias">Memorias</span>
                     </a>
+
+                    <button onclick="reportarIncidencia()" class="btn-manual-pill btn-soporte-pill">
+                        <i class="fa-solid fa-life-ring"></i>
+                        <span data-i18n="btn_soporte">Reportar Incidencia</span>
+                    </button>
                 </div>
 
                 <!-- Texto informativo de memorias (editable en version.js) -->
@@ -912,8 +917,13 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script> 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
-    <script src="https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js"></script>
+    <!-- MapLibre GL auto-alojado (vendor/maplibre-gl/) — v5.24.0, última versión
+         estable que aún distribuye el bundle clásico dist/maplibre-gl.js
+         (a partir de v6 la librería pasó a ser solo ESM, sin bundle <script>
+         global). Se sirve desde el propio repositorio para no depender de
+         ningún CDN externo (unpkg/jsDelivr pueden estar bloqueados según
+         la red del usuario). -->
+    <script src="vendor/maplibre-gl/maplibre-gl.js"></script>
     <script src="languages.js"></script>
     <script>
         var v = EUROCOP_VERSION;
