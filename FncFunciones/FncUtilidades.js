@@ -30,6 +30,49 @@ function runWithLoader(actionCallback) {
 }
 
 // ============================================================
+// REPORTE DE INCIDENCIAS A SOPORTE
+// ============================================================
+/**
+ * Abre el cliente de correo del usuario con un mailto: prerrellenado hacia
+ * soporte, incluyendo automáticamente datos técnicos útiles para depurar
+ * (versión de la app, navegador, y si hay un archivo cargado en ese momento)
+ * para que el usuario no tenga que escribirlos a mano.
+ */
+function reportarIncidencia() {
+    const SOPORTE_EMAIL = 'zzenkiu@gmail.com';
+
+    const version   = (typeof EUROCOP_VERSION !== 'undefined') ? EUROCOP_VERSION : 'desconocida';
+    const empresa   = (typeof FncKPI !== 'undefined' && FncKPI.getEmpresa) ? (FncKPI.getEmpresa() || '—') : '—';
+    const hayDatos  = (typeof finalData !== 'undefined' && Array.isArray(finalData) && finalData.length > 0)
+                      ? `Sí (${finalData.length} registros)` : 'No';
+    const navegador = navigator.userAgent;
+    const url       = window.location.href;
+    const fecha     = new Date().toLocaleString('es-ES');
+
+    const asunto = `[EurocopDashboard v${version}] Incidencia`;
+    const cuerpo =
+`Describe aquí el problema que has encontrado:
+
+
+
+---
+Datos técnicos (no borrar, ayudan a diagnosticar):
+Versión: ${version}
+Empresa/archivo activo: ${empresa}
+Datos cargados: ${hayDatos}
+Fecha: ${fecha}
+URL: ${url}
+Navegador: ${navegador}`;
+
+    const mailtoUrl = `mailto:${SOPORTE_EMAIL}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`;
+    window.location.href = mailtoUrl;
+
+    if (typeof showToast === 'function') {
+        showToast('📧 Abriendo tu cliente de correo para enviar la incidencia…', 5000);
+    }
+}
+
+// ============================================================
 // TOAST (NOTIFICACIÓN TEMPORAL)
 // ============================================================
 function showToast(message, duration = 6000) {

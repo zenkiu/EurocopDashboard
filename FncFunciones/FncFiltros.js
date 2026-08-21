@@ -28,35 +28,42 @@ function renderCheckboxes(containerId, items, defaultValue) {
     if (!container) return;
     // Bloquear triggers durante reconstrucción de checkboxes
     window._filterResetInProgress = true;
-    container.innerHTML = '';
-    // Protección por si translations no está cargado aún
-    const t = (typeof translations !== 'undefined' && translations[currentLang]) 
-              ? translations[currentLang] 
-              : (translations ? translations['es'] : {});
+    try {
+        container.innerHTML = '';
+        // Protección por si translations no está cargado aún
+        const t = (typeof translations !== 'undefined' && translations[currentLang])
+                  ? translations[currentLang]
+                  : (translations ? translations['es'] : {});
 
-    items.forEach(item => {
-        let val, label;
-        if (typeof item === 'object') {
-            val = item.id;
-            // Si es mes, usamos la abreviatura, si no el nombre
-            label = (containerId === 'items-month' && t.months_abbr) 
-                    ? t.months_abbr[item.id - 1] 
-                    : (item.name || item.id);
-        } else {
-            val = item;
-            label = item;
-        }
+        items.forEach(item => {
+            let val, label;
+            if (typeof item === 'object') {
+                val = item.id;
+                // Si es mes, usamos la abreviatura, si no el nombre
+                label = (containerId === 'items-month' && t.months_abbr)
+                        ? t.months_abbr[item.id - 1]
+                        : (item.name || item.id);
+            } else {
+                val = item;
+                label = item;
+            }
 
-        const div = document.createElement('div');
-        div.className = 'checkbox-item';
-        // 'all' marca todo, si es un valor específico solo marca ese
-        const isChecked = (defaultValue === 'all' || val == defaultValue) ? 'checked' : '';
-        
-        div.innerHTML = `<input type="checkbox" value="${val}" ${isChecked} onchange="triggerUpdateWithLoader()"> <span>${label}</span>`;
-        container.appendChild(div);
-    });
-    // Liberar bloqueo (en siguiente tick para que el DOM se estabilice)
-    requestAnimationFrame(() => { window._filterResetInProgress = false; });
+            const div = document.createElement('div');
+            div.className = 'checkbox-item';
+            // 'all' marca todo, si es un valor específico solo marca ese
+            const isChecked = (defaultValue === 'all' || val == defaultValue) ? 'checked' : '';
+
+            div.innerHTML = `<input type="checkbox" value="${val}" ${isChecked} onchange="triggerUpdateWithLoader()"> <span>${label}</span>`;
+            container.appendChild(div);
+        });
+    } catch (err) {
+        console.error('[Filtros] Error al renderizar checkboxes (se continúa):', err);
+    } finally {
+        // Liberar bloqueo (en siguiente tick para que el DOM se estabilice).
+        // Se libera SIEMPRE, incluso si algo anterior ha fallado, para que
+        // los checkboxes nunca queden bloqueados de forma permanente.
+        requestAnimationFrame(() => { window._filterResetInProgress = false; });
+    }
 }
 
 // ============================================================
@@ -535,6 +542,30 @@ function updateUI() {
     if (typeof updateMapData === 'function') updateMapData(filtered);
     if (typeof updateCharts === 'function') updateCharts(filtered, selYears);
     if (typeof updateLocationKPI === 'function') updateLocationKPI(filtered).catch(err => console.warn(err));
+
+    // 7b. REFRESCAR VISOR KPI (si está activo)
+    // El Visor KPI (FncKPI) lee sus datos filtrando internamente por los
+    // checkboxes de #items-year/#items-month/#items-category, pero no se
+    // redibuja solo: hay que forzar su re-render cuando cambian los filtros
+    // del sidebar (año, mes, categoría...), igual que ya se hace al
+    // cambiar de idioma (ver FncIdioma.js).
+    // Aislado en try/catch: cualquier fallo aquí NO debe interrumpir el
+    // resto de updateUI() ni propagarse a quien la invoque (evita que
+    // llamadas como applyLanguage() se corten a mitad y dejen bloqueado
+    // el flag _filterResetInProgress).
+    try {
+        const atView = document.getElementById('atestados-view');
+        if (atView && atView.classList.contains('active')) {
+            const isKpiActive = document.body.classList.contains('kpi-active') ||
+                                atView.querySelector('.kpi-root-layout') ||
+                                atView.querySelector('.kpi-wrapper');
+            if (isKpiActive && typeof FncKPI !== 'undefined') {
+                FncKPI._rerender();
+            }
+        }
+    } catch (kpiErr) {
+        console.error('[Visor KPI] Error al refrescar tras cambio de filtros (se continúa):', kpiErr);
+    }
 
     // 8. TABLAS ESPECÍFICAS
     if (typeof isTableStreetsView !== 'undefined' && isTableStreetsView && typeof renderStreetsTable === 'function') {

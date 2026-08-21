@@ -186,6 +186,25 @@ const FncKPI = (() => {
             kpi21_formula:'Σ horas formación impartidas / Nº agentes',
             kpi21_formula_sub:'Horas: NUMEROHORAS (suma por agente) · Agentes: NUMEROPROFESIONAL únicos',
             kpi21_info:'Media de horas de formación por agente/año. Objetivo ≥ 20 h/agente/año.',
+            // KPI-18-P07 (Proceso P07 — Mejora, formación e integridad)
+            kpi18p07_nombre:'Horas formación continua por agente/año (P07)',
+            kpi18p07_agentes:'Agentes con registro',
+            kpi18p07_con_horas:'Agentes ≥15h/año',
+            kpi18p07_sin_horas:'Agentes <15h o sin horas',
+            kpi18p07_media:'Horas / agente activo',
+            kpi18p07_total_horas:'Total horas impartidas',
+            kpi18p07_distribucion:'Distribución horas por agente',
+            kpi18p07_agente:'Agente',
+            kpi18p07_horas_agente:'Horas formación',
+            kpi18p07_cursos:'Nº cursos',
+            kpi18p07_formula:'Σ horas de formación impartidas / Nº agentes en activo',
+            kpi18p07_formula_sub:'Horas: NUMEROHORAS (suma por agente/año, 0 si no consta) · Agentes en activo: valor introducido manualmente',
+            kpi18p07_info:'Horas de formación continua por agente y año, conforme al plan formativo aprobado por Jefatura. Objetivo ≥ 15 h/agente/año. (Ficha 6.7, Proceso P07 — Mejora, formación e integridad).',
+            kpi18p07_agentes_activos_label:'Nº agentes activos (plantilla)',
+            kpi18p07_agentes_activos_placeholder:'Ej. 85',
+            kpi18p07_agentes_activos_guardar:'Guardar',
+            kpi18p07_agentes_activos_ayuda:'Denominador de la fórmula KPI-18-P07. Se guarda en este dispositivo.',
+            kpi18p07_sin_agentes_activos:'Introduce el nº de agentes activos para calcular el KPI.',
             kpi09_nombre:'Cierre atestados ≤10 días hábiles',
             kpi09_total:'Total atestados abiertos',
             kpi09_en_plazo:'Remitidos ≤10 días hábiles',
@@ -274,6 +293,8 @@ const FncKPI = (() => {
     let _rawDataEventos   = [];          // datos del archivo KPI-15 (eventos/dispositivos)
     let _rawDataVulnerables = [];        // datos del archivo KPI-19/20 (VG/menores derivación y seguimiento)
     let _rawDataFormacion   = [];        // datos del archivo KPI-21 (formación agentes)
+    let _rawDataFormacionP07 = [];       // datos del archivo KPI-18-P07 (formación continua, Proceso P07)
+    let _agentesActivosP07  = parseInt(localStorage.getItem('eurocop_kpi18p07_agentes_activos'), 10) || 0;
     let _años             = [];
     let _añoSel           = null;
     let _mesSel           = null;
@@ -782,6 +803,7 @@ const FncKPI = (() => {
                             {id:'kpi14', label:'KPI-14 - '+t('kpi14_nombre')},
                             {id:'kpi15', label:'KPI-15 - '+t('kpi15_nombre')},
                             {id:'kpi18', label:'KPI-18 - '+t('kpi18_nombre')},
+                            {id:'kpi18p07', label:'KPI-18-P07 - '+t('kpi18p07_nombre')},
                             {id:'kpi19', label:'KPI-19 - '+t('kpi19_nombre')},
                             {id:'kpi20', label:'KPI-20 - '+t('kpi20_nombre')},
                             {id:'kpi21', label:'KPI-21 - '+t('kpi21_nombre')},
@@ -3010,6 +3032,194 @@ const FncKPI = (() => {
 
 
     // ════════════════════════════════════════════════════════════
+    // PARSEO — Archivo formación continua KPI-18-P07 (Proceso P07)
+    // Mismas columnas que KPI-21 (NUMEROPROFESIONAL, TIPOBYESTADOID,
+    // DESCRIPCIONCURSO, ANNO, NUMEROHORAS) pero carga independiente,
+    // distinguida por el nombre del archivo (ver esArchivoP07).
+    // Métrica: Σ NUMEROHORAS / Nº agentes en activo (INPUT MANUAL)
+    // Objetivo: ≥ 15 h/agente/año · Frecuencia: Anual
+    // Horas sin dato (NUMEROHORAS vacío/NaN) se suman como 0.
+    // ════════════════════════════════════════════════════════════
+    function parsearDatosFormacionP07(data) {
+        _rawDataFormacionP07 = data.map((r) => {
+            const anyo = parseInt(r['ANNO'], 10);
+            const h = parseFloat(r['NUMEROHORAS']);
+            return {
+                anyo        : !isNaN(anyo) ? anyo : null,
+                mes         : null, // el archivo solo aporta año, no mes
+                agente      : String(r['NUMEROPROFESIONAL'] || '').trim(),
+                estado      : String(r['TIPOBYESTADOID'] || '').trim(),
+                horas       : (!isNaN(h) && h > 0) ? h : 0,
+                curso       : String(r['DESCRIPCIONCURSO'] || '').trim(),
+                _tieneHoras : (!isNaN(h) && h > 0),
+            };
+        }).filter(r => r.agente !== '');
+
+        _kpisDisponibles.add('kpi18p07');
+        if (!_kpisDisponibles.has(_kpiActivo)) _kpiActivo = 'kpi18p07';
+        _cargado = true;
+        console.log(`[KPI] Formación continua P07 cargada: ${_rawDataFormacionP07.length} registros`);
+    }
+
+    // Helper: agrupa registros crudos por agente (umbral 15h, distinto de KPI-21)
+    function _agruparFormacionPorAgenteP07(registros) {
+        const mapa = {};
+        registros.forEach(r => {
+            if (!r.agente) return;
+            if (!mapa[r.agente]) {
+                mapa[r.agente] = {
+                    agente: r.agente, estado: r.estado,
+                    horas: 0, cursos: 0, cursosDetalle: [],
+                };
+            }
+            mapa[r.agente].horas += r.horas;
+            if (r.curso) { mapa[r.agente].cursos++; mapa[r.agente].cursosDetalle.push(r.curso); }
+        });
+        return Object.values(mapa).map(a => ({
+            ...a,
+            num: 0, anyo: null, mes: null,
+            _cumple  : a.horas >= 15,
+            _sinHoras: a.horas === 0,
+        }));
+    }
+
+    // ════════════════════════════════════════════════════════════
+    // CÁLCULO KPI-18-P07
+    // Métrica principal: Σ horas impartidas / Nº agentes activos (manual)
+    // El detalle por agente (Ver avisos) usa el umbral 15h/agente como
+    // referencia individual, aunque el KPI oficial es una ratio agregada.
+    // ════════════════════════════════════════════════════════════
+    function calcularKPI18P07() {
+        const df = getDashboardFilters();
+        let registros = _rawDataFormacionP07;
+        if (df.years.length > 0) registros = registros.filter(r => df.years.includes(r.anyo));
+        // El archivo no trae mes, así que el filtro de mes no aplica aquí.
+
+        const filas       = _agruparFormacionPorAgenteP07(registros);
+        const totalHoras  = registros.reduce((s, r) => s + r.horas, 0);
+        const agentesActivos = _agentesActivosP07;
+        const media       = agentesActivos > 0 ? totalHoras / agentesActivos : 0;
+        const objetivo    = 15; // h/agente/año
+
+        const conHoras    = filas.filter(r => r._cumple);
+        const sinHoras     = filas.filter(r => r._sinHoras);
+        const bajas       = filas.filter(r => !r._cumple && !r._sinHoras);
+
+        const porcentaje  = (agentesActivos > 0) ? Math.min(media / objetivo * 100, 100) : 0;
+        let estado;
+        if (agentesActivos === 0)        estado = 'rojo';
+        else if (media >= objetivo)       estado = 'verde';
+        else if (media >= objetivo * 0.8) estado = 'amarillo';
+        else                               estado = 'rojo';
+
+        const rangos = [
+            {label:'0h (sin horas)', min:0,   max:0.01},
+            {label:'1–7h',           min:0.01,max:7   },
+            {label:'7–15h',          min:7,   max:15  },
+            {label:'15–30h',         min:15,  max:30  },
+            {label:'> 30h',          min:30,  max:Infinity},
+        ];
+        const distribucion = rangos.map(rng => ({
+            label  : rng.label,
+            cumple : rng.min >= 15,
+            count  : filas.filter(r => r.horas >= rng.min && r.horas < rng.max).length,
+        }));
+
+        return {
+            nAgentesRegistro: filas.length, totalHoras, media, objetivo, agentesActivos,
+            nConHoras:conHoras.length, nSinHoras:sinHoras.length, nBajas:bajas.length,
+            porcentaje, estado,
+            distribucion, filas,
+        };
+    }
+
+    // ════════════════════════════════════════════════════════════
+    // RENDER KPI-18-P07 — gauge muestra horas/agente activo vs objetivo 15h
+    // ════════════════════════════════════════════════════════════
+    function renderKPI18P07() {
+        const stats  = calcularKPI18P07();
+        const color  = { verde:'#2ecc71', amarillo:'#f1c40f', rojo:'#e74c3c' }[stats.estado];
+        const labelE = stats.agentesActivos === 0
+            ? (t('kpi18p07_sin_agentes_activos') || 'Sin dato')
+            : t({ verde:'cumple', amarillo:'alerta', rojo:'no_cumple' }[stats.estado]);
+
+        const distRows = stats.distribucion.map(d => {
+            const pct2 = stats.nAgentesRegistro > 0 ? (d.count/stats.nAgentesRegistro*100).toFixed(1) : '0.0';
+            const w = Math.min(100, parseFloat(pct2));
+            const bc = d.cumple ? '#2ecc71' : (d.label.startsWith('0h') ? '#95a5a6' : '#e74c3c');
+            return `<div class="kpinv-dist-row">
+                <span class="kpinv-dist-label">${d.label}</span>
+                <div class="kpinv-dist-track"><div style="height:100%;width:${w}%;background:${bc};border-radius:6px;transition:width .5s;"></div></div>
+                <span class="kpinv-dist-val">${d.count} <small>(${pct2}%)</small></span>
+            </div>`;
+        }).join('');
+
+        // Sección: input de agentes activos (denominador manual de la fórmula)
+        const seccionAgentes = `<div class="kpi-section">
+            <div class="kpinv-section-header"><i class="fa-solid fa-users-gear" style="margin-right:7px;opacity:.8;"></i>${t('kpi18p07_agentes_activos_label')}</div>
+            <div style="padding:14px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                <input type="number" id="kpi18p07-agentes-input" min="0" step="1"
+                    value="${stats.agentesActivos || ''}" placeholder="${t('kpi18p07_agentes_activos_placeholder')}"
+                    style="padding:8px 12px;border:2px solid #dde3f0;border-radius:8px;font-size:0.9rem;font-weight:700;width:120px;color:#1a2a4a;"
+                    onkeydown="if(event.key==='Enter'){FncKPI._setAgentesActivosP07(this.value);}">
+                <button onclick="FncKPI._setAgentesActivosP07(document.getElementById('kpi18p07-agentes-input').value)"
+                    style="padding:8px 16px;background:#1a2a4a;color:white;border:none;border-radius:8px;
+                        font-size:0.8rem;font-weight:700;cursor:pointer;"
+                    onmouseover="this.style.background='#253d6b'" onmouseout="this.style.background='#1a2a4a'">
+                    <i class="fa-solid fa-floppy-disk"></i> ${t('kpi18p07_agentes_activos_guardar')}
+                </button>
+                <span style="font-size:0.72rem;color:#8898aa;flex:1;min-width:200px;">${t('kpi18p07_agentes_activos_ayuda')}</span>
+            </div>
+        </div>`;
+
+        const seccionDist = _renderSeccionDist(t('kpi18p07_distribucion'), 'fa-graduation-cap', distRows);
+
+        _renderView(_renderKpiCard('kpi18p07', stats.porcentaje, color, labelE, {
+            idLabel:'KPI-18-P07', nombre:t('kpi18p07_nombre'),
+            formula:t('kpi18p07_formula'), formulaSub:t('kpi18p07_formula_sub'),
+            objetivo:100, objSymbol:'≥', conPrioridad:false, infoText:t('kpi18p07_info'),
+            stat1:{icon:'fa-users',                iconColor:'#5e72e4', numColor:'#1a2a4a', num:stats.nAgentesRegistro, label:t('kpi18p07_agentes')},
+            stat2:{icon:'fa-circle-check',         iconColor:'#2ecc71', numColor:'#27ae60', num:stats.nConHoras,        label:t('kpi18p07_con_horas'), bg:'#f0fff4', border:'#b7ebce'},
+            stat3:{icon:'fa-triangle-exclamation', iconColor:'#e74c3c', numColor:'#e74c3c', num:stats.nBajas+stats.nSinHoras, label:t('kpi18p07_sin_horas'), bg:'#fff5f5', border:'#fbd0d0'},
+            stat4:{icon:'fa-clock',                iconColor:'#8898aa', numColor:'#1a2a4a', num:Math.round(stats.totalHoras), label:t('kpi18p07_total_horas')},
+            btnExtra:_btnVerAvisos('verRegistrosKPI18P07'),
+            seccionExtra: seccionAgentes + seccionDist,
+        }));
+    }
+
+    // ════════════════════════════════════════════════════════════
+    // VER REGISTROS KPI-18-P07
+    // ════════════════════════════════════════════════════════════
+    function verRegistrosKPI18P07() {
+        const stats = calcularKPI18P07();
+        const filasOrdenadas = [...stats.filas].sort((a, b) => a.horas - b.horas);
+        _verRegistros({
+            titulo  : `KPI-18-P07 · ${stats.nAgentesRegistro} ${t('kpi18p07_agentes')} · ${t('kpi18p07_media')}: ${stats.media.toFixed(1)}h`,
+            resumen : `${stats.nConHoras}/${stats.nAgentesRegistro} ${t('kpi18p07_con_horas').toLowerCase()}`,
+            filas   : filasOrdenadas,
+            rowBg   : (r) => r._sinHoras ? '#fff5f5' : (r._cumple ? 'white' : '#fffbe6'),
+            columnas: [
+                { key:'agente',  label:t('kpi18p07_agente'),      align:'left',
+                  render:(r)=>`<span style="font-weight:700;font-size:0.82rem;">${r.agente}</span>` },
+                { key:'cursos',  label:t('kpi18p07_cursos'),      align:'center',
+                  render:(r)=>`<span style="color:#5e72e4;font-weight:700;">${r.cursos}</span>` },
+                { key:'horas',   label:t('kpi18p07_horas_agente'),align:'center',
+                  render:(r) => {
+                    if (r._sinHoras) return `<span style="padding:2px 10px;border-radius:20px;font-size:0.72rem;font-weight:700;background:#fde8e8;color:#721c24;">0h — sin datos</span>`;
+                    const c = r._cumple ? '#27ae60' : '#f59e0b';
+                    return `<span style="font-weight:700;color:${c};font-size:0.9rem;">${r.horas}h</span>`;
+                  }},
+                { key:'_ok18p07', label:'≥ 15h',                  align:'center',
+                  render:(r) => {
+                    if (r._sinHoras) return `<span style="padding:2px 8px;border-radius:20px;font-size:0.7rem;font-weight:700;background:#fde8e8;color:#721c24;">❌ Sin horas</span>`;
+                    return `<span style="padding:2px 8px;border-radius:20px;font-size:0.7rem;font-weight:700;background:${r._cumple?'#d4edda':'#fef9ec'};color:${r._cumple?'#155724':'#92400e'};">${r._cumple?'✅ '+t('si'):'⚠️ '+r.horas+'h'}</span>`;
+                  }},
+            ],
+        });
+    }
+
+
+    // ════════════════════════════════════════════════════════════
     // RENDER VISOR
     // ════════════════════════════════════════════════════════════
     // ════════════════════════════════════════════════════════════
@@ -3243,6 +3453,7 @@ const FncKPI = (() => {
             kpi07:renderKPI07, kpi08:renderKPI08, kpi09:renderKPI09,
             kpi10:renderKPI10, kpi11:renderKPI11, kpi13:renderKPI13,
             kpi14:renderKPI14, kpi15:renderKPI15, kpi18:renderKPI18,
+            kpi18p07:renderKPI18P07,
             kpi19:renderKPI19, kpi20:renderKPI20, kpi21:renderKPI21,
             kpi23:renderKPI23,
         };
@@ -3808,7 +4019,13 @@ const FncKPI = (() => {
         }
         // Detectar tipo de archivo por columnas
         const keys = data && data[0] ? Object.keys(data[0]).map(k => k.toUpperCase()) : [];
-        if (keys.includes('NUMEROPROFESIONAL') && keys.includes('NUMEROHORAS')) {
+        // KPI-18-P07 usa las mismas columnas que KPI-21 (formación) — se distingue
+        // por el nombre de archivo (convención: "..._KPI-18-P07...xlsx") para que
+        // ambos KPIs puedan convivir con cargas de archivo independientes.
+        const esArchivoP07 = !!(filename && /18[-_]?P0?7/i.test(filename));
+        if (esArchivoP07 && keys.includes('NUMEROPROFESIONAL') && keys.includes('NUMEROHORAS')) {
+            parsearDatosFormacionP07(data);
+        } else if (keys.includes('NUMEROPROFESIONAL') && keys.includes('NUMEROHORAS')) {
             parsearDatosFormacion(data);
         } else if (keys.includes('TRAMITE') && keys.includes('FECHAALTAINCIDENCIA') && keys.includes('FECHATRAMITE')) {
             parsearDatosVulnerables(data);
@@ -3933,6 +4150,7 @@ const FncKPI = (() => {
         verRegistrosKPI07,
         verRegistrosKPI08,
         verRegistrosKPI18,
+        verRegistrosKPI18P07,
         verRegistrosKPI19,
         verRegistrosKPI20,
         verRegistrosKPI21,
@@ -3977,6 +4195,14 @@ const FncKPI = (() => {
             renderVisor();
         },
         _onKpiChange : (v) => { _kpiActivo = v; _filtroPrioridad=''; _filtroPatrulla=''; renderVisor(); },
+        // Guarda el nº de agentes activos (denominador manual del KPI-18-P07)
+        _setAgentesActivosP07 : (val) => {
+            const n = parseInt(val, 10);
+            _agentesActivosP07 = (!isNaN(n) && n >= 0) ? n : 0;
+            localStorage.setItem('eurocop_kpi18p07_agentes_activos', String(_agentesActivosP07));
+            if (typeof showToast === 'function') showToast(t('kpi18p07_agentes_activos_guardar') + ' ✓');
+            renderVisor();
+        },
         _exportarPdfKpi : (kpi) => {
             if      (kpi === 'kpi01') FncKPI.imprimirKPI01();
             else if (kpi === 'kpi03') FncKPI.imprimirKPI03();

@@ -22,6 +22,22 @@ let lastSearchQuery = '';
 let isSearchInputFocused = false;
 
 function initMap() {
+    if (typeof maplibregl === 'undefined') {
+        // La librería externa MapLibre GL no se ha cargado (fallo de red/CDN,
+        // bloqueador de contenido, etc.). No bloqueamos el resto del dashboard:
+        // avisamos y seguimos sin mapa.
+        console.error('[Mapa] maplibregl no está definido — la librería MapLibre GL no se cargó. El mapa quedará desactivado, pero el resto del dashboard (KPIs, tablas, gráficos) seguirá funcionando.');
+        if (typeof showToast === 'function') {
+            showToast('⚠️ El mapa no está disponible (fallo al cargar la librería). El resto del dashboard funciona con normalidad.', 8000);
+        }
+        map = null;
+        const mapContainer = document.getElementById('main-map');
+        if (mapContainer) {
+            mapContainer.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#8898aa;font-size:0.85rem;padding:20px;text-align:center;">⚠️ Mapa no disponible (fallo al cargar MapLibre GL).<br>Recarga la página o comprueba tu conexión.</div>';
+        }
+        return;
+    }
+
     if (map) map.remove();
 
     map = new maplibregl.Map({
@@ -49,12 +65,8 @@ function initMap() {
         // Inicializar capas del editor de geometrías
         initDrawLayer();
 
-        // Capa heatmap (oculta por defecto)
-        map.addLayer({
-            id: 'heat-layer', type: 'heatmap', source: 'puntos',
-            layout: { visibility: 'none' },
-            paint: { 'heatmap-weight': 1, 'heatmap-intensity': 3, 'heatmap-radius': 20 }
-        });
+        // Las capas heatmap se crean dinámicamente por año en updateMapData()
+        // (una capa 'heat-year-XXXX' por cada año presente en los datos)
 
         // Capa de puntos (visible por defecto)
         map.addLayer({
@@ -203,14 +215,91 @@ function updateMapData(data) {
     // Color por defecto (si el año no está en la lista o es null)
     colorExpression.push('#8898aa'); // Gris
 
-    // 4. Aplicar el color dinámico
+    // 4. Aplicar el color dinámico a la capa de puntos
     map.setPaintProperty('point-layer', 'circle-color', colorExpression);
     
     // Mantener el resto de propiedades estéticas
     map.setPaintProperty('point-layer', 'circle-stroke-width', 2.5);
     map.setPaintProperty('point-layer', 'circle-radius', 7);
 
-    // --- FIN NUEVO ---
+    // --- HEATMAPS POR AÑO ---
+    // Paletas de color para cada año (gradiente del color del año → blanco → rojo intenso)
+    const heatPalettes = [
+        // Azul (#5e72e4)
+        ['rgba(94,114,228,0)', 'rgba(94,114,228,0.4)', 'rgba(150,160,240,0.7)', 'rgba(255,255,255,0.9)', '#f5365c'],
+        // Naranja (#fb6340)
+        ['rgba(251,99,64,0)',  'rgba(251,99,64,0.4)',  'rgba(255,160,100,0.7)', 'rgba(255,230,180,0.9)', '#8965e0'],
+        // Verde (#2dce89)
+        ['rgba(45,206,137,0)', 'rgba(45,206,137,0.4)', 'rgba(100,220,170,0.7)', 'rgba(200,255,230,0.9)', '#ffd600'],
+        // Cyan (#11cdef)
+        ['rgba(17,205,239,0)', 'rgba(17,205,239,0.4)', 'rgba(100,220,240,0.7)', 'rgba(200,245,255,0.9)', '#fb6340'],
+        // Rojo (#f5365c)
+        ['rgba(245,54,92,0)',  'rgba(245,54,92,0.4)',  'rgba(255,120,140,0.7)', 'rgba(255,200,210,0.9)', '#11cdef'],
+        // Púrpura (#8965e0)
+        ['rgba(137,101,224,0)','rgba(137,101,224,0.4)','rgba(180,150,235,0.7)','rgba(230,220,255,0.9)', '#2dce89'],
+        // Amarillo (#ffd600)
+        ['rgba(255,214,0,0)',  'rgba(255,214,0,0.4)',  'rgba(255,230,80,0.7)', 'rgba(255,248,180,0.9)', '#5e72e4'],
+        // Azul oscuro (#32325d)
+        ['rgba(50,50,93,0)',   'rgba(50,50,93,0.4)',   'rgba(100,100,140,0.7)','rgba(180,180,210,0.9)', '#fb6340'],
+        // Terracota (#e74c3c)
+        ['rgba(231,76,60,0)',  'rgba(231,76,60,0.4)',  'rgba(240,130,100,0.7)','rgba(255,210,190,0.9)', '#2dce89'],
+        // Verde claro (#2ecc71)
+        ['rgba(46,204,113,0)', 'rgba(46,204,113,0.4)', 'rgba(110,220,150,0.7)','rgba(200,250,220,0.9)', '#f5365c'],
+    ];
+
+    // Rastrear qué capas heat existen ahora para limpiar las que sobren
+    const expectedHeatIds = new Set(uniqueYears.map(y => 'heat-year-' + y));
+
+    // Eliminar capas de años que ya no están en los datos
+    if (map._heatYearLayers) {
+        map._heatYearLayers.forEach(id => {
+            if (!expectedHeatIds.has(id) && map.getLayer(id)) {
+                map.removeLayer(id);
+            }
+        });
+    }
+
+    // Crear o actualizar una capa heatmap por año
+    uniqueYears.forEach((year, index) => {
+        const layerId = 'heat-year-' + year;
+        const palette = heatPalettes[index % heatPalettes.length];
+
+        const heatColor = [
+            'interpolate', ['linear'],
+            ['heatmap-density'],
+            0,   palette[0],
+            0.2, palette[1],
+            0.5, palette[2],
+            0.8, palette[3],
+            1,   palette[4]
+        ];
+
+        if (map.getLayer(layerId)) {
+            // Actualizar filtro y colores si ya existe
+            map.setFilter(layerId, ['==', ['get', 'year'], year]);
+            map.setPaintProperty(layerId, 'heatmap-color', heatColor);
+        } else {
+            // Crear nueva capa, antes de point-layer para que los puntos queden encima
+            map.addLayer({
+                id: layerId,
+                type: 'heatmap',
+                source: 'puntos',
+                layout: { visibility: isHeatmap ? 'visible' : 'none' },
+                filter: ['==', ['get', 'year'], year],
+                paint: {
+                    'heatmap-weight':     1,
+                    'heatmap-intensity':  3,
+                    'heatmap-radius':     20,
+                    'heatmap-opacity':    0.85,
+                    'heatmap-color':      heatColor
+                }
+            }, 'point-layer');
+        }
+    });
+
+    // Guardar lista de capas activas para limpieza futura
+    map._heatYearLayers = [...expectedHeatIds];
+    // --- FIN HEATMAPS POR AÑO ---
 
     // Encuadrar mapa en los datos
     if (datosConGeo.length > 0) {
@@ -241,8 +330,15 @@ function toggleSatelite(btn) {
 
 function toggleHeatmap(btn) {
     isHeatmap = !isHeatmap;
-    map.setLayoutProperty('heat-layer',  'visibility', isHeatmap ? 'visible' : 'none');
-    map.setLayoutProperty('point-layer', 'visibility', isHeatmap ? 'none'    : 'visible');
+    // Mostrar/ocultar todas las capas heatmap por año
+    if (map._heatYearLayers) {
+        map._heatYearLayers.forEach(id => {
+            if (map.getLayer(id)) {
+                map.setLayoutProperty(id, 'visibility', isHeatmap ? 'visible' : 'none');
+            }
+        });
+    }
+    map.setLayoutProperty('point-layer', 'visibility', isHeatmap ? 'none' : 'visible');
     btn.innerHTML = isHeatmap
         ? '<i class="fa-solid fa-location-dot"></i>'
         : '<i class="fa-solid fa-fire"></i>';
@@ -354,17 +450,25 @@ function _add3D() {
     try {
         // Mover edificios al final del stack (encima de todo, incluido heat y point)
         map.moveLayer('ec-buildings-3d');  // sin beforeId = al final
-        // Reducir opacidad del heatmap en 3D para que se intuya bajo los edificios
-        if (map.getLayer('heat-layer')) map.setPaintProperty('heat-layer', 'heatmap-opacity', 0.85);
+        // Reducir opacidad de todos los heatmaps por año en modo 3D
+        if (map._heatYearLayers) {
+            map._heatYearLayers.forEach(id => {
+                if (map.getLayer(id)) map.setPaintProperty(id, 'heatmap-opacity', 0.65);
+            });
+        }
     } catch(e) {}
 }
 function _remove3D() {
     if (map.getLayer('ec-buildings-3d')) map.removeLayer('ec-buildings-3d');
     try { map.setTerrain(null); } catch(e) {}
     try { map.setLight({ anchor:'viewport', color:'white', intensity:0.5 }); } catch(e) {}
-    // Restaurar opacidad y mover al final del stack
+    // Restaurar opacidad de todos los heatmaps por año
     try {
-        if (map.getLayer('heat-layer')) map.setPaintProperty('heat-layer', 'heatmap-opacity', 1.0);
+        if (map._heatYearLayers) {
+            map._heatYearLayers.forEach(id => {
+                if (map.getLayer(id)) map.setPaintProperty(id, 'heatmap-opacity', 0.85);
+            });
+        }
     } catch(e) {}
 }
 
@@ -479,12 +583,26 @@ function handleGeojsonUpload(input) {
 
 // Pintar capa en MapLibre (Relleno + Línea + Click popup)
 // Pintar capa en MapLibre (Relleno + Línea + Puntos + Popups con Foto)
-// Variable global para controlar el popup de hover y evitar duplicados
-let hoverPopup = new maplibregl.Popup({
-    closeButton: false,
-    closeOnClick: false,
-    offset: 15
-});
+// Variable global para controlar el popup de hover y evitar duplicados.
+// OJO: NO se instancia aquí arriba (nivel superior del script). Si
+// maplibregl no está definido (fallo de CDN/red), `new maplibregl.Popup()`
+// lanzaría una excepción no capturada en cuanto se cargase este archivo,
+// lo que abortaría el resto de la ejecución de FncMapa.js y dejaría sin
+// inicializar TODO lo declarado después (p.ej. hotspotTourActive),
+// rompiendo funciones que nada tienen que ver con el mapa (como los
+// filtros de año/mes/categoría). Por eso se inicializa de forma
+// perezosa mediante _getHoverPopup(), solo cuando realmente se usa.
+let hoverPopup = null;
+function _getHoverPopup() {
+    if (!hoverPopup && typeof maplibregl !== 'undefined') {
+        hoverPopup = new maplibregl.Popup({
+            closeButton: false,
+            closeOnClick: false,
+            offset: 15
+        });
+    }
+    return hoverPopup;
+}
 
 function addLayerToMap(id, geojson, color, layerName) {
     if (!map) return;
@@ -541,14 +659,14 @@ function addLayerToMap(id, geojson, color, layerName) {
 
             const html = _buildLayerPopupHTML(props);
             
-            hoverPopup.setLngLat(e.lngLat)
+            _getHoverPopup().setLngLat(e.lngLat)
                       .setHTML(html)
                       .addTo(map);
         });
 
         // Mientras el mouse se mueve dentro del área (el popup sigue al cursor)
         map.on('mousemove', layerId, (e) => {
-            if (hoverPopup.isOpen()) {
+            if (_getHoverPopup().isOpen()) {
                 hoverPopup.setLngLat(e.lngLat);
             }
         });
@@ -556,7 +674,7 @@ function addLayerToMap(id, geojson, color, layerName) {
         // Cuando el mouse sale del área
         map.on('mouseleave', layerId, () => {
             map.getCanvas().style.cursor = '';
-            hoverPopup.remove();
+            if (hoverPopup) hoverPopup.remove();
         });
     });
 

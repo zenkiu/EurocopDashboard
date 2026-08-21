@@ -383,7 +383,17 @@ const config = {
                 }
             }
 
-            initMap();
+            // initMap() se aísla en su propio try/catch: un fallo al cargar el
+            // mapa (p.ej. CDN de MapLibre caído) NO debe impedir que el resto
+            // del dashboard (KPIs, tablas, avisos) se termine de generar.
+            try {
+                initMap();
+            } catch (mapErr) {
+                console.error('[Mapa] Error al inicializar el mapa (se continúa sin mapa):', mapErr);
+                if (typeof showToast === 'function') {
+                    showToast('⚠️ El mapa no está disponible, pero el resto del dashboard se ha generado.', 8000);
+                }
+            }
 
             setTimeout(() => {
                 if (typeof map !== 'undefined' && map) map.resize();

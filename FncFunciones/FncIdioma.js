@@ -105,8 +105,16 @@ function applyLanguage(lang) {
     if (loaderMsg && t.loading_msg) loaderMsg.textContent = t.loading_msg;
 
     // 7. Si ya hay datos cargados, refrescar la UI con el nuevo idioma
+    //    Aislado en try/catch: si updateUI() lanzara una excepción por
+    //    cualquier motivo, NO debe impedir que se libere el flag
+    //    _filterResetInProgress más abajo — de lo contrario los checkboxes
+    //    de año/mes/categoría quedarían bloqueados (no-op) el resto de la sesión.
     if (typeof finalData !== 'undefined' && finalData.length > 0) {
-        updateUI();
+        try {
+            updateUI();
+        } catch (err) {
+            console.error('[Idioma] Error al refrescar la UI tras cambio de idioma (se continúa):', err);
+        }
     }
 
     // 8. Refrescar etiqueta del toggle día/noche
