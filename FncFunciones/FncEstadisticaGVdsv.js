@@ -79,10 +79,8 @@ const FncEstadisticaGVdsv = (() => {
         if (!filename) return false;
         const up = filename.toUpperCase();
         return up.includes('01-ATESTADOS_DSV-GV') ||
-               up.includes('01-ATESTADOS_GV_DSV') ||
-               up.includes('ATESTADOS_DSV');
+               up.includes('01-ATESTADOS_GV_DSV') ;
     }
-
     // ============================================================
     // PARSEO Y NORMALIZACIÓN
     // ============================================================
