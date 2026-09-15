@@ -112,7 +112,12 @@
 
                     <a href="https://www.youtube.com/playlist?list=PL0ocQ3pHMwQsPcyIqnI7D1H6NIwqwsoyZ" target="_blank" class="btn-manual-pill" style="text-decoration: none;">
                         <i class="fa-brands fa-youtube"></i>
-                        <span data-i18n="btn_videos">VideoTutoriales</span>
+                        <span data-i18n="btn_videos_general">VideoTutoriales General</span>
+                    </a>
+
+                    <a href="https://www.youtube.com/playlist?list=PL0ocQ3pHMwQulwU43FmpK2qhC4F_5WXpz" target="_blank" class="btn-manual-pill" style="text-decoration: none;">
+                        <i class="fa-brands fa-youtube"></i>
+                        <span data-i18n="btn_videos_kpis">VideoTutoriales KPIs</span>
                     </a>
 
                     <a href="./EurocopMemorias/EurocopMemorias.zip" download class="btn-manual-pill" style="text-decoration: none;">
@@ -258,20 +263,39 @@
                 </button>
             </div>
 
-            <!-- Filtro de Años -->
-            <div class="filter-group">
-                <label data-i18n="filter_years">Años</label>
-                <div class="custom-dropdown" id="drop-year">
-                    <div class="dropdown-header" onclick="toggleDropdown('list-year')">
-                        <span id="label-year">----</span>
-                        <i class="fa-solid fa-chevron-down"></i>
-                    </div>
-                    <div id="list-year" class="dropdown-content">
-                        <div class="dropdown-controls" style="padding: 10px 10px 5px 10px;">
-                            <button class="btn-mini" onclick="toggleGroup('items-year', true, event)" title="Todos"><i class="fa-solid fa-check-double"></i></button>
-                            <button class="btn-mini" onclick="toggleGroup('items-year', false, event)" title="Ninguno"><i class="fa-solid fa-minus"></i></button>
+            <!-- Filtro de Años + Día de la semana (general, visible en ambos modos de fecha) -->
+            <div style="display: flex; gap: 10px;">
+                <div class="filter-group" id="filter-group-years" style="flex: 1; min-width: 0;">
+                    <label data-i18n="filter_years">Años</label>
+                    <div class="custom-dropdown" id="drop-year">
+                        <div class="dropdown-header" onclick="toggleDropdown('list-year')">
+                            <span id="label-year">----</span>
+                            <i class="fa-solid fa-chevron-down"></i>
                         </div>
-                        <div class="dropdown-items" id="items-year"></div>
+                        <div id="list-year" class="dropdown-content">
+                            <div class="dropdown-controls" style="padding: 10px 10px 5px 10px;">
+                                <button class="btn-mini" onclick="toggleGroup('items-year', true, event)" title="Todos"><i class="fa-solid fa-check-double"></i></button>
+                                <button class="btn-mini" onclick="toggleGroup('items-year', false, event)" title="Ninguno"><i class="fa-solid fa-minus"></i></button>
+                            </div>
+                            <div class="dropdown-items" id="items-year"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="filter-group" id="filter-group-weekday" style="flex: 1; min-width: 0;">
+                    <label data-i18n="filter_weekday">Día semana</label>
+                    <div class="custom-dropdown" id="drop-weekday">
+                        <div class="dropdown-header" onclick="toggleDropdown('list-weekday')">
+                            <span id="label-weekday">----</span>
+                            <i class="fa-solid fa-chevron-down"></i>
+                        </div>
+                        <div id="list-weekday" class="dropdown-content">
+                            <div class="dropdown-controls" style="padding: 10px 10px 5px 10px;">
+                                <button class="btn-mini" onclick="toggleGroup('items-weekday', true, event)" title="Todos"><i class="fa-solid fa-check-double"></i></button>
+                                <button class="btn-mini" onclick="toggleGroup('items-weekday', false, event)" title="Ninguno"><i class="fa-solid fa-minus"></i></button>
+                            </div>
+                            <div class="dropdown-items" id="items-weekday"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -302,17 +326,22 @@
                     <div style="flex: 1;">
                         <label data-i18n="filter_daymonth_from" style="font-size: 0.7rem; font-weight: 700; color: var(--text-muted); margin-bottom: 5px; display: block; text-transform: uppercase;">Desde</label>
                         <input type="text" id="daymonth-from-input" class="daymonth-input" placeholder="DD/MM" maxlength="5" 
-                            style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; color: var(--text-dark); background: rgb(11, 11, 11);">
+                            style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; color: var(--text-dark); background: rgb(168, 165, 165);">
                     </div>
                     <div style="flex: 1;">
                         <label data-i18n="filter_daymonth_to" style="font-size: 0.7rem; font-weight: 700; color: var(--text-muted); margin-bottom: 5px; display: block; text-transform: uppercase;">Hasta</label>
                         <input type="text" id="daymonth-to-input" class="daymonth-input" placeholder="DD/MM" maxlength="5"
-                            style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; color: var(--text-dark); background: rgb(11, 11, 11);">
+                            style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; color: var(--text-dark); background: rgb(168, 165, 165);">
                     </div>
                 </div>
-                <button onclick="triggerUpdateWithLoader()" style="width: 100%; padding: 8px; background: var(--primary-color, #5e72e4); color: white; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; margin-bottom: 15px;" data-i18n="btn_apply_filter">
-                    <i class="fa-solid fa-filter"></i> Aplicar filtro
-                </button>
+                <div style="display: flex; gap: 8px; margin-bottom: 15px;">
+                    <button id="btn-apply-daymonth" onclick="applyDayMonthFilter()" style="flex: 1; padding: 8px; background: var(--primary-color, #5e72e4); color: white; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer;" data-i18n="btn_apply_filter">
+                        <i class="fa-solid fa-filter"></i> Aplicar filtro
+                    </button>
+                    <button id="btn-revert-daymonth" onclick="revertDayMonthFilter()" style="flex: 1; padding: 8px; background: var(--card-bg-2); color: var(--text-dark); border: 1px solid var(--border-color); border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer;" title="Volver al estado anterior">
+                        <i class="fa-solid fa-rotate-left"></i> <span data-i18n="btn_revert_filter">Volver atrás</span>
+                    </button>
+                </div>
             </div>
 
             <!-- Filtro de Categorías -->
