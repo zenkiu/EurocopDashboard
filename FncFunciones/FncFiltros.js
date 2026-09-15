@@ -18,6 +18,7 @@ function setupFilters() {
     renderCheckboxes('items-year',     years,         years[0]);
     renderCheckboxes('items-month',    monthsConfig,  'all');
     renderCheckboxes('items-category', cats,          'all');
+    renderCheckboxes('items-weekday',  weekdaysConfig, 'all');
 }
 
 // ============================================================
@@ -39,10 +40,14 @@ function renderCheckboxes(containerId, items, defaultValue) {
             let val, label;
             if (typeof item === 'object') {
                 val = item.id;
-                // Si es mes, usamos la abreviatura, si no el nombre
-                label = (containerId === 'items-month' && t.months_abbr)
-                        ? t.months_abbr[item.id - 1]
-                        : (item.name || item.id);
+                // Si es mes o día de la semana, usamos la abreviatura traducida; si no, el nombre
+                if (containerId === 'items-month' && t.months_abbr) {
+                    label = t.months_abbr[item.id - 1];
+                } else if (containerId === 'items-weekday' && t.weekdays_abbr) {
+                    label = t.weekdays_abbr[item.id - 1];
+                } else {
+                    label = item.abbr || item.name || item.id;
+                }
             } else {
                 val = item;
                 label = item;
@@ -83,6 +88,28 @@ function updateMonthLabels() {
             const monthValue = parseInt(input.value);
             if (monthValue >= 1 && monthValue <= 12) {
                 span.textContent = t.months_abbr[monthValue - 1];
+            }
+        }
+    });
+}
+
+// ============================================================
+// ACTUALIZAR LABELS DE DÍAS DE LA SEMANA (cuando cambia el idioma)
+// ============================================================
+function updateWeekdayLabels() {
+    const container = document.getElementById('items-weekday');
+    if (!container) return;
+
+    const t = translations[currentLang];
+    if (!t || !t.weekdays_abbr) return;
+
+    container.querySelectorAll('.checkbox-item').forEach(item => {
+        const input = item.querySelector('input');
+        const span  = item.querySelector('span');
+        if (input && span) {
+            const dayValue = parseInt(input.value);
+            if (dayValue >= 1 && dayValue <= 7) {
+                span.textContent = t.weekdays_abbr[dayValue - 1];
             }
         }
     });
@@ -240,6 +267,12 @@ function toggleDateFilterMode() {
             document.querySelectorAll('#items-category input[type="checkbox"]').forEach(cb => { cb.checked = true; });
             const catAllCb = document.getElementById('check-category-all');
             if (catAllCb) catAllCb.checked = true;
+
+            document.querySelectorAll('#items-weekday input[type="checkbox"]').forEach(cb => { cb.checked = true; });
+            const weekdayAllCb = document.getElementById('check-weekday-all');
+            if (weekdayAllCb) weekdayAllCb.checked = true;
+            _dayMonthLastApplied = null;
+            _dayMonthPrevState   = null;
         } finally {
             window._filterResetInProgress = false;
         }
@@ -264,6 +297,53 @@ function initializeDayMonthInputs() {
     const to   = document.getElementById('daymonth-to-input');
     if (from && !from.value) from.value = '01/01';
     if (to   && !to.value)   to.value   = '31/12';
+
+    // Snapshot inicial (estado "aplicado") para poder revertir más tarde
+    if (!_dayMonthLastApplied) {
+        _dayMonthLastApplied = readDayMonthFilterState();
+        _dayMonthPrevState   = readDayMonthFilterState();
+    }
+}
+
+// ============================================================
+// APLICAR / REVERTIR FILTRO DE RANGO DESDE-HASTA
+// (El filtro de Día de la semana es general e instantáneo, como Años)
+// ============================================================
+let _dayMonthLastApplied = null; // Estado actualmente aplicado
+let _dayMonthPrevState   = null; // Estado aplicado justo antes del anterior "Aplicar filtro"
+
+function readDayMonthFilterState() {
+    const from = document.getElementById('daymonth-from-input');
+    const to   = document.getElementById('daymonth-to-input');
+    return {
+        from: from ? from.value : '01/01',
+        to:   to   ? to.value   : '31/12'
+    };
+}
+
+function writeDayMonthFilterState(state) {
+    if (!state) return;
+    const from = document.getElementById('daymonth-from-input');
+    const to   = document.getElementById('daymonth-to-input');
+    if (from) from.value = state.from;
+    if (to)   to.value   = state.to;
+}
+
+// Botón "Aplicar filtro": guarda el estado previo (para poder revertir) y aplica el actual
+function applyDayMonthFilter() {
+    _dayMonthPrevState   = _dayMonthLastApplied || readDayMonthFilterState();
+    _dayMonthLastApplied = readDayMonthFilterState();
+    triggerUpdateWithLoader();
+}
+
+// Botón "Volver atrás": restaura el estado aplicado justo antes del último "Aplicar filtro"
+function revertDayMonthFilter() {
+    if (!_dayMonthPrevState) return;
+    const stateToRestore = _dayMonthPrevState;
+    writeDayMonthFilterState(stateToRestore);
+    _dayMonthPrevState   = _dayMonthLastApplied;
+    _dayMonthLastApplied = stateToRestore;
+    triggerUpdateWithLoader();
 }
 
 // ============================================================
@@ -435,10 +515,25 @@ function updateUI() {
         setLabel('header-month', rangeText);
     }
 
+    setLabel('label-weekday',  getLabels('items-weekday'));
+    setLabel('header-weekday', getLabels('items-weekday'));
+
     setLabel('label-category',  getLabels('items-category'));
     setLabel('header-category', getLabels('items-category'));
 
-    // 4. FILTRADO DE DATOS (Filtros Base: Año, Mes/Día, Categoría)
+    // Día de la semana (1=Lunes ... 7=Domingo, ISO) — filtro general, aplica en ambos modos.
+    // Sin checkboxes en el DOM (aún no renderizados) -> no filtra.
+    const weekdayCbs      = document.querySelectorAll('#items-weekday input[type="checkbox"]');
+    const selWeekdays     = getValues('items-weekday').map(Number);
+    const filterByWeekday = weekdayCbs.length > 0;
+    const matchesWeekday  = (d) => {
+        if (!filterByWeekday) return true;
+        const jsDay  = d.date.getDay(); // 0=Domingo ... 6=Sábado
+        const isoDay = jsDay === 0 ? 7 : jsDay; // 1=Lunes ... 7=Domingo
+        return selWeekdays.includes(isoDay);
+    };
+
+    // 4. FILTRADO DE DATOS (Filtros Base: Año, Mes/Día, Día semana, Categoría)
     let filtered;
 
     if (typeof dateFilterMode !== 'undefined' && dateFilterMode === 'daymonth') {
@@ -451,6 +546,7 @@ function updateUI() {
 
         filtered = finalData.filter(d => {
             if (!selYears.includes(d.year) || !selCats.includes(d.cat)) return false;
+            if (!matchesWeekday(d)) return false;
 
             const recordDay   = d.date.getDate();
             const recordMonth = d.date.getMonth() + 1;
@@ -465,7 +561,8 @@ function updateUI() {
         filtered = finalData.filter(d =>
             selYears.includes(d.year) &&
             selMonths.includes(d.month) &&
-            selCats.includes(d.cat)
+            selCats.includes(d.cat) &&
+            matchesWeekday(d)
         );
     }
 

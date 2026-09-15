@@ -118,3 +118,12 @@ const monthsConfig = [
     { id: 7,  abbr: 'Jul' }, { id: 8,  abbr: 'Ago' }, { id: 9,  abbr: 'Sep' },
     { id: 10, abbr: 'Oct' }, { id: 11, abbr: 'Nov' }, { id: 12, abbr: 'Dic' }
 ];
+
+// ============================================================
+// CONFIGURACIÓN DE DÍAS DE LA SEMANA (1=Lunes ... 7=Domingo, ISO)
+// ============================================================
+const weekdaysConfig = [
+    { id: 1, abbr: 'Lun' }, { id: 2, abbr: 'Mar' }, { id: 3, abbr: 'Mié' },
+    { id: 4, abbr: 'Jue' }, { id: 5, abbr: 'Vie' }, { id: 6, abbr: 'Sáb' },
+    { id: 7, abbr: 'Dom' }
+];

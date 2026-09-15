@@ -97,8 +97,9 @@ function applyLanguage(lang) {
     // 4. Bloquear triggers espurios durante actualización de DOM por idioma
     window._filterResetInProgress = true;
 
-    // 5. Actualizar los labels de los meses en el filtro
+    // 5. Actualizar los labels de los meses y días de la semana en el filtro
     updateMonthLabels();
+    if (typeof updateWeekdayLabels === 'function') updateWeekdayLabels();
 
     // 6. Actualizar el texto del loader explícitamente (idioma activo)
     const loaderMsg = document.querySelector('#loading-overlay [data-i18n="loading_msg"]');
