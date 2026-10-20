@@ -4794,3 +4794,31 @@ canvas, .maplibregl-canvas, img, svg, video, input[type="range"] {
 #pdf-modal-content {
     transition: width .25s, height .25s, border-radius .25s;
 }
+
+/* ============================================================
+   EVOLUCIÓN MENSUAL — modal gráfica de líneas (DSV / PJ)
+   ============================================================ */
+.evo-modal { max-width: 980px; height: auto; max-height: 92vh; }
+.evo-body {
+    padding: 18px 20px 20px; overflow-y: auto; min-height: 0;
+    display: flex; flex-direction: column; gap: 14px;
+}
+.evo-controls { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end; }
+.evo-ctl {
+    display: flex; flex-direction: column; gap: 4px;
+    font-size: 0.72rem; font-weight: 700; color: var(--text-dark);
+    text-transform: uppercase; letter-spacing: .4px;
+}
+.evo-ctl select:disabled { opacity: .45; cursor: not-allowed; }
+.evo-sub { font-size: 0.8rem; font-weight: 700; color: #5e72e4; min-height: 1em; }
+.evo-chart-wrap { position: relative; height: min(55vh, 460px); min-height: 260px; }
+.evo-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.evo-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px; border: 1px solid var(--border-color); border-radius: 16px;
+    font-size: 0.74rem; color: var(--text-dark); background: var(--card-bg);
+}
+.evo-chip i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.evo-chip b { font-weight: 800; }
+.evo-note { font-size: 0.72rem; color: #8898aa; }
+@media print { #evo-modal { display: none !important; } }
