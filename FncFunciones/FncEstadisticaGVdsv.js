@@ -71,6 +71,7 @@ const FncEstadisticaGVdsv = (() => {
     let _estadosUnicos = [];
     let _añoSel        = null;
     let _mesSel        = null;
+    let _serieCache    = null;
 
     // ============================================================
     // DETECCIÓN DEL ARCHIVO
@@ -85,6 +86,7 @@ const FncEstadisticaGVdsv = (() => {
     // PARSEO Y NORMALIZACIÓN
     // ============================================================
     function parsearDatos(data) {
+        _serieCache = null;
         _rawData = data.map(row => {
             // Normalizar nombres de columna (case-insensitive)
             const r = {};
@@ -636,6 +638,36 @@ const FncEstadisticaGVdsv = (() => {
         return errores;
     }
 
+    // ============================================================
+    // SERIE MENSUAL (para la gráfica de evolución)
+    // Reutiliza calcular() → coherente con la tabla mostrada
+    // ============================================================
+    function getSerieMensual() {
+        if (_serieCache) return _serieCache;
+        const años = [..._años].sort((a, b) => a - b);
+        const valores = {};
+        let estados = [];
+        años.forEach(a => {
+            const v = { total: [], conVictimas: [], sinVictimas: [] };
+            for (let m = 1; m <= 12; m++) {
+                const s = calcular(a, m);
+                estados = s.estados;
+                v.total.push(s.total);
+                v.conVictimas.push(s.conVictimas);
+                v.sinVictimas.push(s.sinVictimas);
+                s.estados.forEach(e => {
+                    const d = s.lesividad[e] || { cv:0, cm:0, ov:0, om:0, pv:0, pm:0 };
+                    const k = 'est:' + e;
+                    if (!v[k]) v[k] = [];
+                    v[k].push(d.cv + d.cm + d.ov + d.om + d.pv + d.pm);
+                });
+            }
+            valores[a] = v;
+        });
+        _serieCache = { años, estados, valores };
+        return _serieCache;
+    }
+
     // ── API pública ──────────────────────────────────────────────────────────
     return {
         // Identificación
@@ -653,6 +685,7 @@ const FncEstadisticaGVdsv = (() => {
         // Cálculo
         calcular,
         getAtestadosDelMes,
+        getSerieMensual,
         // Traducciones
         t,
         // Exportaciones

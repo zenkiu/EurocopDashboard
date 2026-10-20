@@ -122,9 +122,14 @@ const FncAtestadosPJ = (() => {
         <!-- Cabecera de sección -->
         <div class="pj-section-header">
             <span>${t('delitos')}</span>
-            <button class="pj-btn-ver-ats" onclick="FncAtestadosPJ.verAtestados()">
-                <i class="fa-solid fa-list-ul"></i> ${t('ver_atestados')}
-            </button>
+            <div style="display:flex;gap:8px;align-items:center;">
+                <button class="pj-btn-ver-ats" onclick="FncAtestadosPJ.verEvolucion()">
+                    <i class="fa-solid fa-chart-line"></i> ${FncEvolucionGV.t('boton')}
+                </button>
+                <button class="pj-btn-ver-ats" onclick="FncAtestadosPJ.verAtestados()">
+                    <i class="fa-solid fa-list-ul"></i> ${t('ver_atestados')}
+                </button>
+            </div>
         </div>
         <!-- Buscador de delitos -->
         <div class="pj-search-bar">
@@ -214,6 +219,47 @@ const FncAtestadosPJ = (() => {
 
         const view = document.getElementById('atestados-view');
         if (view) { view.innerHTML = html; view.classList.add('active'); }
+    }
+
+    // ============================================================
+    // MODAL — EVOLUCIÓN MENSUAL (gráfica de líneas)
+    // ============================================================
+    function verEvolucion() {
+        const lang  = typeof currentLang !== 'undefined' ? currentLang : 'es';
+        const t     = E.t.bind(E);
+        const serie = E.getSerieMensual();
+        FncEvolucionGV.abrir({
+            titulo: FncEvolucionGV.t('titulo_pj'),
+            meses : E.getMeses(lang),
+            indicadores: [
+                { key: 'nroInf', label: t('nro_inf') },
+                { key: 'det',    label: t('detenciones') },
+                { key: 'inv',    label: t('investigaciones') }
+            ],
+            años   : serie.años,
+            sinMes : serie.sinMes,
+            añoInicial: E.getAñoSel(),
+            selector: {
+                label : FncEvolucionGV.t('delito'),
+                todos : FncEvolucionGV.t('todos_delitos'),
+                // Solo categorías/subcategorías con datos en el año consultado
+                opciones: año => {
+                    const pd = serie.porDelito[año] || {};
+                    return serie.delitos
+                        .filter(c => (pd['c:' + c.key] || {}).n > 0)
+                        .map(c => ({
+                            key  : 'c:' + c.key,
+                            label: c.label,
+                            subs : c.subs
+                                .filter(sb => (pd['s:' + c.key + '/' + sb.key] || {}).n > 0)
+                                .map(sb => ({ key: 's:' + c.key + '/' + sb.key, label: sb.label }))
+                        }));
+                },
+                valores: (año, sel) => sel === 'all'
+                    ? serie.valores[año]
+                    : (serie.porDelito[año] || {})[sel]
+            }
+        });
     }
 
     // ============================================================
@@ -806,7 +852,7 @@ const FncAtestadosPJ = (() => {
     return {
         init, salir,
         esArchivoPJ : E.esArchivoPJ.bind(E),
-        verAtestados, _closeAtestados, _printAtestados,
+        verAtestados, verEvolucion, _closeAtestados, _printAtestados,
         _closeErroresPJ: () => { const m = document.getElementById('atd-err-modal-pj'); if(m) m.remove(); },
         _printErroresPJ,
         imprimirVista,

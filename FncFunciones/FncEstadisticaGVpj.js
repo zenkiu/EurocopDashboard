@@ -242,6 +242,7 @@ const FncEstadisticaGVpj = (() => {
     let _años          = [];
     let _añoSel        = null;
     let _mesSel        = null;
+    let _serieCache    = null;
 
     // ============================================================
     // DETECCIÓN DEL ARCHIVO
@@ -258,6 +259,7 @@ const FncEstadisticaGVpj = (() => {
     // PARSEO Y NORMALIZACIÓN
     // ============================================================
     function parsearDatos(data) {
+        _serieCache = null;
         _rawData = data.map(row => {
             const r = {};
             Object.keys(row).forEach(k => { r[k.toUpperCase()] = row[k]; });
@@ -786,6 +788,51 @@ const FncEstadisticaGVpj = (() => {
         return errores;
     }
 
+    // ============================================================
+    // SERIE MENSUAL (para la gráfica de evolución)
+    // Una sola pasada; mismo criterio de clasificación que calcular()
+    // ============================================================
+    function getSerieMensual() {
+        if (_serieCache) return _serieCache;
+        const años = [..._años].sort((a, b) => a - b);
+        const valores = {}, sinMes = {};
+        años.forEach(a => {
+            valores[a] = { nroInf: Array(12).fill(0), det: Array(12).fill(0), inv: Array(12).fill(0) };
+            sinMes[a] = 0;
+        });
+        const porDelito = {};   // año → { 'c:cat' | 's:cat/sub' → {n, nroInf[12], det[12], inv[12]} }
+        años.forEach(a => { porDelito[a] = {}; });
+        const nodo = (a, k) => porDelito[a][k] || (porDelito[a][k] = {
+            n: 0, nroInf: Array(12).fill(0), det: Array(12).fill(0), inv: Array(12).fill(0)
+        });
+        const memo = new Map();
+        _rawData.forEach(r => {
+            const v = valores[r.anyo];
+            if (!v) return;
+            if (!memo.has(r.delito)) memo.set(r.delito, clasificarDelito(r.delito));
+            const cl = memo.get(r.delito);
+            if (!cl) return;
+            const nodos = [nodo(r.anyo, 'c:' + cl.catKey), nodo(r.anyo, 's:' + cl.catKey + '/' + cl.subKey)];
+            nodos.forEach(nd => { nd.n++; });
+            if (r.mes < 1 || r.mes > 12) { sinMes[r.anyo]++; return; }
+            const i = r.mes - 1;
+            v.nroInf[i] += r.nroInf;
+            v.det[i]    += r.detV + r.detM;
+            v.inv[i]    += r.invV + r.invM;
+            nodos.forEach(nd => {
+                nd.nroInf[i] += r.nroInf;
+                nd.det[i]    += r.detV + r.detM;
+                nd.inv[i]    += r.invV + r.invM;
+            });
+        });
+        const delitos = getCategorias().filter(c => !c.hidden).map(c => ({
+            key: c.key, label: c.label,
+            subs: c.subs.map(sb => ({ key: sb.key, label: sb.label }))
+        }));
+        _serieCache = { años, valores, sinMes, delitos, porDelito };
+        return _serieCache;
+    }
+
     // ── API pública ──────────────────────────────────────────────────────────
     return {
         esArchivoPJ,
@@ -799,6 +846,7 @@ const FncEstadisticaGVpj = (() => {
         getMeses   : (lang) => MESES[lang] || MESES.es,
         calcular,
         getAtestadosDelMes,
+        getSerieMensual,
         t,
         exportarPdf,
         exportarDocx,

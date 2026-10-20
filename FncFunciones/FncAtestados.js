@@ -129,9 +129,14 @@ const FncAtestados = (() => {
     <div class="at-section">
         <div class="at-section-title" style="display:flex;align-items:center;justify-content:space-between;">
             <span>${t('accidentalidad')}</span>
-            <button class="at-btn-ver-atestados" onclick="FncAtestados.verAtestados()">
-                <i class="fa-solid fa-list-ul"></i> ${t('ver_atestados')}
-            </button>
+            <div style="display:flex;gap:8px;align-items:center;">
+                <button class="at-btn-ver-atestados" onclick="FncAtestados.verEvolucion()">
+                    <i class="fa-solid fa-chart-line"></i> ${FncEvolucionGV.t('boton')}
+                </button>
+                <button class="at-btn-ver-atestados" onclick="FncAtestados.verAtestados()">
+                    <i class="fa-solid fa-list-ul"></i> ${t('ver_atestados')}
+                </button>
+            </div>
         </div>
         <table class="at-table at-acc-table">
             <thead>
@@ -336,6 +341,33 @@ const FncAtestados = (() => {
     }
 
     // ============================================================
+    // MODAL — EVOLUCIÓN MENSUAL (gráfica de líneas)
+    // ============================================================
+    function verEvolucion() {
+        const lang  = typeof currentLang !== 'undefined' ? currentLang : 'es';
+        const t     = E.t.bind(E);
+        const serie = E.getSerieMensual();
+        const indicadores = [
+            { key: 'total',       label: FncEvolucionGV.t('acc_total') },
+            { key: 'conVictimas', label: t('con_victimas') },
+            { key: 'sinVictimas', label: t('sin_victimas') },
+            ...serie.estados.map(e => ({
+                key   : 'est:' + e,
+                label : e.replace(/^\d+\.\s*/, '') + ' (' + t('pers') + ')',
+                hidden: e.includes('ILESOS')
+            }))
+        ];
+        FncEvolucionGV.abrir({
+            titulo: FncEvolucionGV.t('titulo_acc'),
+            meses : E.getMeses(lang),
+            indicadores,
+            años  : serie.años,
+            valores: serie.valores,
+            añoInicial: E.getAñoSel()
+        });
+    }
+
+    // ============================================================
     // CICLO DE VIDA
     // ============================================================
     function init(data, filename) {
@@ -482,7 +514,7 @@ const FncAtestados = (() => {
     return {
         init, salir,
         esArchivoAtestados : E.esArchivoAtestados.bind(E),
-        verAtestados,
+        verAtestados, verEvolucion,
         exportarPdf, exportarDocx,
         _onAñoChange, _onMesChange, _onMostrar,
         _closeAtestados, _printAtestados,
